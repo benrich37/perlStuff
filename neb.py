@@ -201,13 +201,13 @@ if __name__ == '__main__':
         images_og_dirs = []
         for i in range(len(int_dirs)):
             _dir = int_dirs[int_dirs_indices[i]]
-            CONTCAR = os.path.join(_dir, "CONTCAR")
+            _CONTCAR = os.path.join(_dir, "CONTCAR")
             POSCAR = os.path.join(_dir, "POSCAR")
-            if os.path.exists(CONTCAR):
-                msg = f'Image {i}: {str(CONTCAR)}'
+            if os.path.exists(_CONTCAR):
+                msg = f'Image {i}: {str(_CONTCAR)}'
                 log_stuff(msg)
-                images.append(read(CONTCAR))
-                images_og_dirs.append(CONTCAR)
+                images.append(read(_CONTCAR))
+                images_og_dirs.append(_CONTCAR)
             elif os.path.exists(POSCAR):
                 log_stuff(f'Image {i}: {POSCAR}')
                 images.append(read(POSCAR))
