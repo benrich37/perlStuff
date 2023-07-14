@@ -3,6 +3,7 @@ import shutil
 from ase.io import read
 import time
 import numpy as np
+from datetime import datetime
 
 
 gbrv_15_ref = [
@@ -185,17 +186,19 @@ def need_sort(root):
                     dones.append(at)
     return False
 
-def log_generic(log_str, work, calc_type, print_bool):
+def log_generic(message, work, calc_type, print_bool):
+    prefix = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": "
+    message = prefix + message
     log_fname = os.path.join(work, calc_type + ".log")
     if not os.path.exists(log_fname):
         with open(log_fname, "w") as f:
-            f.write("Starting")
+            f.write(prefix + "Starting")
             f.close()
     with open(log_fname, "a") as f:
-        f.write(log_str)
+        f.write(message)
         f.close()
     if print_bool:
-        print(log_str)
+        print(message)
 
 def get_cmds(work_dir):
     if not os.path.exists(os.path.join(work_dir, "inputs")):
@@ -205,3 +208,20 @@ def get_cmds(work_dir):
 
 
 
+def read_line_generic(line):
+    key = line.lower().split(":")[0]
+    val = line.rstrip("\n").split(":")[1]
+    if not "#" in key:
+        val = val[:val.index("#")]
+        return key, val
+    else:
+        return None, None
+
+
+def remove_dir_recursive(path):
+    for root, dirs, files in os.walk(path, topdown=False):  # topdown=False makes the walk visit subdirectories first
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+    os.rmdir(path)  # remove the root directory itself

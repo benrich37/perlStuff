@@ -1,0 +1,10 @@
+images: 10
+restart: true
+# work: /pscratch/b/beri9208/ (This argument is deprecrated and should only be used if something breaks)
+# debug: false
+initial: POSCAR_foo
+final: POSCAR_bar
+neb method: spline
+interp method: idpp
+fix: 0, 1, 0, 3
+fmax: 0.05
