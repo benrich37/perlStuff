@@ -194,6 +194,8 @@ if __name__ == '__main__':
     nImages, restart_bool, work_dir, _initial, _final, k, neb_method, interp_method, fix_pairs, fmax, debug, max_steps, read_int_dirs = read_neb_inputs()
     log_stuff = lambda s: log_generic(s, work_dir, "neb", True)
     if read_int_dirs:
+        _initial = "n/a"
+        _final = "n/a"
         log_stuff("Read existing dirs requested")
         int_dirs = get_int_dirs(work_dir)
         int_dirs_indices = get_int_dirs_indices(int_dirs)
