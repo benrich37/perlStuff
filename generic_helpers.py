@@ -190,12 +190,16 @@ def need_sort(root):
     return False
 
 def log_generic(message, work, calc_type, print_bool):
+    print(message)
+    if not "\n" in message:
+        message = message + "\n"
+        print(message)
     prefix = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": "
     message = prefix + message
     log_fname = os.path.join(work, calc_type + ".log")
     if not os.path.exists(log_fname):
         with open(log_fname, "w") as f:
-            f.write(prefix + "Starting")
+            f.write(prefix + "Starting\n")
             f.close()
     with open(log_fname, "a") as f:
         f.write(message)

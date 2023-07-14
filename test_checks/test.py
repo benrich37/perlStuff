@@ -49,9 +49,26 @@ class TestGenericHelpers(unittest.TestCase):
         if ope(dir1):
             gen.remove_dir_recursive(dir1)
         os.mkdir(dir1)
-        gen.log_generic("message", dir1, "test", False)
+        gen.log_generic(messages[0], dir1, "test", False)
         self.assertTrue(ope(opj(dir1, "test.log")))
         with open(opj(dir1, "test.log"), "r") as f:
-
+            length = 0
+            for i, line in enumerate(f):
+                length += 1
+                if i == 0:
+                    self.assertTrue("Starting" in line)
+                if i == 1:
+                    self.assertTrue(messages[i - 1] in line)
+            self.assertEqual(length, 2)
+        gen.log_generic(messages[1], dir1, "test", False)
+        with open(opj(dir1, "test.log"), "r") as f:
+            length = 0
+            for i, line in enumerate(f):
+                length += 1
+                if i == 0:
+                    self.assertTrue("Starting" in line)
+                if i >= 1:
+                    self.assertTrue(messages[i - 1] in line)
+            self.assertEqual(length, 3)
         gen.remove_dir_recursive(dir1)
 
