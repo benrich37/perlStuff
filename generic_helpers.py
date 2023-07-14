@@ -36,6 +36,19 @@ def get_int_dirs_indices(int_dirs):
         ints.append(int(dirr.split("/")[-1]))
     return np.array(ints).argsort()
 
+
+def get_int_dirs(dir_path):
+    int_dir_list = []
+    for name in os.listdir(dir_path):
+        full_path = os.path.join(dir_path, name)
+        if os.path.isdir(full_path):
+            try:
+                int(name)
+                int_dir_list.append(full_path)
+            except ValueError:
+                continue
+    return int_dir_list
+
 def insert_el(filename):
     """
     Inserts elements line in correct position for Vasp 5? Good for
@@ -156,17 +169,7 @@ def time_to_str(t):
     return print_str
 
 
-def get_int_dirs(dir_path):
-    int_dir_list = []
-    for name in os.listdir(dir_path):
-        full_path = os.path.join(dir_path, name)
-        if os.path.isdir(full_path):
-            try:
-                int(name)
-                int_dir_list.append(full_path)
-            except ValueError:
-                continue
-    return int_dir_list
+
 
 def atom_str(atoms, index):
     return f"{atoms.get_chemical_symbols()[index]}({index})"

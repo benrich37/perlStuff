@@ -204,16 +204,16 @@ if __name__ == '__main__':
             CONTCAR = os.path.join(_dir, "CONTCAR")
             POSCAR = os.path.join(_dir, "POSCAR")
             if os.path.exists(CONTCAR):
-                log_stuff(f"Image {i}: {CONTCAR}")
+                log_stuff(f'Image {i}: {CONTCAR}')
                 images.append(read(CONTCAR))
                 images_og_dirs.append(CONTCAR)
             elif os.path.exists(POSCAR):
-                log_stuff(f"Image {i}: {POSCAR}")
+                log_stuff(f'Image {i}: {POSCAR}')
                 images.append(read(POSCAR))
                 images_og_dirs.append(POSCAR)
             else:
-                log_stuff(f"No recognized input file for image {i} in {_dir}")
-                raise ReferenceError(f"No recognized input file for image {i} in {_dir}")
+                log_stuff(f'No recognized input file for image {i} in {_dir}')
+                raise ReferenceError(f'No recognized input file for image {i} in {_dir}')
         nImages = len(images)
     log_stuff("nImages: " + str(nImages))
     log_stuff("restart: " + str(restart_bool))
@@ -245,7 +245,7 @@ if __name__ == '__main__':
         if restart_bool:
             log_stuff("ignoring fix pair (images already set up)")
         else:
-            log_stuff(f"re-optimizing initial and final images with specified atom pairs of fixed length")
+            log_stuff(f're-optimizing initial and final images with specified atom pairs of fixed length')
             for endpoint in [_initial, _final]:
                 if os.path.exists("tmp"):
                     if os.path.isdir("tmp"):
