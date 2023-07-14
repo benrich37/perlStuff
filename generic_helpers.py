@@ -4,6 +4,7 @@ from ase.io import read
 import time
 import numpy as np
 from datetime import datetime
+from ase.constraints import FixBondLength
 
 
 gbrv_15_ref = [
@@ -169,8 +170,6 @@ def time_to_str(t):
     return print_str
 
 
-
-
 def atom_str(atoms, index):
     return f"{atoms.get_chemical_symbols()[index]}({index})"
 
@@ -233,3 +232,25 @@ def remove_dir_recursive(path):
         for name in dirs:
             os.rmdir(os.path.join(root, name))
     os.rmdir(path)  # remove the root directory itself
+
+
+def add_constraint(atoms, constraint):
+    consts = atoms.constraints
+    if len(consts) == 0:
+        atoms.set_constraint(constraint)
+    else:
+        consts.append(constraint)
+        atoms.set_constraint(consts)
+
+def add_bond_constraints(atoms, indices):
+    try:
+        assert len(indices) % 2 == 0
+    except:
+        raise ValueError("Uneven number of indices")
+    nPairs = int(len(indices)/2)
+    for i in range(nPairs):
+        add_constraint(atoms, FixBondLength(indices[2*i], indices[1+(2*i)]))
+
+def write_contcar(atoms, root):
+    atoms.write(os.path.join(root,'CONTCAR'), format="vasp", direct=True)
+    insert_el(os.path.join(root, 'CONTCAR'))

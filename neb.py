@@ -10,7 +10,7 @@ from ase.build.tools import sort
 import numpy as np
 from datetime import datetime
 import shutil
-from generic_helpers import read_inputs, read_line_generic, dup_cmds, insert_el, get_int_dirs, log_generic, get_int_dirs_indices
+from generic_helpers import read_inputs, read_line_generic, dup_cmds, insert_el, get_int_dirs, log_generic, get_int_dirs_indices, add_bond_constraints, write_contcar
 
 def read_neb_inputs():
     """
@@ -103,6 +103,7 @@ def optimizer(neb, opt="FIRE", opt_alpha=150, logfile='opt.log'):
         dyn = opt_dict[opt](neb, trajectory="neb.traj", logfile=logfile, restart='hessian.pckl')
     return dyn
 
+
 def bond_constraint(atoms, indices):
     if len(indices) == 2:
         atoms.set_constraint(FixBondLength(indices[0], indices[1]))
@@ -132,20 +133,6 @@ def set_calc(exe_cmd, inputs_cmds, outfile=os.getcwd(), debug=False):
             ignoreStress=True,
     )
 
-# def log_stuff(message, logfname="neb_log.txt", restart=False, print_time=True, _write_type="a"):
-#     if print_time:
-#         message = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": " + message
-#     if restart:
-#         _write_type = "w"
-#     with open(logfname, _write_type) as f:
-#         f.write(message + "\n")
-
-def bond_constraint(atoms, indices):
-    if len(indices) > 2:
-        bond_consts = []
-    elif len(indices) == 2:
-        atoms.set_constraint(FixBondLength(indices[0], indices[1]))
-    return atoms
 
 def endpoint_optimizer(atoms, opt="FIRE", opt_alpha=150, logfile='opt.log'):
     """
@@ -168,8 +155,7 @@ def run_endpoint(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, opter="F
     if debug:
         atoms.set_atomic_numbers(np.ones(len(atoms.positions)))
     atoms.pbc = [True, True, False]
-    if not debug:
-        bond_constraint(atoms, fix_pairs)
+    add_bond_constraints(atoms, fix_pairs)
     calculator = set_calc(exe_cmd, inputs_cmds, outfile=tmp_dir, debug=debug)
     atoms.set_calculator(calculator)
     if os.path.exists(os.path.join(tmp_dir, "opt.log")):
@@ -178,10 +164,7 @@ def run_endpoint(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, opter="F
     if not debug:
         traj = Trajectory(tmp_dir + 'opt.traj', 'w', atoms, properties=['energy', 'forces'])
         dyn.attach(traj.write, interval=1)
-    def write_contcar(a=atoms):
-        a.write(tmp_dir + 'CONTCAR', format="vasp", direct=True)
-        # insert_el(tmp_dir + 'CONTCAR')
-    dyn.attach(write_contcar, interval=1)
+    dyn.attach(lambda: write_contcar(atoms, tmp_dir), interval=1)
     try:
         dyn.run(fmax=fmax, steps=max_steps)
     except Exception as e:
@@ -237,7 +220,8 @@ if __name__ == '__main__':
     else:
         log_stuff("no interp needed")
     log_stuff("neb method: " + str(neb_method))
-    image_dirs = [str(i) for i in range(0, nImages)]
+    if not read_int_dirs:
+        image_dirs = [str(i) for i in range(0, nImages)]
     os.chdir(work_dir)
     if os.path.exists("inputs"):
         inputs_cmds = read_inputs("inputs")
@@ -290,12 +274,10 @@ if __name__ == '__main__':
     dyn = optimizer(neb, opt=opter, logfile='neb.log')
     traj = Trajectory('neb.traj', 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)
-    def write_contcar(img_dir, image):
-        image.write(os.path.join(img_dir, 'CONTCAR'), format="vasp", direct=True)
-        insert_el(os.path.join(img_dir, 'CONTCAR'))
     for i in range(nImages):
         dyn.attach(Trajectory(os.path.join(os.path.join(work_dir, str(i)), 'opt-' + str(i) + '.traj'), 'w', images[i],
                               properties=['energy', 'forces']))
-        dyn.attach(write_contcar, interval=1, img_dir=os.path.join(work_dir, str(i)), image=images[i])
+        dyn.attach(lambda img, img_dir: write_contcar(img, img_dir),
+                   interval=1, img_dir=os.path.join(work_dir, str(i)), img=images[i])
     dyn.run(fmax=fmax, steps=max_steps)
     traj.close()
