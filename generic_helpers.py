@@ -219,7 +219,8 @@ def read_line_generic(line):
     key = line.lower().split(":")[0]
     val = line.rstrip("\n").split(":")[1]
     if not "#" in key:
-        val = val[:val.index("#")]
+        if "#" in val:
+            val = val[:val.index("#")]
         return key, val
     else:
         return None, None
