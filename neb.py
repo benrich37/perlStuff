@@ -204,7 +204,8 @@ if __name__ == '__main__':
             CONTCAR = os.path.join(_dir, "CONTCAR")
             POSCAR = os.path.join(_dir, "POSCAR")
             if os.path.exists(CONTCAR):
-                log_stuff(f'Image {i}: {str(CONTCAR)}')
+                msg = f'Image {i}: {str(CONTCAR)}'
+                log_stuff(msg)
                 images.append(read(CONTCAR))
                 images_og_dirs.append(CONTCAR)
             elif os.path.exists(POSCAR):
