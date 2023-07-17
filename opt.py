@@ -100,34 +100,6 @@ def get_calc(exe_cmd, cmds, calc_dir):
     )
 
 
-def run_step(step_dir, fix_pair, exe_cmd, inputs_cmds, fmax=0.1, max_steps=50):
-    atoms = read(os.path.join(step_dir, "POSCAR"), format="vasp")
-    atoms.pbc = [True, True, False]
-    add_bond_constraints(atoms, fix_pair)
-    scan_log("creating calculator")
-    calculator = get_calc(exe_cmd, step_dir, inputs_cmds)
-    scan_log("setting calculator")
-    atoms.set_calculator(calculator)
-    scan_log("printing atoms")
-    scan_log(atoms)
-    scan_log("setting optimizer")
-    dyn = optimizer(atoms, step_dir, FIRE)
-    traj = Trajectory(step_dir +'opt.traj', 'w', atoms, properties=['energy', 'forces'])
-    scan_log("attaching trajectory")
-    dyn.attach(traj.write, interval=1)
-    def write_contcar(a=atoms):
-        a.write(step_dir +'CONTCAR', format="vasp", direct=True)
-        insert_el(step_dir +'CONTCAR')
-    dyn.attach(write_contcar, interval=1)
-    try:
-        dyn.run(fmax=fmax, steps=max_steps)
-        finished(step_dir)
-    except Exception as e:
-        scan_log("couldnt run??")
-        scan_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
-        assert False, str(e)
-
-
 if __name__ == '__main__':
     work_dir, structure, fmax, max_steps, gpu, restart = read_opt_inputs()
     opt_log = lambda s: log_generic(s, work_dir, "opt_io", False)
@@ -142,7 +114,7 @@ if __name__ == '__main__':
     exe_cmd = 'srun ' + os.environ[_get]
     opt_log(f"exe cmd: {exe_cmd}")
     os.chdir(work_dir)
-    cmds = get_cmds(work_dir)
+    cmds = get_cmds(work_dir, ref_struct = structure)
     opt_dir = opj(work_dir, "opt")
     if not restart:
         opt_log("setting up opt dir")
