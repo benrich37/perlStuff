@@ -212,6 +212,7 @@ def log_generic(message, work, calc_type, print_bool):
         print(message)
 
 def get_cmds(work_dir, ref_struct = None):
+    os.chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
         return dup_cmds(opj(work_dir, "in"))
     else:
