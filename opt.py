@@ -9,7 +9,7 @@ from ase.optimize import FIRE
 from JDFTx import JDFTx
 import numpy as np
 import shutil
-from generic_helpers import insert_el, copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, add_bond_constraints
+from generic_helpers import insert_el, copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, add_bond_constraints, write_contcar, log_generic
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -57,45 +57,40 @@ python /global/homes/b/beri9208/BEAST_DB_Manager/manager/scan_bond.py > scan.out
 exit 0
 """
 
-def read_scan_inputs(fname = "scan_input"):
+def read_opt_inputs(fname = "opt_input"):
     """ Example:
-    Scan: 1, 4, 10, -.2
-    restart_at: 0
-    work: /pscratch/sd/b/beri9208/1nPt1H_NEB/calcs/surfs/H2_H2O_start/No_bias/scan_bond_test/
-    follow_momentum: True
-
-    notes:
-    Scan counts your atoms starting from 0, so the numbering in vesta will be 1 higher than what you need to put in here
-    The first two numbers in scan are the two atom indices involved in the bond you want to scan
-    The third number is the number of steps
-    The fourth number is the step size (in angstroms) for each step
+    structure: POSCAR
     """
-    lookline = None
-    restart_idx = 0
     work_dir = None
-    follow = False
+    structure = None
     inputs = get_inputs_list(fname)
+    fmax = 0.01
+    max_steps = 100
+    gpu = True
+    restart = False
     for input in inputs:
         key, val = input[0], input[1]
-        if "scan" in key:
-            lookline = val.split(",")
-        if "restart" in key:
-            restart_idx = int(val)
+        if "structure" in key:
+            structure = val
         if "work" in key:
             work_dir = val
-        if "follow" in key:
-            follow = "true" in val
-    atom_pair = [int(lookline[0]), int(lookline[1])]
-    scan_steps = int(lookline[2])
-    step_length = float(lookline[3])
+        if "gpu" in key:
+            gpu = "true" in val.lower()
+        if "restart" in key:
+            restart = "true" in val.lower()
+        if "max" in key:
+            if "fmax" in key:
+                fmax = float(val)
+            elif "step" in key:
+                max_steps = int(val)
     work_dir = fix_work_dir(work_dir)
-    return atom_pair, scan_steps, step_length, restart_idx, work_dir, follow
+    return work_dir, structure, fmax, max_steps, gpu, restart
 
 def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
         f.write("Done")
 
-def set_calc(exe_cmd, cmds, calc_dir):
+def get_calc(exe_cmd, cmds, calc_dir):
     return JDFTx(
         executable=exe_cmd,
         pseudoSet="GBRV_v1.5",
@@ -110,7 +105,7 @@ def run_step(step_dir, fix_pair, exe_cmd, inputs_cmds, fmax=0.1, max_steps=50):
     atoms.pbc = [True, True, False]
     add_bond_constraints(atoms, fix_pair)
     scan_log("creating calculator")
-    calculator = set_calc(exe_cmd, step_dir, inputs_cmds)
+    calculator = get_calc(exe_cmd, step_dir, inputs_cmds)
     scan_log("setting calculator")
     atoms.set_calculator(calculator)
     scan_log("printing atoms")
@@ -134,21 +129,38 @@ def run_step(step_dir, fix_pair, exe_cmd, inputs_cmds, fmax=0.1, max_steps=50):
 
 
 if __name__ == '__main__':
-    jdftx_exe = os.environ['JDFTx_GPU']
-    exe_cmd = 'srun ' + jdftx_exe
-    atom_pair, scan_steps, step_length, restart_idx, work_dir, follow = read_scan_inputs()
-    scan_log = lambda s: _scan_log(s, work_dir)
-    prep_input = lambda s, a, l: _prep_input(s, a, l, follow, scan_log, work_dir, 1)
+    work_dir, structure, fmax, max_steps, gpu, restart = read_opt_inputs()
+    opt_log = lambda s: log_generic(s, work_dir, "opt_io", False)
+    if restart:
+        structure = "CONTCAR"
+        opt_log("Requested restart: reading from CONTCAR in existing opt directory")
+    if gpu:
+        _get = 'JDFTx_GPU'
+    else:
+        _get = 'JDFTx'
+    opt_log(f"Using {_get} for JDFTx exe")
+    exe_cmd = 'srun ' + os.environ[_get]
+    opt_log(f"exe cmd: {exe_cmd}")
     os.chdir(work_dir)
     cmds = get_cmds(work_dir)
-    if (not os.path.exists("./0")) or (not os.path.isdir("./0")):
-        os.mkdir("./0")
-    copy_rel_files("./", "./0")
-    for i in list(range(scan_steps))[restart_idx:]:
-        if (not os.path.exists(f"./{str(i)}")) or (not os.path.isdir(f"./{str(i)}")):
-            os.mkdir(f"./{str(i)}")
-        if i > 0:
-            copy_rel_files(f"./{str(i-1)}", f"./{str(i)}")
-        if (i > 1):
-            prep_input(i, atom_pair, step_length)
-        run_step(opj(work_dir, str(i)), atom_pair, exe_cmd, cmds, fmax=0.1, max_steps=50)
+    opt_dir = opj(work_dir, "opt")
+    if not restart:
+        opt_log("setting up opt dir")
+        if (not ope(opt_dir)) or (not os.path.isdir(opt_dir)):
+            os.mkdir(opt_dir)
+        copy_rel_files("./", opt_dir)
+    atoms = read(opj(opt_dir, structure))
+    atoms.set_calculator(get_calc(exe_cmd, opt_dir, cmds))
+    dyn = optimizer(atoms, opt_dir, FIRE)
+    traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces'])
+    dyn.attach(traj.write, interval=1)
+    write_contcar = lambda a: write_contcar(a, opt_dir)
+    dyn.attach(write_contcar, interval=1)
+    opt_log("optimization starting")
+    try:
+        dyn.run(fmax=fmax, steps=max_steps)
+        finished(opt_dir)
+    except Exception as e:
+        opt_log("couldnt run??")
+        opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
+        assert False, str(e)

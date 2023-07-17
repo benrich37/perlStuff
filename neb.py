@@ -1,16 +1,16 @@
 import os
+from os.path import join as osj
+from os.path import exists as ose
 from ase.io import read, write
-import subprocess
 from ase.io.trajectory import Trajectory
 from ase.constraints import FixBondLength
-from ase.optimize import BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin, FIRE
+from ase.optimize import FIRE
 from ase.calculators.emt import EMT as debug_calc
 from ase.neb import NEB
-from ase.build.tools import sort
 import numpy as np
-from datetime import datetime
 import shutil
-from generic_helpers import read_inputs, read_line_generic, dup_cmds, insert_el, get_int_dirs, log_generic, get_int_dirs_indices, add_bond_constraints, write_contcar
+from neb_helpers import neb_optimizer, init_images, read_images, prep_neb
+from generic_helpers import read_inputs, read_line_generic, dup_cmds, optimizer, get_int_dirs, log_generic, get_int_dirs_indices, add_bond_constraints, write_contcar
 
 def read_neb_inputs():
     """
@@ -87,23 +87,6 @@ def read_neb_inputs():
     return nImages, restart_bool, work_dir, initial.strip(), final, k, neb_method, interp_method, fix_pairs, fmax, debug, max_steps, read_int_dirs
 
 
-def optimizer(neb, opt="FIRE", opt_alpha=150, logfile='opt.log'):
-    """
-    ASE Optimizers:
-        BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin and FIRE.
-    """
-    opt_dict = {'BFGS': BFGS, 'BFGSLineSearch': BFGSLineSearch,
-                'LBFGS': LBFGS, 'LBFGSLineSearch': LBFGSLineSearch,
-                'GPMin': GPMin, 'MDMin': MDMin, 'FIRE': FIRE}
-    if opt in ['BFGS', 'LBFGS']:
-        dyn = opt_dict[opt](neb, trajectory="neb.traj", logfile=logfile, restart='hessian.pckl', alpha=opt_alpha)
-    elif opt == 'FIRE':
-        dyn = opt_dict[opt](neb, trajectory="neb.traj", logfile=logfile, restart='hessian.pckl', a=(opt_alpha / 70) * 0.1)
-    else:
-        dyn = opt_dict[opt](neb, trajectory="neb.traj", logfile=logfile, restart='hessian.pckl')
-    return dyn
-
-
 def bond_constraint(atoms, indices):
     if len(indices) == 2:
         atoms.set_constraint(FixBondLength(indices[0], indices[1]))
@@ -116,11 +99,7 @@ def bond_constraint(atoms, indices):
 
 
 
-def set_calc(exe_cmd, inputs_cmds, outfile=os.getcwd(), debug=False):
-    if inputs_cmds is None:
-        cmds = dup_cmds(os.path.join(outfile, "in"))
-    else:
-        cmds = inputs_cmds
+def set_calc(exe_cmd, cmds, work=os.getcwd(), debug=False, debug_calc=None):
     if debug:
         return debug_calc()
     else:
@@ -128,39 +107,32 @@ def set_calc(exe_cmd, inputs_cmds, outfile=os.getcwd(), debug=False):
             executable=exe_cmd,
             pseudoSet="GBRV_v1.5",
             commands=cmds,
-            outfile=outfile,
+            outfile=work,
             ionic_steps=False,
             ignoreStress=True,
     )
 
+def run_endpoint(endpoint, tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, fmax=0.1, max_steps=50):
+    if os.path.exists(tmp_dir):
+        if os.path.isdir(tmp_dir):
+            shutil.rmtree(tmp_dir)
+    os.mkdir(tmp_dir)
+    shutil.copy(endpoint, osj(tmp_dir, "POSCAR"))
+    run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, fmax=fmax, debug=debug, max_steps=max_steps)
+    shutil.copy(osj(tmp_dir, "CONTCAR"), f"./{endpoint}_opted")
 
-def endpoint_optimizer(atoms, opt="FIRE", opt_alpha=150, logfile='opt.log'):
-    """
-    ASE Optimizers:
-        BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin and FIRE.
-    """
-    opt_dict = {'BFGS': BFGS, 'BFGSLineSearch': BFGSLineSearch,
-                'LBFGS': LBFGS, 'LBFGSLineSearch': LBFGSLineSearch,
-                'GPMin': GPMin, 'MDMin': MDMin, 'FIRE': FIRE}
-    if opt in ['BFGS', 'LBFGS']:
-        dyn = opt_dict[opt](atoms, logfile=logfile, restart='tmp/hessian.pckl', alpha=opt_alpha)
-    elif opt == 'FIRE':
-        dyn = opt_dict[opt](atoms, logfile=logfile, restart='tmp/hessian.pckl', a=(opt_alpha / 70) * 0.1)
-    else:
-        dyn = opt_dict[opt](atoms, logfile=logfile, restart='tmp/hessian.pckl')
-    return dyn
 
-def run_endpoint(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, opter="FIRE", fmax=0.1, max_steps=50):
+def run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, fmax=0.1, max_steps=50):
     atoms = read(os.path.join(tmp_dir, "POSCAR"), format="vasp")
     if debug:
         atoms.set_atomic_numbers(np.ones(len(atoms.positions)))
     atoms.pbc = [True, True, False]
     add_bond_constraints(atoms, fix_pairs)
-    calculator = set_calc(exe_cmd, inputs_cmds, outfile=tmp_dir, debug=debug)
+    calculator = set_calc(exe_cmd, inputs_cmds, work=tmp_dir, debug=debug)
     atoms.set_calculator(calculator)
-    if os.path.exists(os.path.join(tmp_dir, "opt.log")):
-        os.remove(os.path.join(tmp_dir, "opt.log"))
-    dyn = endpoint_optimizer(atoms, logfile=os.path.join(tmp_dir, "opt.log"), opt=opter)
+    if ose(osj(tmp_dir, "opt.log")):
+        os.remove(osj(tmp_dir, "opt.log"))
+    dyn = endpoint_optimizer(atoms)
     if not debug:
         traj = Trajectory(tmp_dir + 'opt.traj', 'w', atoms, properties=['energy', 'forces'])
         dyn.attach(traj.write, interval=1)
@@ -232,50 +204,27 @@ if __name__ == '__main__':
             log_stuff("ignoring fix pair (images already set up)")
         else:
             log_stuff(f're-optimizing initial and final images with specified atom pairs of fixed length')
+            endpoint_optimizer = lambda atoms: optimizer(atoms, osj(work_dir, "tmp"), FIRE)
             for endpoint in [_initial, _final]:
-                if os.path.exists("tmp"):
-                    if os.path.isdir("tmp"):
-                        shutil.rmtree("./tmp")
-                os.mkdir("tmp")
-                shutil.copy(endpoint, "./tmp/POSCAR")
-                run_endpoint("./tmp/", fix_pairs, exe_cmd, inputs_cmds, fmax=fmax, debug=debug, opter=opter, max_steps=max_steps)
-                shutil.copy("./tmp/CONTCAR", f"./{endpoint}_opted")
+                run_endpoint(endpoint, "./tmp/", fix_pairs, exe_cmd, inputs_cmds, fmax=fmax, debug=debug, max_steps=max_steps)
             _initial = _initial + "_opted"
             _final = _final + "_opted"
     if not read_int_dirs:
         if not restart_bool:
-            initial = sort(read(_initial, format="vasp"))
-            final = sort(read(_final, format="vasp"))
-            images = [initial]
-            images += [initial.copy() for i in range(nImages - 2)]
-            images += [final]
-            for i in range(nImages):
-                if os.path.exists(str(i)) and os.path.isdir(str(i)):
-                    log_stuff("resetting directory for image " + str(i))
-                    shutil.rmtree("./" + str(i))
-                os.mkdir(str(i))
+            images = init_images(_initial, _final, nImages, work_dir, log_stuff)
         else:
-            images = []
-            for i in range(nImages):
-                if os.path.exists(os.path.join(str(i), "CONTCAR")):
-                    images.append(read(os.path.join(str(i), "CONTCAR"), format="vasp"))
-                else:
-                    images.append(read(os.path.join(str(i), "POSCAR"), format="vasp"))
+            images = read_images(nImages, work_dir)
     if debug:
         for im in images:
             im.set_atomic_numbers([1]*len(im.positions))
     neb = NEB(images, parallel=False, climb=True, k=k, method=neb_method)
-    if not restart_bool:
-        neb.interpolate(apply_constraint=True, method=interp_method)
-        for i in range(nImages):
-            write(os.path.join(os.path.join(work_dir, str(i)), "POSCAR"), images[i], format="vasp")
-    for i in range(nImages):
-        images[i].set_calculator(set_calc(exe_cmd, inputs_cmds, debug=debug, outfile=os.path.join(work_dir, str(i))))
-    dyn = optimizer(neb, opt=opter, logfile='neb.log')
+    prep_neb(neb, images, work_dir, lambda work: set_calc(exe_cmd, inputs_cmds, debug=debug, work=work),
+             method=interp_method, restart=restart_bool)
+    dyn = neb_optimizer(neb, work_dir, FIRE)
     traj = Trajectory('neb.traj', 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)
     for i in range(nImages):
-        dyn.attach(Trajectory(os.path.join(os.path.join(work_dir, str(i)), 'opt-' + str(i) + '.traj'), 'w', images[i],
+        dyn.attach(Trajectory(osj(osj(work_dir, str(i)), 'opt-' + str(i) + '.traj'), 'w', images[i],
                               properties=['energy', 'forces']))
         dyn.attach(lambda img, img_dir: write_contcar(img, img_dir),
                    interval=1, img_dir=os.path.join(work_dir, str(i)), img=images[i])

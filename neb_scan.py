@@ -2,14 +2,83 @@ import os
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.constraints import FixBondLength
-from ase.optimize import BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin, FIRE
+from ase.optimize import FIRE
 from ase.calculators.emt import EMT as debug_calc
 import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from generic_helpers import read_inputs, insert_el, get_int_dirs, copy_rel_files, remove_restart_files, atom_str
-from neb_scan_helpers import read_neb_scan_inputs, log_total_elapsed, _neb_scan_log, check_poscar, neb_optimizer
+from generic_helpers import read_inputs, insert_el, get_int_dirs, copy_rel_files, remove_restart_files, atom_str, get_inputs_list, optimizer, fix_work_dir
+from neb_scan_helpers import log_total_elapsed, _neb_scan_log, check_poscar, neb_optimizer
+
+
+def read_neb_scan_inputs(fname="neb_scan_input"):
+    """
+    nImages: 10
+    restart: True
+    initial: POSCAR_start
+    final: POSCAR_end
+    work: /pscratch/sd/b/beri9208/1nPt1H_NEB/calcs/surfs/H2_H2O_start/No_bias/scan_bond_test/
+    k: 0.2
+    neb_method: spline
+    interp_method: linear
+    fix_pair: 0, 5
+    fmax: 0.03
+    """
+    k = 1.0
+    neb_method = "spline"
+    interp_method = "linear"
+    lookline = None
+    restart_idx = 0
+    max_steps = 100
+    neb_max_steps = None
+    fmax = 0.01
+    work_dir = None
+    follow = False
+    debug = False
+    inputs = get_inputs_list(fname)
+    for input in inputs:
+        key, val = input[0], input[1]
+        if "scan" in key:
+            lookline = val.split(",")
+        if "restart" in key:
+            restart_idx = int(val.strip())
+        if "debug" in key:
+            restart_bool_str = val
+            debug = "true" in restart_bool_str.lower()
+        if "work" in key:
+            work_dir = val.strip()
+        if ("method" in key) and ("neb" in key):
+            neb_method = val.strip()
+        if ("method" in key) and ("interp" in key):
+            interp_method = val.strip()
+        if "follow" in key:
+            follow = "true" in val
+        if key.lower()[0] == "k":
+            k = float(val.strip())
+        if "fix" in key:
+            lsplit = val.split(",")
+            fix_pairs = []
+            for atom in lsplit:
+                try:
+                    fix_pairs.append(int(atom))
+                except ValueError:
+                    pass
+        if "max" in key:
+            if "steps" in key:
+                if "neb" in key:
+                    neb_max_steps = int(val.strip())
+                else:
+                    max_steps = int(val.strip())
+            elif ("force" in key) or ("fmax" in key):
+                fmax = float(val.strip())
+    atom_pair = [int(lookline[0]), int(lookline[1])]
+    scan_steps = int(lookline[2])
+    step_length = float(lookline[3])
+    if neb_max_steps is None:
+        neb_max_steps = int(max_steps / 10.)
+    work_dir = fix_work_dir(work_dir)
+    return atom_pair, scan_steps, step_length, restart_idx, work_dir, follow, debug, max_steps, fmax, neb_method, interp_method, k, neb_max_steps
 
 
 def set_calc(exe_cmd, cmds, outfile=os.getcwd(), debug=False):
@@ -24,18 +93,6 @@ def set_calc(exe_cmd, cmds, outfile=os.getcwd(), debug=False):
             ionic_steps=False,
             ignoreStress=True,
     )
-
-
-def optimizer(atoms, work = "", opt_alpha=150, logfile='opt.log'):
-    """
-    ASE Optimizers:
-        BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin and FIRE.
-    """
-    logfile = work + logfile
-    restart = work + "hessian.pckl"
-    dyn = FIRE(atoms, logfile=logfile, restart=restart, a=(opt_alpha / 70) * 0.1, maxstep=0.1)
-    return dyn
-
 
 def bond_constraint(atoms, indices):
     atoms.set_constraint(FixBondLength(indices[0], indices[1]))
@@ -92,7 +149,7 @@ def run_step(step_dir, fix_pair, exe_cmd, inputs_cmds, debug=False, fmax=0.1, ma
     bond_constraint(atoms, fix_pair)
     calculator = set_calc(exe_cmd, inputs_cmds, outfile=step_dir, debug=debug)
     atoms.set_calculator(calculator)
-    dyn = optimizer(atoms, logfile=os.path.join(step_dir, "opt.log"))
+    dyn = optimizer(atoms, step_dir, FIRE)
     traj = Trajectory(step_dir +'opt.traj', 'w', atoms, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
     def write_contcar(a=atoms):
@@ -202,7 +259,7 @@ if __name__ == '__main__':
     else:
         exe_cmd = " "
     os.chdir(work_dir)
-    check_poscar(work_dir)
+    check_poscar(work_dir, scan_log)
     if os.path.exists("inputs"):
         inputs_cmds = read_inputs("inputs")
     prep_root(work_dir, restart_idx)

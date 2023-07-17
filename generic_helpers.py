@@ -5,6 +5,9 @@ import time
 import numpy as np
 from datetime import datetime
 from ase.constraints import FixBondLength
+from os.path import join as opj
+from os.path import exists as ope
+from ase.io import read, write
 
 
 gbrv_15_ref = [
@@ -252,5 +255,51 @@ def add_bond_constraints(atoms, indices):
         add_constraint(atoms, FixBondLength(indices[2*i], indices[1+(2*i)]))
 
 def write_contcar(atoms, root):
-    atoms.write(os.path.join(root,'CONTCAR'), format="vasp", direct=True)
+    atoms.write(os.path.join(root, 'CONTCAR'), format="vasp", direct=True)
     insert_el(os.path.join(root, 'CONTCAR'))
+
+def optimizer(atoms, root, opter, opt_alpha=150):
+    traj = opj(root, "opt.traj")
+    log = opj(root, "opt.log")
+    restart = opj(root, "hessian.pckl")
+    dyn = opter(atoms, trajectory=traj, logfile=log, restart=restart, a=(opt_alpha / 70) * 0.1)
+    return dyn
+
+
+def get_inputs_list(fname):
+    inputs = []
+    with open(fname, "r") as f:
+        for line in f:
+            key = line.lower().split(":")[0]
+            val = line.lower().rstrip("\n").split(":")[1]
+            if "#" in val:
+                val = val[:val.index("#")]
+            if not "#" in key:
+                inputs.append(tuple([key, val]))
+    return inputs
+
+def fix_work_dir(work_dir):
+    if work_dir is None:
+        work_dir = os.getcwd()
+    if work_dir[-1] != "/":
+        work_dir += "/"
+    return work_dir
+
+def get_bond_length(atoms, indices):
+    posn1 = atoms.positions[indices[0]]
+    posn2 = atoms.positions[indices[1]]
+    return np.linalg.norm(posn2 - posn1)
+
+def step_bond_with_momentum(atom_pair, step_length, atoms_prev_2, atoms_prev_1):
+    target_length = get_bond_length(atoms_prev_1, atom_pair) + step_length
+    dir_vecs = []
+    for i in range(len(atoms_prev_1.positions)):
+        dir_vecs.append(atoms_prev_1[i] - atoms_prev_2[i])
+    for i in range(len(dir_vecs)):
+        atoms_prev_1.positions[i] += dir_vecs[i]
+    dir_vec = atoms_prev_1.positions[atom_pair[1]] - atoms_prev_1.positions[atom_pair[0]]
+    cur_length = np.linalg.norm(dir_vec)
+    should_be_0 = target_length - cur_length
+    if not np.isclose(should_be_0, 0.0):
+        atoms_prev_1.positions[atom_pair[1]] += dir_vec*(should_be_0)/np.linalg.norm(dir_vec)
+    return atoms_prev_1
