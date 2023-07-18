@@ -9,7 +9,7 @@ from ase.optimize import FIRE
 from JDFTx import JDFTx
 import numpy as np
 import shutil
-from generic_helpers import insert_el, copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, add_bond_constraints, write_contcar, log_generic
+from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, write_contcar, log_generic
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -123,6 +123,9 @@ if __name__ == '__main__':
     if not restart:
         opt_log("setting up opt dir")
         if (not ope(opt_dir)) or (not os.path.isdir(opt_dir)):
+            os.mkdir(opt_dir)
+        else:
+            remove_dir_recursive(opt_dir)
             os.mkdir(opt_dir)
         copy_rel_files("./", opt_dir)
         shutil.copy(opj(work_dir, structure), opt_dir)

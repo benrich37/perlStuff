@@ -81,8 +81,6 @@ class JDFTx(Calculator):
                 if ionic_steps != False and type(ionic_steps) == list:
                         self.addCommand('ionic-minimize', 'nIterations '+str(ionic_steps[0]) +
                                         ' energyDiffThreshold '+ str(ionic_steps[1]))
-                        # assert False, ('Command not yet tested! '+
-                        # 'May cause errors with ASE ionic minimizer due to changing atom positions.')
 
                 # Nick edits
                 if len(self.InitialStateVars) > 0:
@@ -231,25 +229,12 @@ class JDFTx(Calculator):
                 inputfile += '\n'
                 print(self.input)
                 for cmd, v in self.input:
-                        #inputfile += '%s %s\n' % (cmd, str(v))
                         if '\\\\\\n' in v:
                                 vc = '\\\n'.join(v.split('\\\\\\n'))
-                                #vc = ''
-                                #tmp = v.split('\\\n')
-                                #for i,tmpi in enumaerate(tmp):
-                                #        if i+1 < len(tmp):
-                                #                vc = tmpi + '\\\n'
-                                #        else:
-                                #                vc = tmpi
-                                #print(vc)
                         else:
                                 vc = v + "\n"
-                        #vc = '\\'.join(v.split('\\'))
-                        #vc = '\n'.join(vc.split('\n'))
                         inputfile += cmd + ' '
                         inputfile += vc + '\n'
-                #print('\nBug checking\n\n')
-                #print(inputfile)
 
                 # Add ion info
                 atomPos = [x / Bohr for x in list(atoms.get_positions())]  # Also convert to bohr
