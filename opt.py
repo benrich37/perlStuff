@@ -114,6 +114,8 @@ if __name__ == '__main__':
     exe_cmd = 'srun ' + os.environ[_get]
     opt_log(f"exe cmd: {exe_cmd}")
     os.chdir(work_dir)
+    opt_log(f"structure: {structure}")
+    opt_log(f"work_dir: {work_dir}")
     cmds = get_cmds(work_dir, ref_struct = structure)
     opt_dir = opj(work_dir, "opt")
     if not restart:
