@@ -125,6 +125,7 @@ if __name__ == '__main__':
         if (not ope(opt_dir)) or (not os.path.isdir(opt_dir)):
             os.mkdir(opt_dir)
         copy_rel_files("./", opt_dir)
+        shutil.copy(opj(work_dir, structure), opt_dir)
     atoms = read(opj(opt_dir, structure))
     atoms.set_calculator(get_calc(exe_cmd, opt_dir, cmds))
     dyn = optimizer(atoms, opt_dir, FIRE)
