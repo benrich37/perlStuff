@@ -321,3 +321,10 @@ def dump_template_input(fname, template, cwd):
         dump_str += el + "\n"
     with open(opj(cwd, fname), "w") as f:
         f.write(dump_str)
+
+def read_pbc_val(val):
+    vsplit = val.split(' ')
+    pbc = []
+    for i in range(3):
+        pbc.append("true" in vsplit[i].lower())
+    return pbc

@@ -1,6 +1,6 @@
 import os
-from os.path import join as osj
-from os.path import exists as ose
+from os.path import join as opj
+from os.path import exists as ope
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.constraints import FixBondLength
@@ -11,8 +11,21 @@ import numpy as np
 import shutil
 from neb_helpers import neb_optimizer, init_images, read_images, prep_neb
 from generic_helpers import read_inputs, read_line_generic, dup_cmds, optimizer, get_int_dirs, log_generic, get_int_dirs_indices, add_bond_constraints, write_contcar
+from generic_helpers import dump_template_input
 
-def read_neb_inputs():
+
+neb_template = ["nImages: 10",
+                "restart: True",
+                "initial: POSCAR_foo",
+                "final: CONTCAR_bar # comment example",
+                "k: 0.2",
+                "neb method: spline",
+                "interp method: linear",
+                "fix_pair: 22, 25",
+                "fmax: 0.05",
+                "max_steps: 100"]
+
+def read_neb_inputs(fname="neb_input"):
     """
     nImages: 10
     restart: True
@@ -25,6 +38,9 @@ def read_neb_inputs():
     fix_pair: 0, 5
     fmax: 0.03
     """
+    if not ope(fname):
+        dump_template_input(fname, neb_template, os.getcwd())
+        raise ValueError(f"No neb input supplied: dumping template {fname}")
     nImages = None
     restart_bool = False
     work_dir = None
@@ -38,7 +54,7 @@ def read_neb_inputs():
     debug = False
     max_steps = 100
     read_int_dirs = False
-    with open("neb_input", "r") as f:
+    with open(fname, "r") as f:
         for line in f:
             key, val = read_line_generic(line)
             if "images" in key:
@@ -117,9 +133,9 @@ def run_endpoint(endpoint, tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False
         if os.path.isdir(tmp_dir):
             shutil.rmtree(tmp_dir)
     os.mkdir(tmp_dir)
-    shutil.copy(endpoint, osj(tmp_dir, "POSCAR"))
+    shutil.copy(endpoint, opj(tmp_dir, "POSCAR"))
     run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, fmax=fmax, debug=debug, max_steps=max_steps)
-    shutil.copy(osj(tmp_dir, "CONTCAR"), f"./{endpoint}_opted")
+    shutil.copy(opj(tmp_dir, "CONTCAR"), f"./{endpoint}_opted")
 
 
 def run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, fmax=0.1, max_steps=50):
@@ -130,8 +146,8 @@ def run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, f
     add_bond_constraints(atoms, fix_pairs)
     calculator = set_calc(exe_cmd, inputs_cmds, work=tmp_dir, debug=debug)
     atoms.set_calculator(calculator)
-    if ose(osj(tmp_dir, "opt.log")):
-        os.remove(osj(tmp_dir, "opt.log"))
+    if ope(opj(tmp_dir, "opt.log")):
+        os.remove(opj(tmp_dir, "opt.log"))
     dyn = endpoint_optimizer(atoms)
     if not debug:
         traj = Trajectory(tmp_dir + 'opt.traj', 'w', atoms, properties=['energy', 'forces'])
@@ -204,7 +220,7 @@ if __name__ == '__main__':
             log_stuff("ignoring fix pair (images already set up)")
         else:
             log_stuff(f're-optimizing initial and final images with specified atom pairs of fixed length')
-            endpoint_optimizer = lambda atoms: optimizer(atoms, osj(work_dir, "tmp"), FIRE)
+            endpoint_optimizer = lambda atoms: optimizer(atoms, opj(work_dir, "tmp"), FIRE)
             for endpoint in [_initial, _final]:
                 run_endpoint(endpoint, "./tmp/", fix_pairs, exe_cmd, inputs_cmds, fmax=fmax, debug=debug, max_steps=max_steps)
             _initial = _initial + "_opted"
@@ -224,7 +240,7 @@ if __name__ == '__main__':
     traj = Trajectory('neb.traj', 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)
     for i in range(nImages):
-        dyn.attach(Trajectory(osj(osj(work_dir, str(i)), 'opt-' + str(i) + '.traj'), 'w', images[i],
+        dyn.attach(Trajectory(opj(opj(work_dir, str(i)), 'opt-' + str(i) + '.traj'), 'w', images[i],
                               properties=['energy', 'forces']))
         dyn.attach(lambda img, img_dir: write_contcar(img, img_dir),
                    interval=1, img_dir=os.path.join(work_dir, str(i)), img=images[i])

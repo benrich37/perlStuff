@@ -10,7 +10,7 @@ from JDFTx import JDFTx
 import numpy as np
 import shutil
 from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
-from generic_helpers import write_contcar, log_generic, dump_template_input
+from generic_helpers import write_contcar, log_generic, dump_template_input, read_pbc_val
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -30,39 +30,12 @@ to a lower level (ie change kpoint-folding to 1 1 1), make sure you delete all t
 """
 
 
-"""
-#!/bin/bash
-#SBATCH -J scanny
-#SBATCH --time=12:00:00
-#SBATCH -o scanny.out
-#SBATCH -e scanny.err
-#SBATCH -q regular_ss11
-#SBATCH -N 1
-#SBATCH -c 32
-#SBATCH --ntasks-per-node=4
-#SBATCH -C gpu
-#SBATCH --gpus-per-task=1
-#SBATCH --gpu-bind=none
-#SBATCH -A m4025_g
-
-module use --append /global/cfs/cdirs/m4025/Software/Perlmutter/modules
-module load jdftx/gpu
-
-export JDFTx_NUM_PROCS=1
-
-export SLURM_CPU_BIND="cores"
-export JDFTX_MEMPOOL_SIZE=36000
-export MPICH_GPU_SUPPORT_ENABLED=1
-
-python /global/homes/b/beri9208/BEAST_DB_Manager/manager/scan_bond.py > scan.out
-exit 0
-"""
-
 opt_template = ["structure: POSCAR_new #using this one bc idk",
                 "fmax: 0.05",
                 "max_steps: 30",
                 "gpu: False",
-                "restart: False"]
+                "restart: False",
+                "pbc: False False False"]
 
 def read_opt_inputs(fname = "opt_input"):
     """ Example:
@@ -78,6 +51,7 @@ def read_opt_inputs(fname = "opt_input"):
     max_steps = 100
     gpu = True
     restart = False
+    pbc = [True, True, False]
     for input in inputs:
         key, val = input[0], input[1]
         if "structure" in key:
@@ -93,8 +67,10 @@ def read_opt_inputs(fname = "opt_input"):
                 fmax = float(val)
             elif "step" in key:
                 max_steps = int(val)
+        if "pbc" in key:
+            pbc = read_pbc_val(val)
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart
+    return work_dir, structure, fmax, max_steps, gpu, restart, pbc
 
 def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
@@ -111,7 +87,7 @@ def get_calc(exe_cmd, cmds, calc_dir):
 
 
 if __name__ == '__main__':
-    work_dir, structure, fmax, max_steps, gpu, restart = read_opt_inputs()
+    work_dir, structure, fmax, max_steps, gpu, restart, pbc = read_opt_inputs()
     opt_log = lambda s: log_generic(s, work_dir, "opt_io", False)
     if ope("opt_io.log"):
         os.remove("opt_io.log")
@@ -142,6 +118,7 @@ if __name__ == '__main__':
     start_path = opj(opt_dir, structure)
     opt_log(f"Reading {start_path} for structure")
     atoms = read(opj(opt_dir, structure))
+    atoms.pbc = pbc
     opt_log(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t opt_dir: {opt_dir} \n \t cmds: {cmds}")
     atoms.set_calculator(get_calc(exe_cmd, cmds, opt_dir))
     dyn = optimizer(atoms, opt_dir, FIRE)
