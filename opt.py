@@ -126,7 +126,10 @@ if __name__ == '__main__':
             os.mkdir(opt_dir)
         copy_rel_files("./", opt_dir)
         shutil.copy(opj(work_dir, structure), opt_dir)
+    start_path = opj(opt_dir, structure)
+    opt_log(f"Reading {start_path} for structure")
     atoms = read(opj(opt_dir, structure))
+    opt_log(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t opt_dir: {opt_dir} \n \t cmds: {cmds}")
     atoms.set_calculator(get_calc(exe_cmd, opt_dir, cmds))
     dyn = optimizer(atoms, opt_dir, FIRE)
     traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces'])
@@ -134,8 +137,10 @@ if __name__ == '__main__':
     write_contcar = lambda a: write_contcar(a, opt_dir)
     dyn.attach(write_contcar, interval=1)
     opt_log("optimization starting")
+    opt_log(f"Fmax: {fmax} \nmax_steps: {max_steps}")
     try:
         dyn.run(fmax=fmax, steps=max_steps)
+        opt_log(f"Finished in {dyn.nsteps}/{max_steps}\n")
         finished(opt_dir)
     except Exception as e:
         opt_log("couldnt run??")
