@@ -269,14 +269,17 @@ def optimizer(atoms, root, opter, opt_alpha=150):
     return dyn
 
 
-def get_inputs_list(fname):
+def get_inputs_list(fname, auto_lower=True):
     inputs = []
     with open(fname, "r") as f:
         for line in f:
-            key = line.lower().split(":")[0]
-            val = line.lower().rstrip("\n").split(":")[1]
+            key = line.split(":")[0]
+            val = line.rstrip("\n").split(":")[1]
             if "#" in val:
                 val = val[:val.index("#")]
+            if auto_lower:
+                key = key.lower()
+                val = val.lower()
             if not "#" in key:
                 inputs.append(tuple([key, val]))
     return inputs

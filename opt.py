@@ -63,7 +63,7 @@ def read_opt_inputs(fname = "opt_input"):
     """
     work_dir = None
     structure = None
-    inputs = get_inputs_list(fname)
+    inputs = get_inputs_list(fname, auto_lower=False)
     fmax = 0.01
     max_steps = 100
     gpu = True
