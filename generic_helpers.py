@@ -83,6 +83,10 @@ def read_inputs(work_dir, ref_struct=None):
                     for ig in ignore:
                         if ig in line:
                             skip = True
+                    if "#" in line.strip().split(' ')[0:2]:
+                        skip = True
+                    if "ASE" in line:
+                        break
                     if not skip:
                         cmd = line[:line.index(" ")]
                         rest = line.rstrip("\n")[line.index(" ") + 1:]
