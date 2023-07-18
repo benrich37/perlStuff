@@ -69,7 +69,8 @@ def insert_el(filename):
     with open(filename, 'w') as f:
         f.write('\n'.join(contents))
 
-def read_inputs(inpfname, ref_struct=None):
+def read_inputs(work_dir, ref_struct=None):
+    inpfname = opj(work_dir, "inputs")
     if os.path.exists("inputs"):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump", "initial-state",
                   "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
@@ -94,12 +95,11 @@ def read_inputs(inpfname, ref_struct=None):
         else:
             do_n_bands = True
         if do_n_bands:
-            if ope(ref_struct):
-                input_cmds["elec-n-bands"] = str(get_nbands(ref_struct))
-            elif ope("CONTCAR"):
-                input_cmds["elec-n-bands"] = str(get_nbands("CONTCAR"))
-            else:
-                input_cmds["elec-n-bands"] = str(get_nbands("POSCAR"))
+            ref_paths = [opj(work_dir, ref_struct), opj(work_dir, "CONTCAR"), opj(work_dir, "POSCAR")]
+            for p in ref_paths:
+                if ope(p):
+                    input_cmds["elec-n-bands"] = str(get_nbands(p))
+                    break
         return input_cmds
     else:
         return None
@@ -216,7 +216,7 @@ def get_cmds(work_dir, ref_struct = None):
     if not ope(opj(work_dir, "inputs")):
         return dup_cmds(opj(work_dir, "in"))
     else:
-        return read_inputs(opj(work_dir, "inputs"), ref_struct=ref_struct)
+        return read_inputs(work_dir, ref_struct=ref_struct)
 
 
 

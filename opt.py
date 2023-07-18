@@ -103,6 +103,8 @@ def get_calc(exe_cmd, cmds, calc_dir):
 if __name__ == '__main__':
     work_dir, structure, fmax, max_steps, gpu, restart = read_opt_inputs()
     opt_log = lambda s: log_generic(s, work_dir, "opt_io", False)
+    if ope("opt_io.log"):
+        os.remove("opt_io.log")
     if restart:
         structure = "CONTCAR"
         opt_log("Requested restart: reading from CONTCAR in existing opt directory")
