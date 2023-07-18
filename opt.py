@@ -130,7 +130,7 @@ if __name__ == '__main__':
     opt_log(f"Reading {start_path} for structure")
     atoms = read(opj(opt_dir, structure))
     opt_log(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t opt_dir: {opt_dir} \n \t cmds: {cmds}")
-    atoms.set_calculator(get_calc(exe_cmd, opt_dir, cmds))
+    atoms.set_calculator(get_calc(exe_cmd, cmds, opt_dir))
     dyn = optimizer(atoms, opt_dir, FIRE)
     traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
