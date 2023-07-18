@@ -9,7 +9,8 @@ from ase.optimize import FIRE
 from JDFTx import JDFTx
 import numpy as np
 import shutil
-from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, write_contcar, log_generic
+from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
+from generic_helpers import write_contcar, log_generic, dump_template_input
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -57,12 +58,21 @@ python /global/homes/b/beri9208/BEAST_DB_Manager/manager/scan_bond.py > scan.out
 exit 0
 """
 
+opt_template = ["structure: POSCAR_new #using this one bc idk",
+                "fmax: 0.05",
+                "max_steps: 30",
+                "gpu: False",
+                "restart: False"]
+
 def read_opt_inputs(fname = "opt_input"):
     """ Example:
     structure: POSCAR
     """
     work_dir = None
     structure = None
+    if not ope(fname):
+        dump_template_input(fname, opt_template, os.getcwd())
+        raise ValueError(f"No opt input supplied: dumping template {fname}")
     inputs = get_inputs_list(fname, auto_lower=False)
     fmax = 0.01
     max_steps = 100

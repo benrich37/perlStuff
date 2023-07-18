@@ -313,3 +313,11 @@ def step_bond_with_momentum(atom_pair, step_length, atoms_prev_2, atoms_prev_1):
     if not np.isclose(should_be_0, 0.0):
         atoms_prev_1.positions[atom_pair[1]] += dir_vec*(should_be_0)/np.linalg.norm(dir_vec)
     return atoms_prev_1
+
+
+def dump_template_input(fname, template, cwd):
+    dump_str = ""
+    for el in template:
+        dump_str += el + "\n"
+    with open(opj(cwd, fname), "w") as f:
+        f.write(dump_str)
