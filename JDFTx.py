@@ -73,6 +73,7 @@ class JDFTx(Calculator):
                         commands = commands.items()
                 elif commands is None:
                         commands = []
+                print(commands)
                 for cmd, v in commands:
                         self.addCommand(cmd, v)
 
