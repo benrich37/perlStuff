@@ -197,6 +197,12 @@ def need_sort(root):
                     dones.append(at)
     return False
 
+def get_log_fn(work, calc_type, print_bool):
+    fname = opj(work, calc_type + ".log")
+    if ope(fname):
+        os.remove(fname)
+    return lambda s: log_generic(s,work, calc_type, print_bool)
+
 def log_generic(message, work, calc_type, print_bool):
     print(message)
     if not "\n" in message:
@@ -252,7 +258,7 @@ def add_constraint(atoms, constraint):
         consts.append(constraint)
         atoms.set_constraint(consts)
 
-def add_bond_constraints(atoms, indices):
+def add_bond_constraints(atoms, indices, log_fn=None):
     try:
         assert len(indices) % 2 == 0
     except:
@@ -260,6 +266,11 @@ def add_bond_constraints(atoms, indices):
     nPairs = int(len(indices)/2)
     for i in range(nPairs):
         add_constraint(atoms, FixBondLength(indices[2*i], indices[1+(2*i)]))
+        if not log_fn is None:
+            cur_length = np.linalg.norm(atoms.positions[indices[0]] - atoms.positions[indices[1]])
+            print_str = f"Fixed bond {atom_str(atoms, indices[0])} -"
+            print_str += f" {atom_str(atoms, indices[1])} fixed to {cur_length:.{4}g} A"
+            log_fn(print_str)
 
 def write_contcar(atoms, root):
     atoms.write(os.path.join(root, 'CONTCAR'), format="vasp", direct=True)
@@ -328,3 +339,30 @@ def read_pbc_val(val):
     for i in range(3):
         pbc.append("true" in vsplit[i].lower())
     return pbc
+
+def _get_calc(exe_cmd, cmds, root, JDFTx_fn, debug=False, debug_fn=None, log_fn=None):
+    if debug:
+        if not log_fn is None:
+            log_fn("Setting calc to debug calc")
+        return debug_fn()
+    else:
+        if not log_fn is None:
+            log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds}")
+        return JDFTx_fn(
+            executable=exe_cmd,
+            pseudoSet="GBRV_v1.5",
+            commands=cmds,
+            outfile=root,
+            ionic_steps=False
+        )
+
+
+def get_exe_cmd(gpu, log_fn):
+    if gpu:
+        _get = 'JDFTx_GPU'
+    else:
+        _get = 'JDFTx'
+    log_fn(f"Using {_get} for JDFTx exe")
+    exe_cmd = 'srun ' + os.environ[_get]
+    log_fn(f"exe_cmd: {exe_cmd}")
+    return exe_cmd

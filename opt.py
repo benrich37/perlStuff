@@ -10,7 +10,7 @@ from JDFTx import JDFTx
 import numpy as np
 import shutil
 from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
-from generic_helpers import write_contcar, log_generic, dump_template_input, read_pbc_val
+from generic_helpers import write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -76,35 +76,19 @@ def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
         f.write("Done")
 
-def get_calc(exe_cmd, cmds, calc_dir):
-    return JDFTx(
-        executable=exe_cmd,
-        pseudoSet="GBRV_v1.5",
-        commands=cmds,
-        outfile=calc_dir,
-        ionic_steps=False
-    )
-
 
 if __name__ == '__main__':
     work_dir, structure, fmax, max_steps, gpu, restart, pbc = read_opt_inputs()
-    opt_log = lambda s: log_generic(s, work_dir, "opt_io", False)
-    if ope("opt_io.log"):
-        os.remove("opt_io.log")
+    opt_log = get_log_fn(work_dir, "opt_io", False)
     if restart:
         structure = "CONTCAR"
         opt_log("Requested restart: reading from CONTCAR in existing opt directory")
-    if gpu:
-        _get = 'JDFTx_GPU'
-    else:
-        _get = 'JDFTx'
-    opt_log(f"Using {_get} for JDFTx exe")
-    exe_cmd = 'srun ' + os.environ[_get]
-    opt_log(f"exe cmd: {exe_cmd}")
+    exe_cmd = get_exe_cmd(gpu, opt_log)
+    cmds = get_cmds(work_dir, ref_struct=structure)
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=opt_log)
     os.chdir(work_dir)
     opt_log(f"structure: {structure}")
     opt_log(f"work_dir: {work_dir}")
-    cmds = get_cmds(work_dir, ref_struct = structure)
     opt_dir = opj(work_dir, "opt")
     if not restart:
         opt_log("setting up opt dir")
@@ -119,12 +103,11 @@ if __name__ == '__main__':
     opt_log(f"Reading {start_path} for structure")
     atoms = read(opj(opt_dir, structure))
     atoms.pbc = pbc
-    opt_log(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t opt_dir: {opt_dir} \n \t cmds: {cmds}")
-    atoms.set_calculator(get_calc(exe_cmd, cmds, opt_dir))
+    atoms.set_calculator(get_calc(opt_dir))
     dyn = optimizer(atoms, opt_dir, FIRE)
     traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
-    write_contcar = lambda a: write_contcar(a, opt_dir)
+    write_contcar = lambda: write_contcar(atoms, opt_dir)
     dyn.attach(write_contcar, interval=1)
     opt_log("optimization starting")
     opt_log(f"Fmax: {fmax} \nmax_steps: {max_steps}")

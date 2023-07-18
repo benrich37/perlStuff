@@ -10,8 +10,8 @@ from ase.neb import NEB
 import numpy as np
 import shutil
 from neb_helpers import neb_optimizer, init_images, read_images, prep_neb
-from generic_helpers import read_inputs, read_line_generic, dup_cmds, optimizer, get_int_dirs, log_generic, get_int_dirs_indices, add_bond_constraints, write_contcar
-from generic_helpers import dump_template_input
+from generic_helpers import read_inputs, read_line_generic, dup_cmds, optimizer, get_int_dirs, get_log_fn, get_int_dirs_indices, add_bond_constraints, write_contcar
+from generic_helpers import dump_template_input, read_pbc_val, _get_calc, get_exe_cmd, get_cmds
 
 
 neb_template = ["nImages: 10",
@@ -54,6 +54,8 @@ def read_neb_inputs(fname="neb_input"):
     debug = False
     max_steps = 100
     read_int_dirs = False
+    pbc = [True, True, False]
+    gpu = True
     with open(fname, "r") as f:
         for line in f:
             key, val = read_line_generic(line)
@@ -98,9 +100,13 @@ def read_neb_inputs(fname="neb_input"):
                     fmax = float(val.strip())
             if "fmax" in key:
                 fmax = float(val.strip())
+            if "pbc" in key:
+                pbc = read_pbc_val(val)
+            if "gpu" in key:
+                gpu = "true" in val.lower()
     if work_dir is None:
         work_dir = os.getcwd()
-    return nImages, restart_bool, work_dir, initial.strip(), final, k, neb_method, interp_method, fix_pairs, fmax, debug, max_steps, read_int_dirs
+    return nImages, restart_bool, work_dir, initial.strip(), final, k, neb_method, interp_method, fix_pairs, fmax, debug, max_steps, read_int_dirs, pbc, gpu
 
 
 def bond_constraint(atoms, indices):
@@ -128,21 +134,21 @@ def set_calc(exe_cmd, cmds, work=os.getcwd(), debug=False, debug_calc=None):
             ignoreStress=True,
     )
 
-def run_endpoint(endpoint, tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, fmax=0.1, max_steps=50):
+def run_endpoint(endpoint, tmp_dir, fix_pairs, exe_cmd, inputs_cmds, pbc, debug=False, fmax=0.1, max_steps=50):
     if os.path.exists(tmp_dir):
         if os.path.isdir(tmp_dir):
             shutil.rmtree(tmp_dir)
     os.mkdir(tmp_dir)
     shutil.copy(endpoint, opj(tmp_dir, "POSCAR"))
-    run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, fmax=fmax, debug=debug, max_steps=max_steps)
+    run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, pbc, fmax=fmax, debug=debug, max_steps=max_steps)
     shutil.copy(opj(tmp_dir, "CONTCAR"), f"./{endpoint}_opted")
 
 
-def run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, fmax=0.1, max_steps=50):
+def run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, pbc, debug=False, fmax=0.1, max_steps=50):
     atoms = read(os.path.join(tmp_dir, "POSCAR"), format="vasp")
     if debug:
         atoms.set_atomic_numbers(np.ones(len(atoms.positions)))
-    atoms.pbc = [True, True, False]
+    atoms.pbc = pbc
     add_bond_constraints(atoms, fix_pairs)
     calculator = set_calc(exe_cmd, inputs_cmds, work=tmp_dir, debug=debug)
     atoms.set_calculator(calculator)
@@ -160,34 +166,50 @@ def run_endpoint_runner(tmp_dir, fix_pairs, exe_cmd, inputs_cmds, debug=False, f
         print(e)  # Done: make sure this syntax will still print JDFT errors correctly
         assert False, str(e)
 
+def read_from_int_dirs(work_dir):
+    _initial = "n/a"
+    _final = "n/a"
+    log_stuff("Read existing dirs requested")
+    int_dirs = get_int_dirs(work_dir)
+    int_dirs_indices = get_int_dirs_indices(int_dirs)
+    images = []
+    images_og_dirs = []
+    for i in range(len(int_dirs)):
+        _dir = int_dirs[int_dirs_indices[i]]
+        CONTCAR = opj(_dir, "CONTCAR")
+        POSCAR = opj(_dir, "POSCAR")
+        if ope(CONTCAR):
+            log_stuff(f'Image {i}: {CONTCAR}')
+            images.append(read(CONTCAR))
+            images_og_dirs.append(CONTCAR)
+        elif ope(POSCAR):
+            log_stuff(f'Image {i}: {POSCAR}')
+            images.append(read(POSCAR))
+            images_og_dirs.append(POSCAR)
+        else:
+            log_stuff(f'No recognized input file for image {i} in {_dir}')
+            raise ReferenceError(f'No recognized input file for image {i} in {_dir}')
+    nImages = len(images)
+    return _initial, _final, images, images_og_dirs, nImages
+
 
 if __name__ == '__main__':
-    nImages, restart_bool, work_dir, _initial, _final, k, neb_method, interp_method, fix_pairs, fmax, debug, max_steps, read_int_dirs = read_neb_inputs()
-    log_stuff = lambda s: log_generic(s, work_dir, "neb", True)
+    nImages, restart_bool, work_dir, _initial, _final, k, neb_method, interp_method, fix_pairs, fmax, debug, max_steps, read_int_dirs, pbc, gpu = read_neb_inputs()
+    log_stuff = get_log_fn(work_dir, "neb", False)
+    cmds = get_cmds(work_dir)
+    if not debug:
+        from JDFTx import JDFTx
+
+        exe_cmd = get_exe_cmd(True, log_stuff)
+        get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, debug=debug, log_fn=log_stuff)
+    else:
+        exe_cmd = " "
+        from ase.calculators.emt import EMT as debug_calc
+
+        get_calc = lambda root: _get_calc(exe_cmd, cmds, root, None, debug=debug, debug_fn=debug_calc,
+                                          log_fn=log_stuff)
     if read_int_dirs:
-        _initial = "n/a"
-        _final = "n/a"
-        log_stuff("Read existing dirs requested")
-        int_dirs = get_int_dirs(work_dir)
-        int_dirs_indices = get_int_dirs_indices(int_dirs)
-        images = []
-        images_og_dirs = []
-        for i in range(len(int_dirs)):
-            _dir = int_dirs[int_dirs_indices[i]]
-            CONTCAR = os.path.join(_dir, "CONTCAR")
-            POSCAR = os.path.join(_dir, "POSCAR")
-            if os.path.exists(CONTCAR):
-                log_stuff(f'Image {i}: {CONTCAR}')
-                images.append(read(CONTCAR))
-                images_og_dirs.append(CONTCAR)
-            elif os.path.exists(POSCAR):
-                log_stuff(f'Image {i}: {POSCAR}')
-                images.append(read(POSCAR))
-                images_og_dirs.append(POSCAR)
-            else:
-                log_stuff(f'No recognized input file for image {i} in {_dir}')
-                raise ReferenceError(f'No recognized input file for image {i} in {_dir}')
-        nImages = len(images)
+        _initial, _final, images, images_og_dirs, nImages = read_from_int_dirs(work_dir)
     log_stuff("nImages: " + str(nImages))
     log_stuff("restart: " + str(restart_bool))
     log_stuff("work: " + str(work_dir))
@@ -196,13 +218,6 @@ if __name__ == '__main__':
     log_stuff("k: " + str(k))
     log_stuff("fmax: " + str(fmax))
     log_stuff("fix pairs: " + str(fix_pairs))
-    if not debug:
-        from JDFTx import JDFTx
-        jdftx_exe = os.environ['JDFTx_GPU']
-        exe_cmd = 'srun ' + jdftx_exe
-    else:
-        exe_cmd = " "
-    opter = "FIRE"
     if not restart_bool:
         log_stuff("interp method: " + str(interp_method))
     else:
@@ -211,10 +226,6 @@ if __name__ == '__main__':
     if not read_int_dirs:
         image_dirs = [str(i) for i in range(0, nImages)]
     os.chdir(work_dir)
-    if os.path.exists("inputs"):
-        inputs_cmds = read_inputs("inputs")
-    else:
-        inputs_cmds = dup_cmds("in")
     if not fix_pairs is None:
         if restart_bool:
             log_stuff("ignoring fix pair (images already set up)")
@@ -222,7 +233,7 @@ if __name__ == '__main__':
             log_stuff(f're-optimizing initial and final images with specified atom pairs of fixed length')
             endpoint_optimizer = lambda atoms: optimizer(atoms, opj(work_dir, "tmp"), FIRE)
             for endpoint in [_initial, _final]:
-                run_endpoint(endpoint, "./tmp/", fix_pairs, exe_cmd, inputs_cmds, fmax=fmax, debug=debug, max_steps=max_steps)
+                run_endpoint(endpoint, "./tmp/", fix_pairs, exe_cmd, cmds, pbc, fmax=fmax, debug=debug, max_steps=max_steps)
             _initial = _initial + "_opted"
             _final = _final + "_opted"
     if not read_int_dirs:
@@ -234,8 +245,7 @@ if __name__ == '__main__':
         for im in images:
             im.set_atomic_numbers([1]*len(im.positions))
     neb = NEB(images, parallel=False, climb=True, k=k, method=neb_method)
-    prep_neb(neb, images, work_dir, lambda work: set_calc(exe_cmd, inputs_cmds, debug=debug, work=work),
-             method=interp_method, restart=restart_bool)
+    prep_neb(neb, images, work_dir, get_calc, pbc, method=interp_method, restart=restart_bool)
     dyn = neb_optimizer(neb, work_dir, FIRE)
     traj = Trajectory('neb.traj', 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)

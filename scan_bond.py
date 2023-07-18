@@ -4,12 +4,12 @@ from os.path import exists as ope
 from ase.io import read, write
 import subprocess
 from ase.io.trajectory import Trajectory
-from ase.constraints import FixBondLength
 from ase.optimize import FIRE
 from JDFTx import JDFTx
 import numpy as np
 import shutil
-from generic_helpers import insert_el, copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, add_bond_constraints
+from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, dump_template_input
+from generic_helpers import add_bond_constraints, read_pbc_val, write_contcar, get_exe_cmd, _get_calc
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -29,33 +29,13 @@ to a lower level (ie change kpoint-folding to 1 1 1), make sure you delete all t
 """
 
 
-"""
-#!/bin/bash
-#SBATCH -J scanny
-#SBATCH --time=12:00:00
-#SBATCH -o scanny.out
-#SBATCH -e scanny.err
-#SBATCH -q regular_ss11
-#SBATCH -N 1
-#SBATCH -c 32
-#SBATCH --ntasks-per-node=4
-#SBATCH -C gpu
-#SBATCH --gpus-per-task=1
-#SBATCH --gpu-bind=none
-#SBATCH -A m4025_g
 
-module use --append /global/cfs/cdirs/m4025/Software/Perlmutter/modules
-module load jdftx/gpu
-
-export JDFTx_NUM_PROCS=1
-
-export SLURM_CPU_BIND="cores"
-export JDFTX_MEMPOOL_SIZE=36000
-export MPICH_GPU_SUPPORT_ENABLED=1
-
-python /global/homes/b/beri9208/BEAST_DB_Manager/manager/scan_bond.py > scan.out
-exit 0
-"""
+bond_scan_template = ["scan: 3, 5, 10, 0.23",
+                   "restart: 3",
+                   "max_steps: 100",
+                   "fmax: 0.05",
+                   "follow: False",
+                   "pbc: True, true, false"]
 
 def read_scan_inputs(fname = "scan_input"):
     """ Example:
@@ -74,6 +54,11 @@ def read_scan_inputs(fname = "scan_input"):
     restart_idx = 0
     work_dir = None
     follow = False
+    pbc = [True, True, False]
+    gpu = True
+    if not ope(fname):
+        dump_template_input(fname, bond_scan_template, os.getcwd())
+        raise ValueError(f"No bond scan input supplied: dumping template {fname}")
     inputs = get_inputs_list(fname)
     for input in inputs:
         key, val = input[0], input[1]
@@ -85,32 +70,27 @@ def read_scan_inputs(fname = "scan_input"):
             work_dir = val
         if "follow" in key:
             follow = "true" in val
+        if "pbc" in key:
+            pbc = read_pbc_val(val)
+        if "gpu" in key:
+            gpu = "true" in val.lower()
     atom_pair = [int(lookline[0]), int(lookline[1])]
     scan_steps = int(lookline[2])
     step_length = float(lookline[3])
     work_dir = fix_work_dir(work_dir)
-    return atom_pair, scan_steps, step_length, restart_idx, work_dir, follow
+    return atom_pair, scan_steps, step_length, restart_idx, work_dir, follow, pbc, gpu
 
 def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
         f.write("Done")
 
-def set_calc(exe_cmd, cmds, calc_dir):
-    return JDFTx(
-        executable=exe_cmd,
-        pseudoSet="GBRV_v1.5",
-        commands=cmds,
-        outfile=calc_dir,
-        ionic_steps=False
-    )
 
-
-def run_step(step_dir, fix_pair, exe_cmd, inputs_cmds, fmax=0.1, max_steps=50):
+def run_step(step_dir, fix_pair, fmax=0.1, max_steps=50):
     atoms = read(os.path.join(step_dir, "POSCAR"), format="vasp")
     atoms.pbc = [True, True, False]
     add_bond_constraints(atoms, fix_pair)
     scan_log("creating calculator")
-    calculator = set_calc(exe_cmd, step_dir, inputs_cmds)
+    calculator = get_calc(step_dir)
     scan_log("setting calculator")
     atoms.set_calculator(calculator)
     scan_log("printing atoms")
@@ -120,10 +100,7 @@ def run_step(step_dir, fix_pair, exe_cmd, inputs_cmds, fmax=0.1, max_steps=50):
     traj = Trajectory(step_dir +'opt.traj', 'w', atoms, properties=['energy', 'forces'])
     scan_log("attaching trajectory")
     dyn.attach(traj.write, interval=1)
-    def write_contcar(a=atoms):
-        a.write(step_dir +'CONTCAR', format="vasp", direct=True)
-        insert_el(step_dir +'CONTCAR')
-    dyn.attach(write_contcar, interval=1)
+    dyn.attach(lambda: write_contcar(atoms, step_dir), interval=1)
     try:
         dyn.run(fmax=fmax, steps=max_steps)
         finished(step_dir)
@@ -134,13 +111,13 @@ def run_step(step_dir, fix_pair, exe_cmd, inputs_cmds, fmax=0.1, max_steps=50):
 
 
 if __name__ == '__main__':
-    jdftx_exe = os.environ['JDFTx_GPU']
-    exe_cmd = 'srun ' + jdftx_exe
-    atom_pair, scan_steps, step_length, restart_idx, work_dir, follow = read_scan_inputs()
+    atom_pair, scan_steps, step_length, restart_idx, work_dir, follow, pbc, gpu = read_scan_inputs()
     scan_log = lambda s: _scan_log(s, work_dir)
+    exe_cmd = get_exe_cmd(gpu, scan_log)
+    cmds = get_cmds(work_dir)
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=scan_log)
     prep_input = lambda s, a, l: _prep_input(s, a, l, follow, scan_log, work_dir, 1)
     os.chdir(work_dir)
-    cmds = get_cmds(work_dir)
     if (not os.path.exists("./0")) or (not os.path.isdir("./0")):
         os.mkdir("./0")
     copy_rel_files("./", "./0")
@@ -151,4 +128,4 @@ if __name__ == '__main__':
             copy_rel_files(f"./{str(i-1)}", f"./{str(i)}")
         if (i > 1):
             prep_input(i, atom_pair, step_length)
-        run_step(opj(work_dir, str(i)), atom_pair, exe_cmd, cmds, fmax=0.1, max_steps=50)
+        run_step(opj(work_dir, str(i)), atom_pair, fmax=0.1, max_steps=50)
