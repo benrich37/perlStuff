@@ -71,7 +71,7 @@ def read_opt_inputs(fname = "opt_input"):
     for input in inputs:
         key, val = input[0], input[1]
         if "structure" in key:
-            structure = val
+            structure = val.strip()
         if "work" in key:
             work_dir = val
         if "gpu" in key:
