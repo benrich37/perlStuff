@@ -323,7 +323,7 @@ def dump_template_input(fname, template, cwd):
         f.write(dump_str)
 
 def read_pbc_val(val):
-    vsplit = val.split(' ')
+    vsplit = val.strip().split(' ')
     pbc = []
     for i in range(3):
         pbc.append("true" in vsplit[i].lower())

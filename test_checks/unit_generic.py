@@ -8,6 +8,26 @@ from ase import Atoms
 from ase.constraints import FixBondLength
 
 class TestGeomHelpers(unittest.TestCase):
+    def test_read_pbc(self):
+        line1 = "pbc: True true false"
+        val1 = line1.rstrip("\n").split(":")[1]
+        pbc1 = gen.read_pbc_val(val1)
+        self.assertTrue(pbc1[0])
+        self.assertTrue(pbc1[1])
+        self.assertFalse(pbc1[2])
+        line2 = "pbc: False false false"
+        val2 = line2.rstrip("\n").split(":")[1]
+        pbc2 = gen.read_pbc_val(val2)
+        self.assertFalse(pbc2[0])
+        self.assertFalse(pbc2[1])
+        self.assertFalse(pbc2[2])
+        line3 = "pbc: True, true, true"
+        val3 = line3.rstrip("\n").split(":")[1]
+        pbc3 = gen.read_pbc_val(val3)
+        self.assertTrue(pbc3[0])
+        self.assertTrue(pbc3[1])
+        self.assertTrue(pbc3[2])
+
     def test_add_constraint(self):
         atoms = Atoms('HOH',
                       positions=[[0, 0, -1], [0, 1, 0], [0, 0, 1]])
