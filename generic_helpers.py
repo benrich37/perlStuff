@@ -83,7 +83,7 @@ def read_inputs(work_dir, ref_struct=None):
                     for ig in ignore:
                         if ig in line:
                             skip = True
-                    if "#" in line.strip().split(' ')[0:2]:
+                    if "#" in line:
                         skip = True
                     if "ASE" in line:
                         break
