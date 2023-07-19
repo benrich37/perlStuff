@@ -110,6 +110,7 @@ class JDFTx(Calculator):
                 #self.addDump("End", "State")
                 self.addDump("End", "Forces")
                 self.addDump("End", "Ecomponents")
+                self.addDump("End", "Dtot")
 
                 #Run directory:
                 #self.runDir = tempfile.mkdtemp()
