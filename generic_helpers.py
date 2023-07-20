@@ -28,6 +28,31 @@ valence_electrons = {
         'au': 1, 'hg': 2, 'tl': 3, 'pb': 4, 'bi': 5, 'po': 6, 'at': 7, 'rn': 8,
     }
 
+submit_gpu_perl_ref = [
+    "#!/bin/bash\n",
+    "#SBATCH -J foo\n",
+    "#SBATCH --time=1:00:00\n",
+    "SBATCH -o foo.out\n",
+    "SBATCH -e foo.err\n",
+    "SBATCH -q regular_ss11\n",
+    "SBATCH -N 1\n",
+    "SBATCH -c 32\n",
+    "SBATCH --ntasks-per-node=4\n",
+    "SBATCH -C gpu\n",
+    "SBATCH --gpus-per-task=1\n",
+    "SBATCH --gpu-bind=none\n",
+    "SBATCH -A m4025_g\n\n",
+    "module use --append /global/cfs/cdirs/m4025/Software/Perlmutter/modules\n",
+    "module load jdftx/gpu\n\n",
+    "export JDFTx_NUM_PROCS=1\n",
+    "export SLURM_CPU_BIND=\"cores\"\n",
+    "export JDFTX_MEMPOOL_SIZE=36000\n",
+    "export MPICH_GPU_SUPPORT_ENABLED=1\n\n",
+    "python bar/foo.py > foo.out\n",
+    "exit 0\n"
+]
+
+
 def copy_files(src_dir, tgt_dir):
     for filename in os.listdir(src_dir):
         file_path = os.path.join(src_dir, filename)
@@ -346,7 +371,7 @@ def _get_calc(exe_cmd, cmds, root, JDFTx_fn, debug=False, debug_fn=None, log_fn=
         return debug_fn()
     else:
         if not log_fn is None:
-            log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds}")
+            log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
         return JDFTx_fn(
             executable=exe_cmd,
             pseudoSet="GBRV_v1.5",
