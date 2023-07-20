@@ -272,7 +272,7 @@ def add_bond_constraints(atoms, indices, log_fn=None):
             print_str += f" {atom_str(atoms, indices[1])} fixed to {cur_length:.{4}g} A"
             log_fn(print_str)
 
-def write_contcar(atoms, root):
+def _write_contcar(atoms, root):
     atoms.write(os.path.join(root, 'CONTCAR'), format="vasp", direct=True)
     insert_el(os.path.join(root, 'CONTCAR'))
 
@@ -366,3 +366,38 @@ def get_exe_cmd(gpu, log_fn):
     exe_cmd = 'srun ' + os.environ[_get]
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
+
+def read_f(dir):
+    with open(os.path.join(dir, "Ecomponents")) as f:
+        for line in f:
+            if "F =" in line:
+                return float(line.strip().split("=")[1])
+
+############### Gaussian-type output fakers
+def scf_str(atoms):
+    return f"\n SCF Done:  E =  {atoms.get_potential_energy()}\n\n"
+
+def opt_spacer(i, nSteps):
+    dump_str = "\n GradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGrad\n"
+    dump_str += f"\n Step number   {i+1}\n"
+    if i == nSteps:
+        dump_str += " Optimization completed.\n"
+        dump_str += "    -- Stationary point found.\n"
+    dump_str += "\n GradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGrad\n"
+    return dump_str
+
+def log_input_orientation(atoms):
+    dump_str = "                          Input orientation:                          \n"
+    dump_str += " ---------------------------------------------------------------------\n"
+    dump_str += " Center     Atomic      Atomic             Coordinates (Angstroms)\n"
+    dump_str += " Number     Number       Type             X           Y           Z\n"
+    dump_str += " ---------------------------------------------------------------------"
+    at_ns = atoms.get_atomic_numbers()
+    at_posns = atoms.positions
+    for i in range(len(at_posns)):
+        dump_str += f" {i+1} {at_ns[i]} 0 "
+        for j in range(3):
+            dump_str += f"{at_posns[i][j]} "
+        dump_str += "\n"
+    dump_str += " ---------------------------------------------------------------------\n"
+    return dump_str

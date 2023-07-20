@@ -10,7 +10,7 @@ from JDFTx import JDFTx
 import numpy as np
 import shutil
 from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
-from generic_helpers import write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
+from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     dyn = optimizer(atoms, opt_dir, FIRE)
     traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
-    write_contcar = lambda: write_contcar(atoms, opt_dir)
+    write_contcar = lambda: _write_contcar(atoms, opt_dir)
     dyn.attach(write_contcar, interval=1)
     opt_log("optimization starting")
     opt_log(f"Fmax: {fmax} \nmax_steps: {max_steps}")
