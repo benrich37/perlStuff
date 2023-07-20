@@ -204,10 +204,9 @@ def get_log_fn(work, calc_type, print_bool):
     return lambda s: log_generic(s,work, calc_type, print_bool)
 
 def log_generic(message, work, calc_type, print_bool):
-    print(message)
+    message = str(message)
     if not "\n" in message:
         message = message + "\n"
-        print(message)
     prefix = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": "
     message = prefix + message
     log_fname = os.path.join(work, calc_type + ".log")
