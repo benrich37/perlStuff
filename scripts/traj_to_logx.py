@@ -1,6 +1,7 @@
 import os
 import sys
 from ase.io.trajectory import TrajectoryReader
+from os.path import join as opj
 import numpy as np
 import argparse
 
@@ -70,6 +71,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', help="input traj file")
     args = parser.parse_args()
     file = args.input
+    file = opj(os.getcwd(), file)
     print(os.getcwd())
     print(file)
     assert ".traj" in file
