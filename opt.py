@@ -2,17 +2,13 @@ import os
 from os.path import join as opj
 from os.path import exists as ope
 from ase.io import read, write
-import subprocess
 from ase.io.trajectory import Trajectory
-from ase.constraints import FixBondLength
 from ase.optimize import FIRE
 from JDFTx import JDFTx
-import numpy as np
 import shutil
 from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
 from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_from_out
-from scan_bond_helpers import _scan_log, _prep_input
 import copy
 
 
@@ -37,7 +33,8 @@ opt_template = ["structure: POSCAR_new #using this one bc idk",
                 "max_steps: 30",
                 "gpu: False",
                 "restart: False",
-                "pbc: False False False"]
+                "pbc: False False False",
+                "lattice steps: 0"]
 
 def read_opt_inputs(fname = "opt_input"):
     """ Example:
@@ -100,6 +97,7 @@ if __name__ == '__main__':
         if not ope(opj(lat_dir,"finished.txt")):
             lat_cmds = copy.copy(cmds)
             lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
+            lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
             get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=opt_log)
             lat_dir = opj(work_dir, "lat")
             if not ope(lat_dir):
