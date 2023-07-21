@@ -12,8 +12,8 @@ def traj_to_log_str(traj):
     for i in range(nSteps):
         dump_str += log_input_orientation(traj[i], do_cell=do_cell)
         dump_str += scf_str(traj[i])
-        dump_str += opt_spacer(i, nSteps)
         dump_str += log_charges(traj[i])
+        dump_str += opt_spacer(i, nSteps)
     dump_str += log_input_orientation(traj[-1])
     dump_str += " Normal termination of Gaussian 16"
     return dump_str
@@ -72,8 +72,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     file = args.input
     file = opj(os.getcwd(), file)
-    print(os.getcwd())
-    print(file)
     assert ".traj" in file
     traj = TrajectoryReader(file)
     with open(file[:file.index(".traj")] + "_traj.logx", "w") as f:
