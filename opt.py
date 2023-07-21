@@ -11,7 +11,7 @@ import numpy as np
 import shutil
 from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
-from generic_helpers import _write_logx, finished_logx
+from generic_helpers import _write_logx, finished_logx, check_submit
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -80,6 +80,7 @@ def finished(dirname):
 
 if __name__ == '__main__':
     work_dir, structure, fmax, max_steps, gpu, restart, pbc = read_opt_inputs()
+    check_submit(gpu, os.getcwd())
     opt_log = get_log_fn(work_dir, "opt_io", False)
     if restart:
         structure = "CONTCAR"

@@ -358,6 +358,12 @@ def dump_template_input(fname, template, cwd):
     with open(opj(cwd, fname), "w") as f:
         f.write(dump_str)
 
+def check_submit(gpu, cwd):
+    if not ope(opj(cwd, "submit.sh")):
+        if gpu:
+            dump_template_input("submit.sh", submit_gpu_perl_ref, cwd)
+        exit()
+
 def read_pbc_val(val):
     vsplit = val.strip().split(' ')
     pbc = []
