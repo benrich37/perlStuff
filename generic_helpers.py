@@ -30,27 +30,27 @@ valence_electrons = {
     }
 
 submit_gpu_perl_ref = [
-    "#!/bin/bash\n",
-    "#SBATCH -J foo\n",
-    "#SBATCH --time=1:00:00\n",
-    "SBATCH -o foo.out\n",
-    "SBATCH -e foo.err\n",
-    "SBATCH -q regular_ss11\n",
-    "SBATCH -N 1\n",
-    "SBATCH -c 32\n",
-    "SBATCH --ntasks-per-node=4\n",
-    "SBATCH -C gpu\n",
-    "SBATCH --gpus-per-task=1\n",
-    "SBATCH --gpu-bind=none\n",
-    "SBATCH -A m4025_g\n\n",
-    "module use --append /global/cfs/cdirs/m4025/Software/Perlmutter/modules\n",
-    "module load jdftx/gpu\n\n",
-    "export JDFTx_NUM_PROCS=1\n",
-    "export SLURM_CPU_BIND=\"cores\"\n",
-    "export JDFTX_MEMPOOL_SIZE=36000\n",
-    "export MPICH_GPU_SUPPORT_ENABLED=1\n\n",
-    "python bar/foo.py > foo.out\n",
-    "exit 0\n"
+    "#!/bin/bash",
+    "#SBATCH -J foo",
+    "#SBATCH --time=1:00:00",
+    "#SBATCH -o foo.out",
+    "#SBATCH -e foo.err",
+    "#SBATCH -q regular_ss11",
+    "#SBATCH -N 1",
+    "#SBATCH -c 32",
+    "#SBATCH --ntasks-per-node=4",
+    "#SBATCH -C gpu",
+    "#SBATCH --gpus-per-task=1",
+    "#SBATCH --gpu-bind=none",
+    "#SBATCH -A m4025_g\n",
+    "#module use --append /global/cfs/cdirs/m4025/Software/Perlmutter/modules",
+    "#module load jdftx/gpu\n",
+    "export JDFTx_NUM_PROCS=1",
+    "export SLURM_CPU_BIND=\"cores\"",
+    "export JDFTX_MEMPOOL_SIZE=36000",
+    "export MPICH_GPU_SUPPORT_ENABLED=1\n",
+    "python bar/foo.py > foo.out",
+    "exit 0"
 ]
 
 
