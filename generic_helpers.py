@@ -437,3 +437,93 @@ def sp_logx(atoms, fname, do_cell=True):
     with open(fname, "w") as f:
         f.write(dump_str)
 
+def get_start_line(outfname):
+        start = 0
+        for i, line in enumerate(open(outfname)):
+                if "JDFTx 1." in line:
+                        start = i
+        return start
+
+def get_count_dict(symbols):
+    count_dict = {}
+    for s in symbols:
+        if not s in count_dict.keys():
+            count_dict[s] = 1
+        else:
+            count_dict[s] += 1
+    return count_dict
+def get_poscar_str_from_out(outfile):
+    posns, symbols, R = get_coords_vars(outfile)
+    count_dict = get_count_dict(symbols)
+    dump_str = ''
+    dump_str += 'from outfile' + ' \n'
+    dump_str += '1.0' + ' \n'
+    for line in R:
+        for num in line:
+            dump_str += num + ' '
+        dump_str += ' \n'
+    for a in count_dict.keys():
+        dump_str += a + ' '
+    dump_str += ' \n'
+    for a in count_dict.keys():
+        dump_str += f"{count_dict[a]} "
+    dump_str += ' \n'
+    dump_str += "Direct \n"
+    for p in posns:
+        for x in p:
+            dump_str += x + ' '
+        dump_str += ' \n'
+    return dump_str
+
+def get_atoms_from_out(outfile):
+    temp_name = "tmp_poscar"
+    with open(temp_name, "w") as f:
+        f.write(get_poscar_str_from_out(outfile))
+    atoms = read(temp_name, format="vasp")
+    os.remove(temp_name)
+    return atoms
+
+def get_coords_vars(outfile):
+    start = get_start_line(outfile)
+    iLine = 0
+    refLine = -10
+    R = np.zeros((3, 3))
+    Rdone = False
+    ionPosStarted = False
+    ionNames = []
+    ionPos = []
+    for i, line in enumerate(open(outfile)):
+        if i > start:
+            # Lattice vectors:
+            if line.find('Initializing the Grid') >= 0 and (not Rdone):
+                refLine = iLine
+            rowNum = iLine - (refLine + 2)
+            if rowNum >= 0 and rowNum < 3:
+                R[rowNum, :] = [float(x) for x in line.split()[1:-1]]
+            if rowNum == 3:
+                refLine = -10
+                Rdone = True
+            # Coordinate system and ionic positions:
+            if ionPosStarted:
+                tokens = line.split()
+                if len(tokens) and tokens[0] == 'ion':
+                    ionNames.append(tokens[1])
+                    ionPos.append([float(tokens[2]), float(tokens[3]), float(tokens[4])])
+                else:
+                    break
+            if line.find('# Ionic positions in') >= 0:
+                coords = line.split()[4]
+                ionPosStarted = True
+            # Line counter:
+            iLine += 1
+    ionPos = np.array(ionPos)
+    if coords != 'lattice':
+        ionPos = np.dot(ionPos, np.linalg.inv(R.T))  # convert to lattice
+    return ionPos, ionNames, R
+
+
+
+
+
+
+

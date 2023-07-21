@@ -11,8 +11,9 @@ import numpy as np
 import shutil
 from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
-from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx
+from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_from_out
 from scan_bond_helpers import _scan_log, _prep_input
+import copy
 
 
 """ HOW TO USE ME:
@@ -53,6 +54,7 @@ def read_opt_inputs(fname = "opt_input"):
     gpu = True
     restart = False
     pbc = [True, True, False]
+    lat_iters = 0
     for input in inputs:
         key, val = input[0], input[1]
         if "structure" in key:
@@ -70,8 +72,14 @@ def read_opt_inputs(fname = "opt_input"):
                 max_steps = int(val)
         if "pbc" in key:
             pbc = read_pbc_val(val)
+        if "lat" in key:
+            try:
+                n_iters = int(val)
+                lat_iters = n_iters
+            except:
+                pass
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc
+    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters
 
 def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
@@ -79,13 +87,52 @@ def finished(dirname):
 
 
 if __name__ == '__main__':
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc = read_opt_inputs()
+    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters = read_opt_inputs()
     check_submit(gpu, os.getcwd())
     opt_log = get_log_fn(work_dir, "opt_io", False)
     if restart:
         structure = "CONTCAR"
         opt_log("Requested restart: reading from CONTCAR in existing opt directory")
     exe_cmd = get_exe_cmd(gpu, opt_log)
+    cmds = get_cmds(work_dir, ref_struct=structure)
+    if lat_iters > 0:
+        lat_dir = opj(work_dir, "lat")
+        if not ope(opj(lat_dir,"finished.txt")):
+            lat_cmds = copy.copy(cmds)
+            lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
+            get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=opt_log)
+            lat_dir = opj(work_dir, "lat")
+            if not ope(lat_dir):
+                opt_log("Setting up lattice opt directory")
+                os.mkdir(lat_dir)
+            else:
+                opt_log("Found existing lattice opt directory")
+            copy_rel_files("./", lat_dir)
+            shutil.copy(opj(work_dir, structure), lat_dir)
+            opt_log(f"Reading {opj(lat_dir, structure)} for lattice opt structure")
+            atoms = read(opj(lat_dir, structure))
+            atoms.pbc = pbc
+            atoms.set_calculator(get_lat_calc(lat_dir))
+            dyn = optimizer(atoms, lat_dir, FIRE)
+            traj = Trajectory(opj(lat_dir, "lat.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
+            dyn.attach(traj.write, interval=1)
+            write_contcar = lambda: _write_contcar(atoms, opt_dir)
+            dyn.attach(write_contcar, interval=1)
+            do_cell = True in pbc
+            opt_log("lattice optimization starting")
+            opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}")
+            try:
+                dyn.run(fmax=fmax, steps=1)
+                atoms = get_atoms_from_out(opj(lat_dir, "out"))
+                opt_log(f"Finished lattice optimization")
+                sp_logx(atoms, "sp.logx", do_cell=do_cell)
+                finished(lat_dir)
+                structure = opj(work_dir, structure + "_lat_opted")
+                write(structure, atoms)
+            except Exception as e:
+                opt_log("couldnt run??")
+                opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
+                assert False, str(e)
     cmds = get_cmds(work_dir, ref_struct=structure)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=opt_log)
     os.chdir(work_dir)
