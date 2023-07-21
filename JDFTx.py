@@ -202,6 +202,7 @@ class JDFTx(Calculator):
                         raise IOError('Error: Forces not found.')
                 return (Hartree / Bohr) * scipy.array(forces)
 
+
         def __readCharges(self, filename):
                 idxMap = {}
                 symbolList = self.lastAtoms.get_chemical_symbols()

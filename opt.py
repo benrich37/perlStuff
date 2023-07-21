@@ -105,7 +105,7 @@ if __name__ == '__main__':
     atoms.pbc = pbc
     atoms.set_calculator(get_calc(opt_dir))
     dyn = optimizer(atoms, opt_dir, FIRE)
-    traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces'])
+    traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
     dyn.attach(traj.write, interval=1)
     write_contcar = lambda: _write_contcar(atoms, opt_dir)
     dyn.attach(write_contcar, interval=1)
