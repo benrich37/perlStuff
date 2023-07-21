@@ -11,8 +11,7 @@ def traj_to_log_str(traj):
         dump_str += log_input_orientation(traj[i], do_cell=do_cell)
         dump_str += scf_str(traj[i])
         dump_str += opt_spacer(i, nSteps)
-        if i > 0:
-            dump_str += log_charges(traj[i])
+        dump_str += log_charges(traj[i])
     dump_str += log_input_orientation(traj[-1])
     dump_str += " Normal termination of Gaussian 16"
     return dump_str
@@ -54,7 +53,7 @@ def log_input_orientation(atoms, do_cell=False):
     return dump_str
 
 def log_charges(atoms):
-    charges = atoms.charges
+    charges = atoms.get_charges()
     nAtoms = len(atoms.positions)
     symbols = atoms.get_chemical_symbols()
     dump_str = " **********************************************************************\n\n"
