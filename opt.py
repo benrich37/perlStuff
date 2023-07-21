@@ -112,8 +112,8 @@ if __name__ == '__main__':
     dyn.attach(write_contcar, interval=1)
     do_cell = True in pbc
     logx = "opt/opt.logx"
-    write_logx = lambda i: _write_logx(atoms, logx, i, max_steps, do_cell=do_cell)
-    dyn.attach(write_logx, interval=1, i=lambda: dyn.nsteps)
+    write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
+    dyn.attach(write_logx, interval=1)
     opt_log("optimization starting")
     opt_log(f"Fmax: {fmax} \nmax_steps: {max_steps}")
     try:

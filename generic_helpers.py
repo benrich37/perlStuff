@@ -400,10 +400,11 @@ def read_f(dir):
 
 
 
-def _write_logx(atoms, fname, step, maxstep, do_cell=True, do_charges=True):
+def _write_logx(atoms, fname, dyn, maxstep, do_cell=True, do_charges=True):
     if not ope(fname):
         with open(fname, "w") as f:
             f.write("\n Entering Link 1 \n \n")
+    step = dyn.nsteps
     with open(fname, "a") as f:
         f.write(log_input_orientation(atoms, do_cell=do_cell))
         f.write(scf_str(atoms))
