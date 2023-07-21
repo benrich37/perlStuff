@@ -11,6 +11,7 @@ def traj_to_log_str(traj):
         dump_str += log_input_orientation(traj[i], do_cell=do_cell)
         dump_str += scf_str(traj[i])
         dump_str += opt_spacer(i, nSteps)
+        dump_str += log_charges(traj[i])
     dump_str += log_input_orientation(traj[-1])
     dump_str += " Normal termination of Gaussian 16"
     return dump_str
