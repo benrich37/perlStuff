@@ -111,7 +111,7 @@ if __name__ == '__main__':
     write_contcar = lambda: _write_contcar(atoms, opt_dir)
     dyn.attach(write_contcar, interval=1)
     do_cell = True in pbc
-    logx = "opt.logx"
+    logx = "opt/opt.logx"
     write_logx = lambda i: _write_logx(atoms, logx, i, max_steps, do_cell=do_cell)
     dyn.attach(write_logx, interval=1, i=dyn.nsteps)
     opt_log("optimization starting")
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     try:
         dyn.run(fmax=fmax, steps=max_steps)
         opt_log(f"Finished in {dyn.nsteps}/{max_steps}\n")
-        finished_logx(logx)
+        finished_logx(atoms, logx, dyn.nsteps, max_steps)
         finished(opt_dir)
     except Exception as e:
         opt_log("couldnt run??")

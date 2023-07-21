@@ -435,12 +435,9 @@ def log_input_orientation(atoms, do_cell=False):
     return dump_str
 
 def log_charges(atoms):
-    try:
-        charges = atoms.charges
-        nAtoms = len(atoms.positions)
-        symbols = atoms.get_chemical_symbols()
-    except:
-        return(" ")
+    charges = atoms.charges
+    nAtoms = len(atoms.positions)
+    symbols = atoms.get_chemical_symbols()
     dump_str = " **********************************************************************\n\n"
     dump_str += "            Population analysis using the SCF Density.\n\n"
     dump_str = " **********************************************************************\n\n Mulliken charges:\n    1\n"
@@ -461,6 +458,11 @@ def _write_logx(atoms, fname, step, maxstep, do_cell=True, do_charges=True):
         f.write(opt_spacer(step, maxstep))
         f.write(log_charges(atoms))
 
-def finished_logx(fname):
+
+def finished_logx(atoms, fname, step, maxstep, do_cell=True, do_charges=True):
     with open(fname, "a") as f:
+        f.write(log_input_orientation(atoms, do_cell=do_cell))
+        f.write(scf_str(atoms))
+        f.write(opt_spacer(step, maxstep))
+        f.write(log_charges(atoms))
         f.write("\n Normal termination of Gaussian 16 at Fri Jul 21 12:28:14 2023.\n")
