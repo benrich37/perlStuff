@@ -217,8 +217,8 @@ class JDFTx(Calculator):
                         if i > start:
                                 if key in line:
                                         look = line.rstrip('\n')[line.index(key):].split(' ')
-                                        symbol = str(look[0])
-                                        charges = [float(val) for val in look[1:]]
+                                        symbol = str(look[1])
+                                        charges = [float(val) for val in look[2:]]
                                         chargeDir[symbol] = charges
                 charges = scipy.zeros(len(symbolList), dtype=float)
                 for atom in list(chargeDir.keys()):
