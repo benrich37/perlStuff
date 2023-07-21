@@ -1,3 +1,4 @@
+import os
 import sys
 from ase.io.trajectory import TrajectoryReader
 import numpy as np
@@ -69,6 +70,8 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', help="input traj file")
     args = parser.parse_args()
     file = args.input
+    print(os.getcwd())
+    print(file)
     assert ".traj" in file
     traj = TrajectoryReader(file)
     with open(file[:file.index(".traj")] + "_traj.logx", "w") as f:
