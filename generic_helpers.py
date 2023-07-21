@@ -416,6 +416,6 @@ def finished_logx(atoms, fname, step, maxstep, do_cell=True, do_charges=True):
     with open(fname, "a") as f:
         f.write(log_input_orientation(atoms, do_cell=do_cell))
         f.write(scf_str(atoms))
-        f.write(opt_spacer(step, maxstep))
         f.write(log_charges(atoms))
+        f.write(opt_spacer(step, maxstep))
         f.write("\n Normal termination of Gaussian 16 at Fri Jul 21 12:28:14 2023.\n")
