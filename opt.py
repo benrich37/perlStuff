@@ -11,7 +11,7 @@ import numpy as np
 import shutil
 from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
-from generic_helpers import _write_logx, finished_logx, check_submit
+from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx
 from scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -121,6 +121,7 @@ if __name__ == '__main__':
         dyn.run(fmax=fmax, steps=max_steps)
         opt_log(f"Finished in {dyn.nsteps}/{max_steps}\n")
         finished_logx(atoms, logx, dyn.nsteps, max_steps)
+        sp_logx(atoms, "sp.logx", do_cell=do_cell)
         finished(opt_dir)
     except Exception as e:
         opt_log("couldnt run??")
