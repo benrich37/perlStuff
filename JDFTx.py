@@ -213,7 +213,7 @@ class JDFTx(Calculator):
                 chargeDir={}
                 key = "oxidation-state"
                 start = self.get_start_line(filename)
-                for i, line in open(filename):
+                for i, line in enumerate(open(filename)):
                         if i > start:
                                 if key in line:
                                         look = line.rstrip('\n')[line.index(key):].split(' ')
@@ -230,7 +230,7 @@ class JDFTx(Calculator):
 
         def get_start_line(self, outfname):
                 start = 0
-                for i, line in open(outfname):
+                for i, line in enumerate(open(outfname)):
                         if "JDFTx 1." in line:
                                 start = i
                 return start

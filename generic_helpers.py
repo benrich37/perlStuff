@@ -447,6 +447,7 @@ def log_charges(atoms):
     for i in range(nAtoms):
         dump_str += f"{int(i+1)} {symbols[i]} {charges[i]} \n"
     dump_str += f" Sum of Mulliken charges = {np.sum(charges)}\n"
+    return dump_str
 
 
 
@@ -458,3 +459,8 @@ def _write_logx(atoms, fname, step, maxstep, do_cell=True, do_charges=True):
         f.write(log_input_orientation(atoms, do_cell=do_cell))
         f.write(scf_str(atoms))
         f.write(opt_spacer(step, maxstep))
+        f.write(log_charges(atoms))
+
+def finished_logx(fname):
+    with open(fname, "a") as f:
+        f.write("\n Normal termination of Gaussian 16 at Fri Jul 21 12:28:14 2023.\n")
