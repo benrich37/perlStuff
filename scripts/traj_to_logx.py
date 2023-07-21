@@ -55,9 +55,12 @@ def log_input_orientation(atoms, do_cell=False):
     return dump_str
 
 def log_charges(atoms):
-    charges = atoms.get_charges()
-    nAtoms = len(atoms.positions)
-    symbols = atoms.get_chemical_symbols()
+    try:
+        charges = atoms.get_charges()
+        nAtoms = len(atoms.positions)
+        symbols = atoms.get_chemical_symbols()
+    except:
+        return " "
     dump_str = " **********************************************************************\n\n"
     dump_str += "            Population analysis using the SCF Density.\n\n"
     dump_str = " **********************************************************************\n\n Mulliken charges:\n    1\n"
