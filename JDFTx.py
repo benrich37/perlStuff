@@ -97,6 +97,7 @@ class JDFTx(Calculator):
                 # Current results
                 self.E = None
                 self.Forces = None
+                self.Charges = None
 
                 # History
                 self.lastAtoms = None
@@ -111,6 +112,7 @@ class JDFTx(Calculator):
                 self.addDump("End", "Forces")
                 self.addDump("End", "Ecomponents")
                 self.addDump("End", "Dtot")
+                self.addDump("End", "ElecDensity")
 
                 #Run directory:
                 #self.runDir = tempfile.mkdtemp()
@@ -159,6 +161,11 @@ class JDFTx(Calculator):
                         self.update(atoms)
                 return self.E
 
+        def get_charges(self, atoms):
+                if (self.calculation_required(atoms, None)):
+                        self.update(atoms)
+                return self.Charges
+
         def get_stress(self, atoms):
                 if self.ignoreStress:
                         return scipy.zeros((3, 3))
@@ -191,10 +198,42 @@ class JDFTx(Calculator):
                                 tokens = line.split()
                                 idx = idxMap[tokens[1]].pop(0) # tokens[1] is chemical symbol
                                 forces[idx] = [float(word) for word in tokens[2:5]] # tokens[2:5]: force components
-
                 if(len(forces) == 0):
                         raise IOError('Error: Forces not found.')
                 return (Hartree / Bohr) * scipy.array(forces)
+
+        def __readCharges(self, filename):
+                idxMap = {}
+                symbolList = self.lastAtoms.get_chemical_symbols()
+                for i, symbol in enumerate(symbolList):
+                        if symbol not in idxMap:
+                                idxMap[symbol] = []
+                        idxMap[symbol].append(i)
+                chargeDir={}
+                key = "oxidation-state"
+                start = self.get_start_line(filename)
+                for i, line in open(filename):
+                        if i > start:
+                                if key in line:
+                                        look = line.rstrip('\n')[line.index(key):].split(' ')
+                                        symbol = str(look[0])
+                                        charges = [float(val) for val in look[1:]]
+                                        chargeDir[symbol] = charges
+                charges = scipy.zeros(len(symbolList), dtype=float)
+                for atom in list(chargeDir.keys()):
+                        for i, idx in enumerate(idxMap[atom]):
+                                charges[idx] += chargeDir[atom][i]
+                return charges
+
+
+
+        def get_start_line(self, outfname):
+                start = 0
+                for i, line in open(outfname):
+                        if "JDFTx 1." in line:
+                                start = i
+                return start
+
 
         ############## Running JDFTx ##############
 
@@ -211,6 +250,7 @@ class JDFTx(Calculator):
                 shell('cd %s && %s -i in -o out' % (self.runDir, self.executable))
                 self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
                 self.Forces = self.__readForces('%s/force' % (self.runDir))
+                self.Charges = self.__readCharges('%s/out' % (self.runDir))
 
         def constructInput(self, atoms):
                 """ Constructs a JDFTx input string using the input atoms and the input file arguments (kwargs) in self.input """
