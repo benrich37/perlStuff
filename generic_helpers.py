@@ -8,6 +8,7 @@ from ase.constraints import FixBondLength
 from os.path import join as opj
 from os.path import exists as ope
 from ase.io import read, write
+from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
 
 
 gbrv_15_ref = [
@@ -396,55 +397,6 @@ def read_f(dir):
         for line in f:
             if "F =" in line:
                 return float(line.strip().split("=")[1])
-
-############### Gaussian-type output fakers
-def scf_str(atoms):
-    return f"\n SCF Done:  E =  {atoms.get_potential_energy()}\n\n"
-
-def opt_spacer(i, nSteps):
-    dump_str = "\n GradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGrad\n"
-    dump_str += f"\n Step number   {i+1}\n"
-    if i == nSteps:
-        dump_str += " Optimization completed.\n"
-        dump_str += "    -- Stationary point found.\n"
-    dump_str += "\n GradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGrad\n"
-    return dump_str
-
-def log_input_orientation(atoms, do_cell=False):
-    dump_str = "                          Input orientation:                          \n"
-    dump_str += " ---------------------------------------------------------------------\n"
-    dump_str += " Center     Atomic      Atomic             Coordinates (Angstroms)\n"
-    dump_str += " Number     Number       Type             X           Y           Z\n"
-    dump_str += " ---------------------------------------------------------------------\n"
-    at_ns = atoms.get_atomic_numbers()
-    at_posns = atoms.positions
-    nAtoms = len(at_ns)
-    for i in range(nAtoms):
-        dump_str += f" {i+1} {at_ns[i]} 0 "
-        for j in range(3):
-            dump_str += f"{at_posns[i][j]} "
-        dump_str += "\n"
-    if do_cell:
-        cell = atoms.cell
-        for i in range(3):
-            dump_str += f"{i + nAtoms + 1} -2 0 "
-            for j in range(3):
-                dump_str += f"{cell[i][j]} "
-            dump_str += "\n"
-    dump_str += " ---------------------------------------------------------------------\n"
-    return dump_str
-
-def log_charges(atoms):
-    charges = atoms.charges
-    nAtoms = len(atoms.positions)
-    symbols = atoms.get_chemical_symbols()
-    dump_str = " **********************************************************************\n\n"
-    dump_str += "            Population analysis using the SCF Density.\n\n"
-    dump_str = " **********************************************************************\n\n Mulliken charges:\n    1\n"
-    for i in range(nAtoms):
-        dump_str += f"{int(i+1)} {symbols[i]} {charges[i]} \n"
-    dump_str += f" Sum of Mulliken charges = {np.sum(charges)}\n"
-    return dump_str
 
 
 
