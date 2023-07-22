@@ -161,6 +161,7 @@ class JDFTx(Calculator):
                         self.update(atoms)
                 return self.E
 
+
         def get_charges(self, atoms):
                 if (self.calculation_required(atoms, None)):
                         self.update(atoms)

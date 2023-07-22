@@ -125,7 +125,7 @@ if __name__ == '__main__':
                 structure = opj(work_dir, structure + "_lat_opted")
                 write(structure, atoms, format="vasp")
                 opt_log(f"Finished lattice optimization")
-                sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
+                # sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
                 finished(lat_dir)
             except Exception as e:
                 opt_log("couldnt run??")
