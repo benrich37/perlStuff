@@ -118,9 +118,9 @@ if __name__ == '__main__':
             dyn.attach(write_contcar, interval=1)
             do_cell = True in pbc
             opt_log("lattice optimization starting")
-            opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}")
+            opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}\n")
             try:
-                dyn.run(fmax=fmax, steps=1)
+                #dyn.run(fmax=fmax, steps=1)
                 atoms = get_atoms_from_out(opj(lat_dir, "out"))
                 opt_log(f"Finished lattice optimization")
                 sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
