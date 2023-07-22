@@ -122,11 +122,11 @@ if __name__ == '__main__':
             try:
                 #dyn.run(fmax=fmax, steps=1)
                 atoms = get_atoms_from_out(opj(lat_dir, "out"))
+                structure = opj(work_dir, structure + "_lat_opted")
+                write(structure, atoms)
                 opt_log(f"Finished lattice optimization")
                 sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
                 finished(lat_dir)
-                structure = opj(work_dir, structure + "_lat_opted")
-                write(structure, atoms)
             except Exception as e:
                 opt_log("couldnt run??")
                 opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
