@@ -114,7 +114,7 @@ if __name__ == '__main__':
             dyn = optimizer(atoms, lat_dir, FIRE)
             traj = Trajectory(opj(lat_dir, "lat.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
             dyn.attach(traj.write, interval=1)
-            write_contcar = lambda: _write_contcar(atoms, opt_dir)
+            write_contcar = lambda: _write_contcar(atoms, lat_dir)
             dyn.attach(write_contcar, interval=1)
             do_cell = True in pbc
             opt_log("lattice optimization starting")
@@ -123,7 +123,7 @@ if __name__ == '__main__':
                 dyn.run(fmax=fmax, steps=1)
                 atoms = get_atoms_from_out(opj(lat_dir, "out"))
                 opt_log(f"Finished lattice optimization")
-                sp_logx(atoms, "sp.logx", do_cell=do_cell)
+                sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
                 finished(lat_dir)
                 structure = opj(work_dir, structure + "_lat_opted")
                 write(structure, atoms)
