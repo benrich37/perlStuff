@@ -8,7 +8,7 @@ from JDFTx import JDFTx
 import shutil
 from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
-from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_from_out
+from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_from_out, update_atoms
 import copy
 
 
@@ -121,7 +121,7 @@ if __name__ == '__main__':
             opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}\n")
             try:
                 dyn.run(fmax=fmax, steps=1)
-                atoms = get_atoms_from_out(opj(lat_dir, "out"))
+                update_atoms(atoms, get_atoms_from_out(opj(lat_dir, "out")))
                 structure = opj(work_dir, structure + "_lat_opted")
                 write(structure, atoms, format="vasp")
                 opt_log(f"Finished lattice optimization")

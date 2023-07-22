@@ -522,6 +522,11 @@ def get_coords_vars(outfile):
     return ionPos, ionNames, R
 
 
+def update_atoms(atoms, atoms_from_out):
+    atoms.positions = atoms_from_out.positions
+    atoms.cell = atoms_from_out.cell
+
+
 
 
 
