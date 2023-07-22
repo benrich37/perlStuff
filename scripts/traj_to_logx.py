@@ -11,8 +11,14 @@ def traj_to_log_str(traj):
     do_cell = np.sum(abs(traj[0].cell)) > 0
     for i in range(nSteps):
         dump_str += log_input_orientation(traj[i], do_cell=do_cell)
-        dump_str += scf_str(traj[i])
-        dump_str += log_charges(traj[i])
+        try:
+            dump_str += scf_str(traj[i])
+        except:
+            pass
+        try:
+            dump_str += log_charges(traj[i])
+        except:
+            pass
         dump_str += opt_spacer(i, nSteps)
     dump_str += log_input_orientation(traj[-1])
     dump_str += " Normal termination of Gaussian 16"
