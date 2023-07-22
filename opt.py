@@ -108,14 +108,14 @@ if __name__ == '__main__':
             copy_rel_files("./", lat_dir)
             shutil.copy(opj(work_dir, structure), lat_dir)
             opt_log(f"Reading {opj(lat_dir, structure)} for lattice opt structure")
-            atoms = read(opj(lat_dir, structure))
-            atoms.pbc = pbc
-            atoms.set_calculator(get_lat_calc(lat_dir))
-            dyn = optimizer(atoms, lat_dir, FIRE)
-            traj = Trajectory(opj(lat_dir, "lat.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
-            dyn.attach(traj.write, interval=1)
-            write_contcar = lambda: _write_contcar(atoms, lat_dir)
-            dyn.attach(write_contcar, interval=1)
+            # atoms = read(opj(lat_dir, structure))
+            # atoms.pbc = pbc
+            # atoms.set_calculator(get_lat_calc(lat_dir))
+            # dyn = optimizer(atoms, lat_dir, FIRE)
+            # traj = Trajectory(opj(lat_dir, "lat.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
+            # dyn.attach(traj.write, interval=1)
+            # write_contcar = lambda: _write_contcar(atoms, lat_dir)
+            # dyn.attach(write_contcar, interval=1)
             do_cell = True in pbc
             opt_log("lattice optimization starting")
             opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}\n")
