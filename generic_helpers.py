@@ -460,7 +460,7 @@ def get_poscar_str_from_out(outfile):
     dump_str += '1.0' + ' \n'
     for line in R:
         for num in line:
-            dump_str += num + ' '
+            dump_str += f"{num} "
         dump_str += ' \n'
     for a in count_dict.keys():
         dump_str += a + ' '
@@ -471,7 +471,7 @@ def get_poscar_str_from_out(outfile):
     dump_str += "Direct \n"
     for p in posns:
         for x in p:
-            dump_str += x + ' '
+            dump_str += f"{x} "
         dump_str += ' \n'
     return dump_str
 
