@@ -9,6 +9,7 @@ from os.path import join as opj
 from os.path import exists as ope
 from ase.io import read, write
 from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
+from ase.units import Bohr
 
 
 gbrv_15_ref = [
@@ -522,7 +523,7 @@ def get_coords_vars(outfile):
     return ionPos, ionNames, R
 
 
-def update_atoms(atoms, atoms_from_out, conv=0.529177249):
+def update_atoms(atoms, atoms_from_out, conv=Bohr):
     atoms.positions = atoms_from_out.positions * conv
     atoms.cell = atoms_from_out.cell * conv
 
