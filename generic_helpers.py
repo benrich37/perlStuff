@@ -528,11 +528,3 @@ def update_atoms(atoms, atoms_from_out, conv=Bohr):
     atoms.cell = atoms_from_out.cell * conv
 
 
-def bad_restart
-
-
-
-
-
-
-
