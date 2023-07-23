@@ -459,7 +459,7 @@ def get_poscar_str_from_out(outfile):
     dump_str = ''
     dump_str += 'from outfile' + ' \n'
     dump_str += '1.0' + ' \n'
-    for line in R:
+    for line in R.T:
         for num in line:
             dump_str += f"{num} "
         dump_str += ' \n'
@@ -526,6 +526,9 @@ def get_coords_vars(outfile):
 def update_atoms(atoms, atoms_from_out, conv=Bohr):
     atoms.positions = atoms_from_out.positions * conv
     atoms.cell = atoms_from_out.cell * conv
+
+
+def bad_restart
 
 
 
