@@ -119,7 +119,7 @@ if __name__ == '__main__':
             opt_log("lattice optimization starting")
             opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}\n")
             try:
-                dyn.run(fmax=fmax, steps=1)
+                dyn.run(fmax=fmax, steps=0)
                 update_atoms(atoms, get_atoms_from_out(opj(lat_dir, "out")))
                 structure = opj(work_dir, structure + "_lat_opted")
                 write(structure, atoms, format="vasp")
