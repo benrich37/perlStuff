@@ -81,7 +81,6 @@ def read_opt_inputs(fname = "opt_input"):
 def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
         f.write("Done")
-did_lat = False
 
 if __name__ == '__main__':
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters = read_opt_inputs()
@@ -127,7 +126,6 @@ if __name__ == '__main__':
                 opt_log(f"Finished lattice optimization")
                 # sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
                 finished(lat_dir)
-                did_lat = True
             except Exception as e:
                 opt_log("couldnt run??")
                 opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
