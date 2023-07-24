@@ -10,6 +10,7 @@ from os.path import exists as ope
 from ase.io import read, write
 from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
 from ase.units import Bohr
+from ase import Atoms, Atom
 
 
 gbrv_15_ref = [
@@ -454,7 +455,7 @@ def get_count_dict(symbols):
             count_dict[s] += 1
     return count_dict
 def get_poscar_str_from_out(outfile):
-    posns, symbols, R = get_coords_vars(outfile)
+    ionNames, posns, R = get_coord_vars_opt(outfile)[-1]
     count_dict = get_count_dict(symbols)
     dump_str = ''
     dump_str += 'from outfile' + ' \n'
@@ -477,12 +478,17 @@ def get_poscar_str_from_out(outfile):
     return dump_str
 
 def get_atoms_from_out(outfile):
-    temp_name = "tmp_poscar"
-    with open(temp_name, "w") as f:
-        f.write(get_poscar_str_from_out(outfile))
-    atoms = read(temp_name, format="vasp")
-    os.remove(temp_name)
+    ionNames, posns, R = get_coord_vars_opt(outfile)[-1]
+    R *= Bohr
+    posns *= Bohr
+    assert len(ionNames) == len(posns)
+    atoms = Atoms()
+    atoms.cell = R.T
+    for i in range(len(ionNames)):
+        atoms.append(Atom(ionNames[i], posns[i]))
     return atoms
+
+
 
 def get_coords_vars(outfile):
     start = get_start_line(outfile)
@@ -521,6 +527,54 @@ def get_coords_vars(outfile):
     if coords != 'lattice':
         ionPos = np.dot(ionPos, np.linalg.inv(R.T))  # convert to lattice
     return ionPos, ionNames, R
+
+
+def get_coord_vars_opt(outfile):
+    start = get_start_line(outfile)
+    opts = []
+    opt_new = [[],[],np.zeros([3,3])]
+    active_lattice = False
+    lat_row = 0
+    active_posns = False
+    log_vars = False
+    coords = None
+    new_posn = False
+    for i, line in enumerate(open(outfile)):
+        if i > start:
+            if new_posn:
+                if "R =" in line:
+                    active_lattice = True
+                elif line.find('# Ionic positions in') >= 0:
+                    coords = line.split()[4]
+                    active_posns = True
+                elif active_lattice:
+                    if lat_row < 3:
+                        opt_new[2][lat_row, :] = [float(x) for x in line.split()[1:-1]]
+                        lat_row += 1
+                    else:
+                        active_lattice = False
+                        lat_row = 0
+                elif active_posns:
+                    tokens = line.split()
+                    if len(tokens) and tokens[0] == 'ion':
+                        opt_new[0].append(tokens[1])
+                        opt_new[1].append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
+                    else:
+                        active_posns = False
+                        log_vars = True
+                elif log_vars:
+                    if coords != 'cartesian':
+                        raise ValueError('This has not been tested yet')
+                        #opt_new[1] = np.dot(opt_new[1], opt_new[2])
+                    opt_new[1] = np.array(opt_new[1])
+                    opts.append(opt_new)
+                    opt_new = [[], [], np.zeros([3, 3])]
+                    log_vars = False
+                    new_posn = False
+            elif "Computing DFT-D3 correction:" in line:
+                new_posn = True
+    return opts
+
 
 
 def update_atoms(atoms, atoms_from_out, conv=Bohr):
