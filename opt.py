@@ -123,7 +123,7 @@ if __name__ == '__main__':
             try:
                 # dyn.run(fmax=fmax, steps=0)
                 atoms.get_forces()
-                update_atoms(atoms, get_atoms_list_from_out(opj(lat_dir, "out"))[-1])
+                update_atoms(atoms, lat_dir(opj(lat_dir, "out"))[-1])
                 structure = opj(work_dir, structure + "_lat_opted")
                 write(structure, atoms, format="vasp")
                 opt_log(f"Finished lattice optimization")
@@ -147,7 +147,7 @@ if __name__ == '__main__':
         else:
             remove_dir_recursive(opt_dir)
             os.mkdir(opt_dir)
-        copy_rel_files("./", opt_dir)
+        copy_rel_files(work_dir, opt_dir)
         shutil.copy(opj(work_dir, structure), opt_dir)
     start_path = opj(opt_dir, structure)
     opt_log(f"Reading {start_path} for structure")
