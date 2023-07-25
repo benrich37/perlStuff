@@ -25,7 +25,7 @@ def traj_to_log_str(traj):
     return dump_str
 
 def scf_str(atoms, e_conv=(1/27.211397)):
-    return f"\n SCF Done:  E =  {atoms.E*e_conv}\n\n"
+    return f"\n SCF Done:  E =  {atoms.get_potential_energy()*e_conv}\n\n"
 
 def opt_spacer(i, nSteps):
     dump_str = "\n GradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGrad\n"
