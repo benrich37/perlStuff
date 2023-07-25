@@ -230,14 +230,17 @@ def get_best_state_files(dir_list):
         best_files.append(get_best(dir_list, f))
     return best_files
 
-def copy_best_state_f(dir_list, target, log_fn = None):
-    best = get_best_state_files(dir_list)
+def copy_best_state_f(dir_list, target, log_fn):
+    try:
+        best = get_best_state_files(dir_list)
+    except Exception as e:
+        log_fn(e)
+        pass
     for f in best:
         if not Path(f).parent == Path(target):
             copy_file(f, target, log_fn=log_fn)
         else:
-            if not log_fn is None:
-                log_fn(f"Keeping state file {f} in {target}")
+            log_fn(f"Keeping state file {f} in {target}")
 
 
 
@@ -745,7 +748,6 @@ def get_atoms_from_outfile_data(names, posns, R):
     for i in range(len(names)):
         atoms.append(Atom(names[i], posns[i]))
     return atoms
-
 
 def has_coords_out_files(dir):
     return (ope(opj(dir, "ionpos"))) and (ope(opj(dir, "lattice")))

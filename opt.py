@@ -150,8 +150,7 @@ if __name__ == '__main__':
     if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
         lat_cmds = get_lattice_cmds(cmds, lat_iters, pbc)
         get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=opt_log)
-        if has_state_files(work_dir):
-            copy_best_state_f([work_dir, lat_dir], lat_dir)
+        copy_best_state_f([work_dir, lat_dir], lat_dir, log_fn=opt_log)
         atoms.set_calculator(get_lat_calc(lat_dir))
         do_cell = True in pbc
         opt_log("lattice optimization starting")
