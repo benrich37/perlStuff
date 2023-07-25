@@ -734,14 +734,17 @@ def parse_coords_out(ionpos_fname, lattice_fname):
 
 def get_atoms_from_coords_out(ionpos_fname, lattice_fname):
     names, posns, R = parse_coords_out(ionpos_fname, lattice_fname)
-    atoms = Atoms()
-    atoms.cell = R.T
-    for i in range(len(names)):
-        atoms.append(Atom(names[i], posns[i]))
-    return atoms
+    return get_atoms_from_outfile_data(names, posns, R)
+
 
 def get_atoms_from_outfile_data(names, posns, R):
     atoms = Atoms()
+    posns *= Bohr
+    R = R.T*Bohr
+    atoms.cell = R
+    for i in range(len(names)):
+        atoms.append(Atom(names[i], posns[i]))
+    return atoms
 
 
 def has_coords_out_files(dir):
