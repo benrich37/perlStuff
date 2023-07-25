@@ -11,6 +11,8 @@ from ase.io import read, write
 from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
 from ase.units import Bohr
 from ase import Atoms, Atom
+from pathlib import Path
+import copy
 
 
 gbrv_15_ref = [
@@ -56,11 +58,17 @@ submit_gpu_perl_ref = [
 ]
 
 
+def copy_file(file, tgt_dir, log_fn = None):
+    shutil.copy(file, tgt_dir)
+    if not log_fn is None:
+        log_fn(f"Copying {file} to {tgt_dir}")
+
 def copy_files(src_dir, tgt_dir):
     for filename in os.listdir(src_dir):
-        file_path = os.path.join(src_dir, filename)
+        file_path = opj(src_dir, filename)
         if os.path.isfile(file_path):
-            shutil.copy(file_path, tgt_dir)
+            copy_file(file_path, tgt_dir)
+
 
 def get_int_dirs_indices(int_dirs):
     ints = []
@@ -182,19 +190,64 @@ def dup_cmds(infile):
                                     infile_cmds[cmd] = rest
     return infile_cmds
 
-def copy_rel_files(src, dest):
-    state_files = ["wfns", "eigenvals", "fillings", "fluidState","force","CONTCAR","POSCAR", "hessian.pckl","in"]
+state_files = ["wfns", "eigenvals", "fillings", "fluidState"]
+
+def copy_state_files(src, dest):
+    # state_files = ["wfns", "eigenvals", "fillings", "fluidState","force","CONTCAR","POSCAR", "hessian.pckl","in"]
     for f in state_files:
         if os.path.exists(os.path.join(src, f)):
             print(f"copying {f} from {src} to {dest}")
             shutil.copy(os.path.join(src, f), dest)
 
-def remove_restart_files(dir):
-    state_files = ["wfns", "eigenvals", "fillings", "fluidState", "force", "hessian.pckl"]
+def has_state_files(dir):
+    has = True
     for f in state_files:
-        if os.path.exists(os.path.join(dir, f)):
-            print(f"removing {f} from {dir}")
-            os.remove(os.path.join(dir, f))
+        has = has and ope(opj(dir, f))
+    return has
+
+def get_mtime(path_str):
+    return Path(path_str).stat().st_mtime
+
+
+def get_best(dir_list, f):
+    time_best = 0
+    path_best = None
+    for d in dir_list:
+        if ope(opj(d, f)):
+            time = get_mtime(opj(d, f))
+            if time > time_best:
+                time_best = time
+                path_best = opj(d, f)
+    if not path_best is None:
+        return path_best
+    else:
+        raise ValueError("No dirs have this file")
+
+
+def get_best_state_files(dir_list):
+    best_files = []
+    for f in state_files:
+        best_files.append(get_best(dir_list, f))
+    return best_files
+
+def copy_best_state_f(dir_list, target, log_fn = None):
+    best = get_best_state_files(dir_list)
+    for f in best:
+        if not Path(f).parent == Path(target):
+            copy_file(f, target, log_fn=log_fn)
+        else:
+            if not log_fn is None:
+                log_fn(f"Keeping state file {f} in {target}")
+
+
+
+def remove_restart_files(dir, log_fn = None):
+    restart_files = ["wfns", "eigenvals", "fillings", "fluidState", "force", "hessian.pckl"]
+    for f in restart_files:
+        if ope(opj(dir, f)):
+            if not log_fn is None:
+                log_fn(f"removing {f} from {dir}")
+            os.remove(opj(dir, f))
 
 
 def time_to_str(t):
@@ -211,7 +264,7 @@ def atom_str(atoms, index):
     return f"{atoms.get_chemical_symbols()[index]}({index})"
 
 def need_sort(root):
-    atoms = read(os.path.join(root, "POSCAR"), format="vasp")
+    atoms = read(opj(root, "POSCAR"), format="vasp")
     ats = []
     dones = []
     for a in atoms.get_chemical_symbols():
@@ -645,5 +698,61 @@ def out_to_logx(save_dir, outfile):
 def update_atoms(atoms, atoms_from_out):
     atoms.positions = atoms_from_out.positions
     atoms.cell = atoms_from_out.cell
+
+
+def parse_ionpos(ionpos_fname):
+    names = []
+    posns = []
+    coords = None
+    with open(ionpos_fname, "r") as f:
+        for i, line in enumerate(f):
+            tokens = line.split()
+            if len(tokens):
+                if line.find('# Ionic positions in') >= 0:
+                    coords = tokens[4]
+                elif tokens[0] == "ion":
+                    names.append(tokens[1])
+                    posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
+    return names, np.array(posns), coords
+
+def parse_lattice(lattice_fname):
+    R = np.zeros([3,3], dtype=float)
+    with open(lattice_fname, "r") as f:
+        for i, line in enumerate(f):
+            if i > 0:
+                R[i - 1, :] = [float(x) for x in line.split()[:3]]
+    return R
+
+def parse_coords_out(ionpos_fname, lattice_fname):
+    names, posns, coords = parse_ionpos(ionpos_fname)
+    R = parse_lattice(lattice_fname)
+    R *= Bohr
+    if coords != "cartesian":
+        posns = np.dot(posns, R)
+    else:
+        posns *= Bohr
+    return names, posns, R
+
+def get_atoms_from_coords_out(ionpos_fname, lattice_fname):
+    names, posns, R = parse_coords_out(ionpos_fname, lattice_fname)
+    atoms = Atoms()
+    atoms.cell = R.T
+    for i in range(len(names)):
+        atoms.append(Atom(names[i], posns[i]))
+    return atoms
+
+
+def has_coords_out_files(dir):
+    return (ope(opj(dir, "ionpos"))) and (ope(opj(dir, "lattice")))
+
+def get_lattice_cmds(cmds, lat_iters, pbc):
+    lat_cmds = copy.copy(cmds)
+    lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
+    lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
+
+
+
+
+
 
 

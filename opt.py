@@ -6,9 +6,10 @@ from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from JDFTx import JDFTx
 import shutil
-from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
+from generic_helpers import copy_state_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
-from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_list_from_out, update_atoms
+from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_list_from_out, update_atoms, get_atoms_from_coords_out
+from generic_helpers import copy_best_state_f, copy_file, has_coords_out_files, get_lattice_cmds, has_state_files
 import copy
 
 
@@ -82,77 +83,93 @@ def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
         f.write("Done")
 
+def get_atoms_from_lat_dir(dir):
+    ionpos = opj(dir, "ionpos")
+    lattice = opj(dir, "lattice")
+    return get_atoms_from_coords_out(ionpos, lattice)
+
 did_lat = False
 
 if __name__ == '__main__':
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters = read_opt_inputs()
     check_submit(gpu, os.getcwd())
+    os.chdir(work_dir)
+    opt_dir = opj(work_dir, "opt")
+    lat_dir = opj(work_dir, "lat")
+    structure = opj(work_dir, structure)
     opt_log = get_log_fn(work_dir, "opt_io", False)
-    if restart:
-        structure = "CONTCAR"
-        opt_log("Requested restart: reading from CONTCAR in existing opt directory")
+    if not restart:
+        for d in [opt_dir, lat_dir]:
+            if ope(d):
+                opt_log(f"Resetting {d}")
+                remove_dir_recursive(d)
+            os.mkdir(d)
+        if ope(structure):
+            opt_log(f"Found {structure} for structure")
+        else:
+            opt_log(f"Requested structure {structure} not found")
+            raise ValueError("Missing input structure")
+    else:
+        if ope(opj(opt_dir, "CONTCAR")):
+            structure = opj(opt_dir, "CONTCAR")
+            opt_log(f"Found {structure} for restart structure")
+        elif ope(lat_dir):
+            if not has_coords_out_files(lat_dir):
+                opt_log(f"No ionpos and/or lattice found in {lat_dir}")
+                lat_out = opj(lat_dir, "out")
+                if ope(lat_out):
+                    opt_log(f"Reading recent structure from out file in {lat_out}")
+                    atoms = get_atoms_list_from_out(lat_out)[-1]
+                    structure = opj(lat_dir, "POSCAR_lat_out")
+                    opt_log(f"Saving read structure to {structure}")
+                    write(structure, atoms, format="vasp")
+                    opt_log(f"Removing restart files from {lat_dir} due to low success rate in structures from out being the most recent")
+            else:
+                opt_log(f"Reading structure from {lat_dir}")
+                atoms = get_atoms_from_lat_dir(lat_dir)
+                structure = opj(lat_dir, "POSCAR_coords_out")
+                opt_log(f"Saving read structure to {structure}")
+                write(structure, atoms, format="vasp")
+        else:
+            opt_log(f"Could not gather restart structure from {work_dir}")
+            if ope(structure):
+                opt_log(f"Using {structure} for structure")
+                opt_log(f"Changing restart to False")
+                restart = False
+                opt_log("setting up lattice and opt dir")
+                os.mkdir(lat_dir)
+                os.mkdir(opt_dir)
+            else:
+                opt_log(f"Requested structure {structure} not found")
+                raise ValueError("Missing input structure")
     exe_cmd = get_exe_cmd(gpu, opt_log)
     cmds = get_cmds(work_dir, ref_struct=structure)
-    if lat_iters > 0:
-        lat_dir = opj(work_dir, "lat")
-        if not ope(opj(lat_dir,"finished.txt")):
-            lat_cmds = copy.copy(cmds)
-            lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
-            lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
-            get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=opt_log)
-            lat_dir = opj(work_dir, "lat")
-            if not ope(lat_dir):
-                opt_log("Setting up lattice opt directory")
-                os.mkdir(lat_dir)
-            else:
-                opt_log("Found existing lattice opt directory")
-            copy_rel_files("./", lat_dir)
-            shutil.copy(opj(work_dir, structure), lat_dir)
-            opt_log(f"Reading {opj(lat_dir, structure)} for lattice opt structure")
-            atoms = read(opj(lat_dir, structure))
-            atoms.pbc = pbc
-            atoms.set_calculator(get_lat_calc(lat_dir))
-            dyn = optimizer(atoms, lat_dir, FIRE)
-            traj = Trajectory(opj(lat_dir, "lat.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
-            dyn.attach(traj.write, interval=1)
-            write_contcar = lambda: _write_contcar(atoms, lat_dir)
-            dyn.attach(write_contcar, interval=1)
-            do_cell = True in pbc
-            opt_log("lattice optimization starting")
-            opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}\n")
-            try:
-                # dyn.run(fmax=fmax, steps=0)
-                atoms.get_forces()
-                update_atoms(atoms, lat_dir(opj(lat_dir, "out"))[-1])
-                structure = opj(work_dir, structure + "_lat_opted")
-                write(structure, atoms, format="vasp")
-                opt_log(f"Finished lattice optimization")
-                # sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
-                finished(lat_dir)
-                copy_rel_files(lat_dir, work_dir)
-            except Exception as e:
-                opt_log("couldnt run??")
-                opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
-                assert False, str(e)
-    cmds = get_cmds(work_dir, ref_struct=structure)
-    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=opt_log)
-    os.chdir(work_dir)
-    opt_log(f"structure: {structure}")
-    opt_log(f"work_dir: {work_dir}")
-    opt_dir = opj(work_dir, "opt")
-    if not restart:
-        opt_log("setting up opt dir")
-        if (not ope(opt_dir)) or (not os.path.isdir(opt_dir)):
-            os.mkdir(opt_dir)
-        else:
-            remove_dir_recursive(opt_dir)
-            os.mkdir(opt_dir)
-        copy_rel_files(work_dir, opt_dir)
-        shutil.copy(opj(work_dir, structure), opt_dir)
-    start_path = opj(opt_dir, structure)
-    opt_log(f"Reading {start_path} for structure")
-    atoms = read(opj(opt_dir, structure))
+    opt_log(f"Setting {structure} to atoms object")
+    atoms = read(structure, format="vasp")
     atoms.pbc = pbc
+    if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
+        lat_cmds = get_lattice_cmds(cmds, lat_iters, pbc)
+        get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=opt_log)
+        copy_best_state_f([work_dir, lat_dir], lat_dir)
+        atoms.set_calculator(get_lat_calc(lat_dir))
+        do_cell = True in pbc
+        opt_log("lattice optimization starting")
+        opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}\n")
+        try:
+            atoms.get_forces()
+            ionpos = opj(lat_dir, "ionpos")
+            lattice = opj(lat_dir, "lattice")
+            update_atoms(atoms, get_atoms_from_coords_out(ionpos, lattice))
+            structure = opj(work_dir, structure + "_lat_opted")
+            write(structure, atoms, format="vasp")
+            opt_log(f"Finished lattice optimization")
+            sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
+            finished(lat_dir)
+        except Exception as e:
+            opt_log("couldnt run??")
+            opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
+            assert False, str(e)
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=opt_log)
     atoms.set_calculator(get_calc(opt_dir))
     dyn = optimizer(atoms, opt_dir, FIRE)
     traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
@@ -160,14 +177,14 @@ if __name__ == '__main__':
     write_contcar = lambda: _write_contcar(atoms, opt_dir)
     dyn.attach(write_contcar, interval=1)
     do_cell = True in pbc
-    logx = "opt/opt.logx"
+    logx = opj(opt_dir, "opt.logx")
     write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
     dyn.attach(write_logx, interval=1)
     opt_log("optimization starting")
-    opt_log(f"Fmax: {fmax} \nmax_steps: {max_steps}")
+    opt_log(f"Fmax: {fmax}, max_steps: {max_steps}")
     try:
         dyn.run(fmax=fmax, steps=max_steps)
-        opt_log(f"Finished in {dyn.nsteps}/{max_steps}\n")
+        opt_log(f"Finished in {dyn.nsteps}/{max_steps}")
         finished_logx(atoms, logx, dyn.nsteps, max_steps)
         sp_logx(atoms, "sp.logx", do_cell=do_cell)
         finished(opt_dir)

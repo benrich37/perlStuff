@@ -8,7 +8,7 @@ import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from generic_helpers import get_int_dirs, copy_rel_files, atom_str, get_cmds, get_int_dirs_indices
+from generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices
 from generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, write_contcar, add_bond_constraints, optimizer
 from generic_helpers import dump_template_input, _get_calc, get_exe_cmd
 from neb_scan_helpers import _neb_scan_log, check_poscar, neb_optimizer
@@ -197,7 +197,7 @@ def prep_root(work_dir, restart_idx):
     if (not os.path.exists("./0")) or (not os.path.isdir("./0")):
         os.mkdir("./0")
     if restart_idx == 0:
-        copy_rel_files("./", "./0")
+        copy_state_files("./", "./0")
 
 
 def _setup_mini_neb_dirs(neb_dir, front, restart):
@@ -209,7 +209,7 @@ def _setup_mini_neb_dirs(neb_dir, front, restart):
         img_dirs.append(img_dir)
         if not restart:
             os.mkdir(img_dir)
-            copy_rel_files(f"./{str(i)}/", img_dir)
+            copy_state_files(f"./{str(i)}/", img_dir)
     return img_dirs
 
 def _setup_mini_neb_imgs(front, img_dirs, exe_cmd, inputs_cmds, pbc, debug=False):
@@ -287,7 +287,7 @@ if __name__ == '__main__':
             if (not os.path.exists(f"./{str(i)}")) or (not os.path.isdir(f"./{str(i)}")):
                 os.mkdir(f"./{str(i)}")
             if i > 0:
-                copy_rel_files(f"./{str(i - 1)}", f"./{str(i)}")
+                copy_state_files(f"./{str(i - 1)}", f"./{str(i)}")
             if (i > 1):
                 prep_input(i, atom_pair, step_length)
             run_step(work_dir + str(i) + "/", atom_pair, pbc, scan_log, fmax=fmax, max_steps=max_steps)
@@ -296,7 +296,7 @@ if __name__ == '__main__':
         os.mkdir("neb")
         for i in range(scan_steps):
             os.mkdir(f"neb/{i}")
-            copy_rel_files(str(i), f"neb/{i}")
+            copy_state_files(str(i), f"neb/{i}")
     use_ci = has_max(get_fs(work_dir))
     dyn = setup_neb(scan_steps, k, neb_method, exe_cmd, inputs_cmds, pbc, debug=debug, restart=skip_to_neb, use_ci = use_ci)
     dyn.run(fmax=fmax, steps=neb_max_steps)

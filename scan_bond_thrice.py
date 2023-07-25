@@ -9,6 +9,7 @@ from JDFTx import JDFTx
 import numpy as np
 import shutil
 from generic_helpers import optimizer, read_pbc_val, get_inputs_list, add_bond_constraints, get_log_fn, _get_calc, get_exe_cmd, get_cmds, write_contcar
+from generic_helpers import dump_template_input, read_f
 
 """ HOW TO USE ME:
 - Be on perlmutter
@@ -54,6 +55,14 @@ python /global/homes/b/beri9208/BEAST_DB_Manager/manager/scan_bond.py > scan.out
 exit 0
 """
 
+bond_scan_template = ["scan: 3, 5, 10, 0.23",
+                   "restart: 3",
+                   "max_steps: 100",
+                   "fmax: 0.05",
+                   "follow: False",
+                   "pbc: True, true, false"]
+
+
 def read_scan_inputs(fname="scan_input"):
     """ Example:
     Scan: 1, 4, 10, -.2
@@ -72,6 +81,9 @@ def read_scan_inputs(fname="scan_input"):
     work_dir = None
     follow = False
     pbc = [True, True, False]
+    if not ope(fname):
+        dump_template_input(fname, bond_scan_template, os.getcwd())
+        raise ValueError(f"No bond scan input supplied: dumping template {fname}")
     inputs = get_inputs_list(fname)
     for input in inputs:
         key, val = input[0], input[1]
@@ -94,8 +106,6 @@ def read_scan_inputs(fname="scan_input"):
 def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
         f.write("Done")
-
-
 
 
 def prep_input(step_idx, atom_pair, step_length, step_type, start_length):
@@ -148,12 +158,6 @@ def get_start_dist(work_dir, atom_pair):
     atoms = read(os.path.join(start_dir, "CONTCAR"))
     dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
     return np.linalg.norm(dir_vec)
-
-def read_f(dir):
-    with open(os.path.join(dir, "Ecomponents")) as f:
-        for line in f:
-            if "F =" in line:
-                return float(line.strip().split("=")[1])
 
 
 if __name__ == '__main__':

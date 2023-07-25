@@ -8,7 +8,7 @@ from ase.optimize import FIRE
 from JDFTx import JDFTx
 import numpy as np
 import shutil
-from generic_helpers import copy_rel_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, dump_template_input
+from generic_helpers import copy_state_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, dump_template_input
 from generic_helpers import add_bond_constraints, read_pbc_val, write_contcar, get_exe_cmd, _get_calc
 from scan_bond_helpers import _scan_log, _prep_input
 
@@ -120,12 +120,12 @@ if __name__ == '__main__':
     os.chdir(work_dir)
     if (not os.path.exists("./0")) or (not os.path.isdir("./0")):
         os.mkdir("./0")
-    copy_rel_files("./", "./0")
+    copy_state_files("./", "./0")
     for i in list(range(scan_steps))[restart_idx:]:
         if (not os.path.exists(f"./{str(i)}")) or (not os.path.isdir(f"./{str(i)}")):
             os.mkdir(f"./{str(i)}")
         if i > 0:
-            copy_rel_files(f"./{str(i-1)}", f"./{str(i)}")
+            copy_state_files(f"./{str(i - 1)}", f"./{str(i)}")
         if (i > 1):
             prep_input(i, atom_pair, step_length)
         run_step(opj(work_dir, str(i)), atom_pair, fmax=0.1, max_steps=50)

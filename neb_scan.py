@@ -8,7 +8,7 @@ import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from generic_helpers import read_inputs, insert_el, get_int_dirs, copy_rel_files, remove_restart_files, atom_str, get_inputs_list, optimizer, fix_work_dir
+from generic_helpers import read_inputs, insert_el, get_int_dirs, copy_state_files, remove_restart_files, atom_str, get_inputs_list, optimizer, fix_work_dir
 from generic_helpers import read_pbc_val, dump_template_input
 from neb_scan_helpers import log_total_elapsed, _neb_scan_log, check_poscar, neb_optimizer
 
@@ -196,7 +196,7 @@ def prep_root(work_dir, restart_idx):
     if (not os.path.exists("./0")) or (not os.path.isdir("./0")):
         os.mkdir("./0")
     if restart_idx == 0:
-        copy_rel_files("./", "./0")
+        copy_state_files("./", "./0")
 
 
 def _setup_mini_neb_dirs(neb_dir, front, restart):
@@ -208,7 +208,7 @@ def _setup_mini_neb_dirs(neb_dir, front, restart):
         img_dirs.append(img_dir)
         if not restart:
             os.mkdir(img_dir)
-            copy_rel_files(f"./{str(i)}/", img_dir)
+            copy_state_files(f"./{str(i)}/", img_dir)
     return img_dirs
 
 def _setup_mini_neb_imgs(front, img_dirs, exe_cmd, inputs_cmds, debug=False):
@@ -241,7 +241,7 @@ def backup_mini_neb_to_cur(front):
     neb_dir = f"./iters/{str(front)}/"
     for i in range(front + 1):
         img_dir = os.path.join(neb_dir, str(i))
-        copy_rel_files(img_dir, "./" + str(i))
+        copy_state_files(img_dir, "./" + str(i))
 def write_finished(front):
     with open(f"./{str(front)}/finished_{str(front)}.txt", "w") as f:
         f.write("done")
@@ -279,7 +279,7 @@ if __name__ == '__main__':
             if (not os.path.exists(front_dir)) or (not os.path.isdir(front_dir)):
                 os.mkdir(front_dir)
             if front > 0:
-                copy_rel_files(f"./{str(front - 1)}", f"./{str(front)}")
+                copy_state_files(f"./{str(front - 1)}", f"./{str(front)}")
                 prep_input(front, atom_pair, step_length, start_length, follow)
             start2 = time.time()
             try:
