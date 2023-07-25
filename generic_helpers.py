@@ -478,7 +478,7 @@ def get_poscar_str_from_out(outfile):
     return dump_str
 
 def get_atoms_from_out(outfile):
-    ionNames, posns, R = get_coord_vars_opt(outfile)[-1]
+    ionNames, posns, R = get_coord_vars_opt(outfile)[-1][:3]
     R *= Bohr
     posns *= Bohr
     assert len(ionNames) == len(posns)
@@ -532,7 +532,7 @@ def get_coords_vars(outfile):
 def get_coord_vars_opt(outfile):
     start = get_start_line(outfile)
     opts = []
-    opt_new = [[],[],np.zeros([3,3])]
+    opt_new = [[],[],np.zeros([3,3]), 0]
     active_lattice = False
     lat_row = 0
     active_posns = False
@@ -561,6 +561,12 @@ def get_coord_vars_opt(outfile):
                         opt_new[1].append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
                     else:
                         active_posns = False
+                elif "Minimize: Iter:" in line:
+                    if "F: " in line:
+                        opt_new[3] = float(line[line.index("F: "):].split(' ')[1])
+                        log_vars = True
+                    elif "G: " in line:
+                        opt_new[3] = float(line[line.index("G: "):].split(' ')[1])
                         log_vars = True
                 elif log_vars:
                     if coords != 'cartesian':
@@ -576,9 +582,96 @@ def get_coord_vars_opt(outfile):
     return opts
 
 
+def get_atoms_opt(outfile):
+    start = get_start_line(outfile)
+    opts = []
+    atoms = Atoms()
+    R = np.zeros([3,3])
+    posns = []
+    names = []
+    chargeDir = {}
+    active_lattice = False
+    lat_row = 0
+    active_posns = False
+    log_vars = False
+    coords = None
+    new_posn = False
+    active_lowdin = False
+    charge_key = "oxidation-state"
+    idxMap = {}
+    for i, line in enumerate(open(outfile)):
+        if i > start:
+            if new_posn:
+                if "Lowdin population analysis " in line:
+                    active_lowdin = True
+                if "R =" in line:
+                    active_lattice = True
+                elif line.find('# Ionic positions in') >= 0:
+                    coords = line.split()[4]
+                    active_posns = True
+                elif active_lattice:
+                    if lat_row < 3:
+                        R[lat_row, :] = [float(x) for x in line.split()[1:-1]]
+                        lat_row += 1
+                    else:
+                        active_lattice = False
+                        lat_row = 0
+                elif active_posns:
+                    tokens = line.split()
+                    if len(tokens) and tokens[0] == 'ion':
+                        names.append(tokens[1])
+                        posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
+                        if tokens[1] not in idxMap:
+                                idxMap[tokens[1]] = []
+                        idxMap[tokens[1]].append(i)
+                    else:
+                        active_posns = False
+                elif "Minimize: Iter:" in line:
+                    if "F: " in line:
+                        atoms.E = float(line[line.index("F: "):].split(' ')[1])
+                    elif "G: " in line:
+                        atoms.E = float(line[line.index("G: "):].split(' ')[1])
+                elif active_lowdin:
+                    if charge_key in line:
+                        look = line.rstrip('\n')[line.index(charge_key):].split(' ')
+                        symbol = str(look[1])
+                        charges = [float(val) for val in look[2:]]
+                        chargeDir[symbol] = charges
+                        charges = np.zeros(len(posns), dtype=float)
+                        for atom in list(chargeDir.keys()):
+                            for i, idx in enumerate(idxMap[atom]):
+                                charges[idx] += chargeDir[atom][i]
+                    elif not "#" in line:
+                        active_lowdin = False
+                        log_vars = True
+                elif log_vars:
+                    if coords != 'cartesian':
+                        raise ValueError('This has not been tested yet')
+                        #opt_new[1] = np.dot(opt_new[1], opt_new[2])
+                    posns = np.array(posns)
+                    atoms.cell = R.T * Bohr
+                    for i in range(len(posns)):
+                        atoms.append(Atom(names[i], posns[i], charge=charges[i]))
+                    opts.append(atoms)
+                    atoms = Atoms()
+                    R = np.zeros([3, 3])
+                    posns = []
+                    names = []
+                    chargeDir = {}
+                    active_lattice = False
+                    lat_row = 0
+                    active_posns = False
+                    log_vars = False
+                    coords = None
+                    new_posn = False
+                    active_lowdin = False
+                    idxMap = {}
+            elif "Computing DFT-D3 correction:" in line:
+                new_posn = True
+    return opts
 
-def update_atoms(atoms, atoms_from_out, conv=Bohr):
-    atoms.positions = atoms_from_out.positions * conv
-    atoms.cell = atoms_from_out.cell * conv
+def update_atoms(atoms, atoms_from_out):
+    atoms.positions = atoms_from_out.positions
+    atoms.cell = atoms_from_out.cell
 
 
