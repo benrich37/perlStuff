@@ -209,7 +209,7 @@ def get_mtime(path_str):
     return Path(path_str).stat().st_mtime
 
 
-def get_best(dir_list, f):
+def get_best(dir_list, f, log_fn=lambda s: print(s)):
     time_best = 0
     path_best = None
     for d in dir_list:
@@ -221,18 +221,20 @@ def get_best(dir_list, f):
     if not path_best is None:
         return path_best
     else:
-        raise ValueError("No dirs have this file")
+        err = f"No dirs have {f}"
+        log_fn(err)
+        raise ValueError(err)
 
 
-def get_best_state_files(dir_list):
+def get_best_state_files(dir_list, log_fn = lambda s: print(s)):
     best_files = []
     for f in state_files:
-        best_files.append(get_best(dir_list, f))
+        best_files.append(get_best(dir_list, f, log_fn = log_fn))
     return best_files
 
 def copy_best_state_f(dir_list, target, log_fn):
     try:
-        best = get_best_state_files(dir_list)
+        best = get_best_state_files(dir_list, log_fn=log_fn)
         for f in best:
             if not Path(f).parent == Path(target):
                 copy_file(f, target, log_fn=log_fn)
@@ -282,10 +284,11 @@ def need_sort(root):
                     dones.append(at)
     return False
 
-def get_log_fn(work, calc_type, print_bool):
+def get_log_fn(work, calc_type, print_bool, restart=False):
     fname = opj(work, calc_type + ".log")
-    if ope(fname):
-        os.remove(fname)
+    if not restart:
+        if ope(fname):
+            os.remove(fname)
     return lambda s: log_generic(s,work, calc_type, print_bool)
 
 def log_generic(message, work, calc_type, print_bool):

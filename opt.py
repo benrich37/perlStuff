@@ -89,6 +89,42 @@ def get_atoms_from_lat_dir(dir):
     lattice = opj(dir, "lattice")
     return get_atoms_from_coords_out(ionpos, lattice)
 
+def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
+    if ope(opj(opt_dir, "CONTCAR")):
+        structure = opj(opt_dir, "CONTCAR")
+        log_fn(f"Found {structure} for restart structure")
+    elif ope(lat_dir):
+        if not has_coords_out_files(lat_dir):
+            log_fn(f"No ionpos and/or lattice found in {lat_dir}")
+            lat_out = opj(lat_dir, "out")
+            if ope(lat_out):
+                log_fn(f"Reading recent structure from out file in {lat_out}")
+                atoms = get_atoms_list_from_out(lat_out)[-1]
+                structure = opj(lat_dir, "POSCAR_lat_out")
+                log_fn(f"Saving read structure to {structure}")
+                write(structure, atoms, format="vasp")
+        else:
+            log_fn(f"Reading structure from {lat_dir}")
+            atoms = get_atoms_from_lat_dir(lat_dir)
+            structure = opj(lat_dir, "POSCAR_coords_out")
+            log_fn(f"Saving read structure to {structure}")
+            write(structure, atoms, format="vasp")
+    else:
+        log_fn(f"Could not gather restart structure from {work_dir}")
+        if ope(structure):
+            log_fn(f"Using {structure} for structure")
+            log_fn(f"Changing restart to False")
+            restart = False
+            log_fn("setting up lattice and opt dir")
+            os.mkdir(lat_dir)
+            os.mkdir(opt_dir)
+        else:
+            err = f"Requested structure {structure} not found"
+            log_fn(err)
+            raise ValueError(err)
+    return structure, restart
+
+
 did_lat = False
 
 if __name__ == '__main__':
@@ -98,7 +134,7 @@ if __name__ == '__main__':
     opt_dir = opj(work_dir, "opt")
     lat_dir = opj(work_dir, "lat")
     structure = opj(work_dir, structure)
-    opt_log = get_log_fn(work_dir, "opt_io", False)
+    opt_log = get_log_fn(work_dir, "opt_io", False, restart=restart)
     if not restart:
         for d in [opt_dir, lat_dir]:
             if ope(d):
@@ -111,38 +147,7 @@ if __name__ == '__main__':
             opt_log(f"Requested structure {structure} not found")
             raise ValueError("Missing input structure")
     else:
-        if ope(opj(opt_dir, "CONTCAR")):
-            structure = opj(opt_dir, "CONTCAR")
-            opt_log(f"Found {structure} for restart structure")
-        elif ope(lat_dir):
-            if not has_coords_out_files(lat_dir):
-                opt_log(f"No ionpos and/or lattice found in {lat_dir}")
-                lat_out = opj(lat_dir, "out")
-                if ope(lat_out):
-                    opt_log(f"Reading recent structure from out file in {lat_out}")
-                    atoms = get_atoms_list_from_out(lat_out)[-1]
-                    structure = opj(lat_dir, "POSCAR_lat_out")
-                    opt_log(f"Saving read structure to {structure}")
-                    write(structure, atoms, format="vasp")
-                    opt_log(f"Removing restart files from {lat_dir} due to low success rate in structures from out being the most recent")
-            else:
-                opt_log(f"Reading structure from {lat_dir}")
-                atoms = get_atoms_from_lat_dir(lat_dir)
-                structure = opj(lat_dir, "POSCAR_coords_out")
-                opt_log(f"Saving read structure to {structure}")
-                write(structure, atoms, format="vasp")
-        else:
-            opt_log(f"Could not gather restart structure from {work_dir}")
-            if ope(structure):
-                opt_log(f"Using {structure} for structure")
-                opt_log(f"Changing restart to False")
-                restart = False
-                opt_log("setting up lattice and opt dir")
-                os.mkdir(lat_dir)
-                os.mkdir(opt_dir)
-            else:
-                opt_log(f"Requested structure {structure} not found")
-                raise ValueError("Missing input structure")
+        structure, restart = get_restart_structure(structure, restart, opt_dir, lat_dir, opt_log)
     exe_cmd = get_exe_cmd(gpu, opt_log)
     cmds = get_cmds(work_dir, ref_struct=structure)
     opt_log(f"Setting {structure} to atoms object")
