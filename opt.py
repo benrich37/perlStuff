@@ -9,7 +9,8 @@ import shutil
 from generic_helpers import copy_state_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
 from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_list_from_out, update_atoms, get_atoms_from_coords_out
-from generic_helpers import copy_best_state_f, copy_file, has_coords_out_files, get_lattice_cmds, has_state_files
+from generic_helpers import copy_best_state_f, copy_file, has_coords_out_files, get_lattice_cmds, has_state_files, death_by_bad_state_files
+from generic_helpers import remove_restart_files, out_to_logx
 import copy
 
 
@@ -163,12 +164,30 @@ if __name__ == '__main__':
             structure = opj(work_dir, structure + "_lat_opted")
             write(structure, atoms, format="vasp")
             opt_log(f"Finished lattice optimization")
-            sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
             finished(lat_dir)
+            out_to_logx(lat_dir, opj(lat_dir, 'out'), log_fn=opt_log)
         except Exception as e:
             opt_log("couldnt run??")
             opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
-            assert False, str(e)
+            pass
+        if death_by_bad_state_files(opj(lat_dir, "out"), log_fn=opt_log):
+            remove_restart_files(lat_dir, log_fn=opt_log)
+            atoms.set_calculator(get_lat_calc(lat_dir))
+            opt_log("Retrying lattice opt without state files present")
+            try:
+                atoms.get_forces()
+            except Exception as e:
+                opt_log("Check out file - unknown issue with calculation")
+                opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
+                assert False
+            ionpos = opj(lat_dir, "ionpos")
+            lattice = opj(lat_dir, "lattice")
+            update_atoms(atoms, get_atoms_from_coords_out(ionpos, lattice))
+            structure = opj(work_dir, structure + "_lat_opted")
+            write(structure, atoms, format="vasp")
+            opt_log(f"Finished lattice optimization")
+            sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
+            finished(lat_dir)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=opt_log)
     atoms.set_calculator(get_calc(opt_dir))
     dyn = optimizer(atoms, opt_dir, FIRE)

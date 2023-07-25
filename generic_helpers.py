@@ -693,11 +693,15 @@ def out_to_logx_str(outfile, e_conv=(1/27.211397)):
     dump_str += " Normal termination of Gaussian 16"
     return dump_str
 
-def out_to_logx(save_dir, outfile):
-    fname = save_dir + "out.logx"
-    with open(fname, "w") as f:
-        f.write(out_to_logx_str(outfile))
-    f.close()
+def out_to_logx(save_dir, outfile, log_fn=lambda s: print(s)):
+    try:
+        fname = save_dir + "out.logx"
+        with open(fname, "w") as f:
+            f.write(out_to_logx_str(outfile))
+        f.close()
+    except Exception as e:
+        log_fn(e)
+        pass
 
 
 def update_atoms(atoms, atoms_from_out):
@@ -757,6 +761,17 @@ def get_lattice_cmds(cmds, lat_iters, pbc):
     lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
     lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
     return lat_cmds
+
+def death_by_bad_state_files(outfname, log_fn=lambda s: print(s)):
+    start_line = get_start_line(outfname)
+    with open(outfname) as f:
+        for i, line in enumerate(f):
+            if i > start_line:
+                if ("bytes" in line) and ("instead of the expected" in line):
+                    log_fn(line)
+                    return True
+
+
 
 
 
