@@ -699,7 +699,7 @@ def out_to_logx_str(outfile, e_conv=(1/27.211397)):
 
 def out_to_logx(save_dir, outfile, log_fn=lambda s: print(s)):
     try:
-        fname = save_dir + "out.logx"
+        fname = opj(save_dir,"out.logx")
         with open(fname, "w") as f:
             f.write(out_to_logx_str(outfile))
         f.close()
