@@ -129,6 +129,7 @@ if __name__ == '__main__':
                 opt_log(f"Finished lattice optimization")
                 # sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
                 finished(lat_dir)
+                copy_rel_files(lat_dir, work_dir)
             except Exception as e:
                 opt_log("couldnt run??")
                 opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
