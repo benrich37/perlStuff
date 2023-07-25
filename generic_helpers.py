@@ -233,14 +233,15 @@ def get_best_state_files(dir_list):
 def copy_best_state_f(dir_list, target, log_fn):
     try:
         best = get_best_state_files(dir_list)
+        for f in best:
+            if not Path(f).parent == Path(target):
+                copy_file(f, target, log_fn=log_fn)
+            else:
+                log_fn(f"Keeping state file {f} in {target}")
     except Exception as e:
         log_fn(e)
         pass
-    for f in best:
-        if not Path(f).parent == Path(target):
-            copy_file(f, target, log_fn=log_fn)
-        else:
-            log_fn(f"Keeping state file {f} in {target}")
+
 
 
 
