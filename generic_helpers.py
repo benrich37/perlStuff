@@ -650,8 +650,7 @@ def get_atoms_list_from_out(outfile):
                         log_vars = True
                 elif log_vars:
                     if coords != 'cartesian':
-                        raise ValueError('This has not been tested yet')
-                        #opt_new[1] = np.dot(opt_new[1], opt_new[2])
+                        opt_new[1] = np.dot(opt_new[1], opt_new[2])
                     posns = np.array(posns)
                     atoms.cell = R.T * Bohr
                     for i in range(len(posns)):
@@ -675,10 +674,13 @@ def get_atoms_list_from_out(outfile):
                 new_posn = True
     return opts
 
+def get_do_cell(pbc):
+    return np.sum(pbc) > 0
+
 def out_to_logx_str(outfile, e_conv=(1/27.211397)):
     atoms_list = get_atoms_list_from_out(outfile)
     dump_str = "\n Entering Link 1 \n \n"
-    do_cell = np.sum(abs(atoms_list[0].cell)) > 0
+    do_cell = get_do_cell(atoms_list[0].cell)
     for i in range(len(atoms_list)):
         dump_str += log_input_orientation(atoms_list[i], do_cell=do_cell)
         dump_str += f"\n SCF Done:  E =  {atoms_list[i].E*e_conv}\n\n"
@@ -726,11 +728,8 @@ def parse_lattice(lattice_fname):
 def parse_coords_out(ionpos_fname, lattice_fname):
     names, posns, coords = parse_ionpos(ionpos_fname)
     R = parse_lattice(lattice_fname)
-    R *= Bohr
     if coords != "cartesian":
         posns = np.dot(posns, R)
-    else:
-        posns *= Bohr
     return names, posns, R
 
 def get_atoms_from_coords_out(ionpos_fname, lattice_fname):
@@ -741,6 +740,9 @@ def get_atoms_from_coords_out(ionpos_fname, lattice_fname):
         atoms.append(Atom(names[i], posns[i]))
     return atoms
 
+def get_atoms_from_outfile_data(names, posns, R):
+    atoms = Atoms()
+
 
 def has_coords_out_files(dir):
     return (ope(opj(dir, "ionpos"))) and (ope(opj(dir, "lattice")))
@@ -749,6 +751,7 @@ def get_lattice_cmds(cmds, lat_iters, pbc):
     lat_cmds = copy.copy(cmds)
     lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
     lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
+    return lat_cmds
 
 
 
