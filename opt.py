@@ -5,7 +5,7 @@ from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from JDFTx import JDFTx
-import datetime
+from datetime import datetime
 from generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
 from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_from_coords_out
@@ -81,7 +81,7 @@ def read_opt_inputs(fname = "opt_input"):
     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters
 
 def finished(dirname):
-    with open(os.path.join(dirname, "finished.txt"), 'w') as f:
+    with open(opj(dirname, "finished.txt"), 'w') as f:
         f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": Done")
 
 def get_atoms_from_lat_dir(dir):
