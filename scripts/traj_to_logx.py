@@ -60,9 +60,32 @@ def log_input_orientation(atoms, do_cell=False):
     dump_str += " ---------------------------------------------------------------------\n"
     return dump_str
 
-def log_charges(atoms):
+def get_charges(atoms):
+    es = []
+    charges = None
     try:
         charges = atoms.get_charges()
+    except Exception as e:
+        es.append(e)
+        pass
+    if charges is None:
+        try:
+            charges = atoms.charges
+        except Exception as e:
+            es.append(e)
+            pass
+    if charges is None:
+        try:
+            charges = atoms.arrays["initial_charges"]
+        except Exception as e:
+            es.append(e)
+            print(es)
+            assert False
+    return charges
+
+def log_charges(atoms):
+    try:
+        charges = get_charges(atoms)
         nAtoms = len(atoms.positions)
         symbols = atoms.get_chemical_symbols()
     except:

@@ -5,13 +5,12 @@ from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from JDFTx import JDFTx
-import shutil
-from generic_helpers import copy_state_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
+import datetime
+from generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
-from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_list_from_out, update_atoms, get_atoms_from_coords_out
-from generic_helpers import copy_best_state_f, copy_file, has_coords_out_files, get_lattice_cmds, has_state_files, death_by_bad_state_files
-from generic_helpers import remove_restart_files, out_to_logx
-import copy
+from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_list_from_out, get_atoms_from_coords_out
+from generic_helpers import copy_best_state_f, has_coords_out_files, get_lattice_cmds,  death_by_state
+from generic_helpers import remove_restart_files, out_to_logx, get_do_cell, _write_opt_log
 
 
 """ HOW TO USE ME:
@@ -82,7 +81,7 @@ def read_opt_inputs(fname = "opt_input"):
 
 def finished(dirname):
     with open(os.path.join(dirname, "finished.txt"), 'w') as f:
-        f.write("Done")
+        f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": Done")
 
 def get_atoms_from_lat_dir(dir):
     ionpos = opj(dir, "ionpos")
@@ -125,7 +124,72 @@ def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
     return structure, restart
 
 
-did_lat = False
+def run_lat_opt_runner(atoms, structure, lat_dir, work_dir, log_fn):
+    atoms.get_forces()
+    ionpos = opj(lat_dir, "ionpos")
+    lattice = opj(lat_dir, "lattice")
+    pbc = atoms.pbc
+    atoms = get_atoms_from_coords_out(ionpos, lattice)
+    atoms.pbc = pbc
+    structure = opj(work_dir, structure + "_lat_opted")
+    write(structure, atoms, format="vasp")
+    opt_log(f"Finished lattice optimization")
+    finished(lat_dir)
+    out_to_logx(lat_dir, opj(lat_dir, 'out'), log_fn=log_fn)
+    return atoms, structure
+
+# def run_ase_opt(atoms, root, opter, do_cell, log_fn, failed_before = False):
+#     dyn = optimizer(atoms, root, opter)
+#     traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
+#     logx = opj(root, "opt.logx")
+#     write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
+#     write_contcar = lambda: _write_contcar(atoms, root)
+#     write_opt_log = lambda: _write_opt_log(atoms, dyn, max_steps, log_fn)
+#     dyn.attach(traj.write, interval=1)
+#     dyn.attach(write_contcar, interval=1)
+#     dyn.attach(write_logx, interval=1)
+#     dyn.attach(write_opt_log, interval=1)
+#     opt_log("Optimization starting")
+#     opt_log(f"Fmax: {fmax}, max_steps: {max_steps}")
+#     failed = False
+#     try:
+#         dyn.run(fmax=fmax, steps=max_steps)
+#         opt_log(f"Finished in {dyn.nsteps}/{max_steps}")
+#         finished_logx(atoms, logx, dyn.nsteps, max_steps)
+#         sp_logx(atoms, "sp.logx", do_cell=do_cell)
+#         finished(root)
+#     except Exception as e:
+#         log_fn(e)
+#         if not failed_before:
+#             if death_by_state(opj(root,"out"), log_fn):
+#                 log_fn("Calculation failed due to state file. Will retry without state files present")
+#                 pass
+#             else:
+#                 log_fn("Check out file - unknown issue with calculation")
+#                 assert False
+#         else:
+#
+#         opt_log("couldnt run??")
+#         opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
+#         failed = True
+#         err = e
+#         pass
+#     if failed:
+#         if death_by_state(opj(root,"out"), log_fn):
+#             if not failed_before:
+#                 remove_restart_files(lat_dir, log_fn=opt_log)
+#                 atoms.set_calculator(get_lat_calc(lat_dir))
+#                 log_fn("Retrying lattice opt without state files present")
+#                 try:
+#                     run_ase_opt(atoms, root, opter, do_cell, log_fn, failed_before=True)
+#                 except Exception as e:
+#                     log_fn("Check out file - unknown issue with calculation")
+#                     log_fn(e)  # Done: make sure this syntax will still print JDFT errors correctly
+#                     assert False
+#             else:
+#                 log_fn("Recognizing failure by state files when supposeduly no files are present - insane")
+
+
 
 if __name__ == '__main__':
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters = read_opt_inputs()
@@ -152,55 +216,39 @@ if __name__ == '__main__':
     cmds = get_cmds(work_dir, ref_struct=structure)
     opt_log(f"Setting {structure} to atoms object")
     atoms = read(structure, format="vasp")
+    do_cell = get_do_cell(pbc)
     atoms.pbc = pbc
     if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
         lat_cmds = get_lattice_cmds(cmds, lat_iters, pbc)
         get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=opt_log)
         copy_best_state_f([work_dir, lat_dir], lat_dir, log_fn=opt_log)
         atoms.set_calculator(get_lat_calc(lat_dir))
-        do_cell = True in pbc
         opt_log("lattice optimization starting")
-        opt_log(f"Fmax: n/a \nmax_steps: {lat_iters}\n")
+        opt_log(f"Fmax: n/a, max_steps: {lat_iters}")
         try:
-            atoms.get_forces()
-            ionpos = opj(lat_dir, "ionpos")
-            lattice = opj(lat_dir, "lattice")
-            update_atoms(atoms, get_atoms_from_coords_out(ionpos, lattice))
-            structure = opj(work_dir, structure + "_lat_opted")
-            write(structure, atoms, format="vasp")
-            opt_log(f"Finished lattice optimization")
-            finished(lat_dir)
-            out_to_logx(lat_dir, opj(lat_dir, 'out'), log_fn=opt_log)
+            atoms, structure = run_lat_opt_runner(atoms, structure, lat_dir, work_dir, opt_log)
         except Exception as e:
             opt_log("couldnt run??")
-            opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
+            opt_log(e)
             pass
-        if death_by_bad_state_files(opj(lat_dir, "out"), log_fn=opt_log):
+        if death_by_state(opj(lat_dir, "out"), log_fn=opt_log):
             remove_restart_files(lat_dir, log_fn=opt_log)
             atoms.set_calculator(get_lat_calc(lat_dir))
             opt_log("Retrying lattice opt without state files present")
             try:
-                atoms.get_forces()
+                atoms, structure = run_lat_opt_runner(atoms, structure, lat_dir, work_dir, opt_log)
             except Exception as e:
                 opt_log("Check out file - unknown issue with calculation")
                 opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
                 assert False
-            ionpos = opj(lat_dir, "ionpos")
-            lattice = opj(lat_dir, "lattice")
-            update_atoms(atoms, get_atoms_from_coords_out(ionpos, lattice))
-            structure = opj(work_dir, structure + "_lat_opted")
-            write(structure, atoms, format="vasp")
-            opt_log(f"Finished lattice optimization")
-            sp_logx(atoms, opj(lat_dir, "sp.logx"), do_cell=do_cell)
-            finished(lat_dir)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=opt_log)
     atoms.set_calculator(get_calc(opt_dir))
+
     dyn = optimizer(atoms, opt_dir, FIRE)
     traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
     dyn.attach(traj.write, interval=1)
     write_contcar = lambda: _write_contcar(atoms, opt_dir)
     dyn.attach(write_contcar, interval=1)
-    do_cell = True in pbc
     logx = opj(opt_dir, "opt.logx")
     write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
     dyn.attach(write_logx, interval=1)
