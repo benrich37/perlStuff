@@ -7,6 +7,7 @@ from ase.units import Bohr
 from ase import Atoms, Atom
 import argparse
 
+
 def get_do_cell(pbc):
     return np.sum(pbc) > 0
 
@@ -17,6 +18,7 @@ def get_start_line(outfname):
         if "JDFTx 1." in line:
             start = i
     return start
+
 
 def get_atoms_from_outfile_data(names, posns, R, charges=None, E=0):
     atoms = Atoms()
@@ -29,6 +31,7 @@ def get_atoms_from_outfile_data(names, posns, R, charges=None, E=0):
         atoms.append(Atom(names[i], posns[i], charge=charges[i]))
     atoms.E = E
     return atoms
+
 
 def get_atoms_list_from_out_reset_vars(nAtoms=100, _def=100):
     R = np.zeros([3, 3])
@@ -50,6 +53,7 @@ def get_atoms_list_from_out_reset_vars(nAtoms=100, _def=100):
     charges = np.zeros(nAtoms, dtype=float)
     return R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
         new_posn, log_vars, E, charges
+
 
 def get_atoms_list_from_out(outfile):
     start = get_start_line(outfile)
@@ -102,9 +106,9 @@ def get_atoms_list_from_out(outfile):
                         line_charges = [float(val) for val in look[2:]]
                         chargeDir[symbol] = line_charges
                         for atom in list(chargeDir.keys()):
-                            for i, idx in enumerate(idxMap[atom]):
-                                charges[idx] += chargeDir[atom][i]
-                    elif not "#" in line:
+                            for k, idx in enumerate(idxMap[atom]):
+                                charges[idx] += chargeDir[atom][k]
+                    elif "#" not in line:
                         active_lowdin = False
                         log_vars = True
                 elif log_vars:
