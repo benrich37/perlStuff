@@ -1,17 +1,16 @@
 import os
 from os.path import join as opj
 from os.path import exists as ope
-from ase.io import read, write
+from ase.io import read
 from ase.io.trajectory import Trajectory
 from ase.constraints import FixBondLength
 from ase.optimize import FIRE
-from ase.calculators.emt import EMT as debug_calc
 from ase.neb import NEB
 import numpy as np
 import shutil
-from neb_helpers import neb_optimizer, init_images, read_images, prep_neb
-from generic_helpers import read_inputs, read_line_generic, dup_cmds, optimizer, get_int_dirs, get_log_fn, get_int_dirs_indices, add_bond_constraints, write_contcar
-from generic_helpers import dump_template_input, read_pbc_val, _get_calc, get_exe_cmd, get_cmds
+from helpers.neb_helpers import neb_optimizer, init_images, read_images, prep_neb
+from helpers.generic_helpers import read_line_generic, optimizer, get_int_dirs, get_log_fn, get_int_dirs_indices, add_bond_constraints, write_contcar
+from helpers.generic_helpers import dump_template_input, read_pbc_val, _get_calc, get_exe_cmd, get_cmds
 
 
 neb_template = ["nImages: 10",

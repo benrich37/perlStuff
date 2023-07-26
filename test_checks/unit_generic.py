@@ -2,8 +2,7 @@ import unittest
 from os.path import exists as ope
 from os.path import join as opj
 import os
-import generic_helpers as gen
-import subprocess
+from helpers import generic_helpers as gen
 from ase import Atoms
 from ase.constraints import FixBondLength
 

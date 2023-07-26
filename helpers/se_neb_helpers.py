@@ -1,6 +1,5 @@
-import numpy as np
 import os
-from generic_helpers import get_int_dirs, get_int_dirs_indices
+from helpers.generic_helpers import get_int_dirs, get_int_dirs_indices
 
 def get_f(path):
     with open(os.path.join(path, "Ecomponents")) as f:

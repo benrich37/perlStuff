@@ -1,16 +1,13 @@
 import os
 from os.path import join as opj
 from os.path import exists as ope
-from ase.io import read, write
-import subprocess
+from ase.io import read
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from JDFTx import JDFTx
-import numpy as np
-import shutil
-from generic_helpers import copy_state_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, dump_template_input
-from generic_helpers import add_bond_constraints, read_pbc_val, write_contcar, get_exe_cmd, _get_calc
-from scan_bond_helpers import _scan_log, _prep_input
+from helpers.generic_helpers import copy_state_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, dump_template_input
+from helpers.generic_helpers import add_bond_constraints, read_pbc_val, write_contcar, get_exe_cmd, _get_calc
+from helpers.scan_bond_helpers import _scan_log, _prep_input
 
 
 """ HOW TO USE ME:

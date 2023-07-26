@@ -1,4 +1,4 @@
-from generic_helpers import time_to_str, log_generic, need_sort
+from helpers.generic_helpers import time_to_str, log_generic, need_sort
 from ase.optimize import BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin, FIRE
 from ase.io import read, write
 from ase.build.tools import sort

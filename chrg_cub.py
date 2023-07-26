@@ -1,4 +1,4 @@
-from cube_helpers import check_file, check_multiple, write_cube_helper
+from helpers.cube_helpers import check_file, check_multiple, write_cube_helper
 import numpy as np
 import os
 import argparse

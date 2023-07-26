@@ -8,9 +8,8 @@ import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from generic_helpers import read_inputs, insert_el, get_int_dirs, copy_state_files, remove_restart_files, atom_str, get_inputs_list, optimizer, fix_work_dir
-from generic_helpers import read_pbc_val, dump_template_input
-from neb_scan_helpers import log_total_elapsed, _neb_scan_log, check_poscar, neb_optimizer
+from helpers.generic_helpers import read_inputs, insert_el, get_int_dirs, copy_state_files, remove_restart_files, atom_str, get_inputs_list, optimizer, fix_work_dir
+from helpers.neb_scan_helpers import log_total_elapsed, _neb_scan_log, check_poscar, neb_optimizer
 
 
 def read_neb_scan_inputs(fname="neb_scan_input"):

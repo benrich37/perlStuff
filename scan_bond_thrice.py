@@ -2,14 +2,13 @@ import os
 from os.path import join as opj
 from os.path import exists as ope
 from ase.io import read, write
-import subprocess
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from JDFTx import JDFTx
 import numpy as np
 import shutil
-from generic_helpers import optimizer, read_pbc_val, get_inputs_list, add_bond_constraints, get_log_fn, _get_calc, get_exe_cmd, get_cmds, write_contcar
-from generic_helpers import dump_template_input, read_f
+from helpers.generic_helpers import optimizer, read_pbc_val, get_inputs_list, add_bond_constraints, get_log_fn, _get_calc, get_exe_cmd, get_cmds, write_contcar
+from helpers.generic_helpers import dump_template_input, read_f
 
 """ HOW TO USE ME:
 - Be on perlmutter

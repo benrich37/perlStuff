@@ -8,11 +8,11 @@ import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices
-from generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, write_contcar, add_bond_constraints, optimizer
-from generic_helpers import dump_template_input, _get_calc, get_exe_cmd
-from neb_scan_helpers import _neb_scan_log, check_poscar, neb_optimizer
-from se_neb_helpers import get_fs, has_max
+from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices
+from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, write_contcar, add_bond_constraints, optimizer
+from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd
+from helpers.neb_scan_helpers import _neb_scan_log, check_poscar, neb_optimizer
+from helpers.se_neb_helpers import get_fs, has_max
 
 se_neb_template = ["k: 0.1",
                    "neb method: spline",
