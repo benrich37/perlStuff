@@ -73,7 +73,6 @@ class JDFTx(Calculator):
                         commands = commands.items()
                 elif commands is None:
                         commands = []
-                print(commands)
                 for cmd, v in commands:
                         self.addCommand(cmd, v)
 
@@ -270,7 +269,6 @@ class JDFTx(Calculator):
 
                 # Construct most of the input file
                 inputfile += '\n'
-                print(self.input)
                 for cmd, v in self.input:
                         if '\\\\\\n' in v:
                                 vc = '\\\n'.join(v.split('\\\\\\n'))
