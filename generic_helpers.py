@@ -1,13 +1,11 @@
 import os
 import shutil
-from ase.io import read
-import time
 import numpy as np
 from datetime import datetime
 from ase.constraints import FixBondLength
 from os.path import join as opj
 from os.path import exists as ope
-from ase.io import read, write
+from ase.io import read
 from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
 from ase.units import Bohr
 from ase import Atoms, Atom
