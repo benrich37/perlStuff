@@ -89,10 +89,12 @@ def get_atoms_from_lat_dir(dir):
     return get_atoms_from_coords_out(ionpos, lattice)
 
 def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
-    if ope(opj(opt_dir, "CONTCAR")):
-        structure = opj(opt_dir, "CONTCAR")
-        log_fn(f"Found {structure} for restart structure")
+    if ope(opt_dir):
+        if ope(opj(opt_dir, "CONTCAR")):
+            structure = opj(opt_dir, "CONTCAR")
+            log_fn(f"Found {structure} for restart structure")
     elif ope(lat_dir):
+        os.mkdir(opt_dir)
         if not has_coords_out_files(lat_dir):
             log_fn(f"No ionpos and/or lattice found in {lat_dir}")
             lat_out = opj(lat_dir, "out")
@@ -109,19 +111,54 @@ def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
             log_fn(f"Saving read structure to {structure}")
             write(structure, atoms, format="vasp")
     else:
+        os.mkdir(lat_dir)
+        os.mkdir(opt_dir)
         log_fn(f"Could not gather restart structure from {work_dir}")
         if ope(structure):
             log_fn(f"Using {structure} for structure")
             log_fn(f"Changing restart to False")
             restart = False
             log_fn("setting up lattice and opt dir")
-            os.mkdir(lat_dir)
-            os.mkdir(opt_dir)
         else:
             err = f"Requested structure {structure} not found"
             log_fn(err)
             raise ValueError(err)
     return structure, restart
+
+# def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
+#     if ope(opj(opt_dir, "CONTCAR")):
+#         structure = opj(opt_dir, "CONTCAR")
+#         log_fn(f"Found {structure} for restart structure")
+#     elif ope(lat_dir):
+#         if not has_coords_out_files(lat_dir):
+#             log_fn(f"No ionpos and/or lattice found in {lat_dir}")
+#             lat_out = opj(lat_dir, "out")
+#             if ope(lat_out):
+#                 log_fn(f"Reading recent structure from out file in {lat_out}")
+#                 atoms = get_atoms_list_from_out(lat_out)[-1]
+#                 structure = opj(lat_dir, "POSCAR_lat_out")
+#                 log_fn(f"Saving read structure to {structure}")
+#                 write(structure, atoms, format="vasp")
+#         else:
+#             log_fn(f"Reading structure from {lat_dir}")
+#             atoms = get_atoms_from_lat_dir(lat_dir)
+#             structure = opj(lat_dir, "POSCAR_coords_out")
+#             log_fn(f"Saving read structure to {structure}")
+#             write(structure, atoms, format="vasp")
+#     else:
+#         log_fn(f"Could not gather restart structure from {work_dir}")
+#         if ope(structure):
+#             log_fn(f"Using {structure} for structure")
+#             log_fn(f"Changing restart to False")
+#             restart = False
+#             log_fn("setting up lattice and opt dir")
+#             os.mkdir(lat_dir)
+#             os.mkdir(opt_dir)
+#         else:
+#             err = f"Requested structure {structure} not found"
+#             log_fn(err)
+#             raise ValueError(err)
+#     return structure, restart
 
 
 def run_lat_opt_runner(atoms, structure, lat_dir, work_dir, log_fn):
@@ -138,56 +175,48 @@ def run_lat_opt_runner(atoms, structure, lat_dir, work_dir, log_fn):
     out_to_logx(lat_dir, opj(lat_dir, 'out'), log_fn=log_fn)
     return atoms, structure
 
-# def run_ase_opt(atoms, root, opter, do_cell, log_fn, failed_before = False):
-#     dyn = optimizer(atoms, root, opter)
-#     traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
-#     logx = opj(root, "opt.logx")
-#     write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
-#     write_contcar = lambda: _write_contcar(atoms, root)
-#     write_opt_log = lambda: _write_opt_log(atoms, dyn, max_steps, log_fn)
-#     dyn.attach(traj.write, interval=1)
-#     dyn.attach(write_contcar, interval=1)
-#     dyn.attach(write_logx, interval=1)
-#     dyn.attach(write_opt_log, interval=1)
-#     opt_log("Optimization starting")
-#     opt_log(f"Fmax: {fmax}, max_steps: {max_steps}")
-#     failed = False
-#     try:
-#         dyn.run(fmax=fmax, steps=max_steps)
-#         opt_log(f"Finished in {dyn.nsteps}/{max_steps}")
-#         finished_logx(atoms, logx, dyn.nsteps, max_steps)
-#         sp_logx(atoms, "sp.logx", do_cell=do_cell)
-#         finished(root)
-#     except Exception as e:
-#         log_fn(e)
-#         if not failed_before:
-#             if death_by_state(opj(root,"out"), log_fn):
-#                 log_fn("Calculation failed due to state file. Will retry without state files present")
-#                 pass
-#             else:
-#                 log_fn("Check out file - unknown issue with calculation")
-#                 assert False
-#         else:
-#
-#         opt_log("couldnt run??")
-#         opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
-#         failed = True
-#         err = e
-#         pass
-#     if failed:
-#         if death_by_state(opj(root,"out"), log_fn):
-#             if not failed_before:
-#                 remove_restart_files(lat_dir, log_fn=opt_log)
-#                 atoms.set_calculator(get_lat_calc(lat_dir))
-#                 log_fn("Retrying lattice opt without state files present")
-#                 try:
-#                     run_ase_opt(atoms, root, opter, do_cell, log_fn, failed_before=True)
-#                 except Exception as e:
-#                     log_fn("Check out file - unknown issue with calculation")
-#                     log_fn(e)  # Done: make sure this syntax will still print JDFT errors correctly
-#                     assert False
-#             else:
-#                 log_fn("Recognizing failure by state files when supposeduly no files are present - insane")
+
+def run_ase_opt_runner(atoms, root, opter, do_cell, log_fn):
+    dyn = optimizer(atoms, root, opter)
+    traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
+    logx = opj(root, "opt.logx")
+    write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
+    write_contcar = lambda: _write_contcar(atoms, root)
+    write_opt_log = lambda: _write_opt_log(atoms, dyn, max_steps, log_fn)
+    dyn.attach(traj.write, interval=1)
+    dyn.attach(write_contcar, interval=1)
+    dyn.attach(write_logx, interval=1)
+    dyn.attach(write_opt_log, interval=1)
+    opt_log("Optimization starting")
+    opt_log(f"Fmax: {fmax}, max_steps: {max_steps}")
+    dyn.run(fmax=fmax, steps=max_steps)
+    opt_log(f"Finished in {dyn.nsteps}/{max_steps}")
+    finished_logx(atoms, logx, dyn.nsteps, max_steps)
+    sp_logx(atoms, "sp.logx", do_cell=do_cell)
+    finished(root)
+
+def run_ase_opt(atoms, root, opter, do_cell, log_fn, failed_before = False):
+    run_again = False
+    try:
+        run_ase_opt_runner(atoms, root, opter, do_cell, log_fn)
+    except Exception as e:
+        log_fn(e)
+        if not failed_before:
+            if death_by_state(opj(root,"out"), log_fn):
+                log_fn("Calculation failed due to state file. Will retry without state files present")
+                run_again = True
+                pass
+            else:
+                log_fn("Check out file - unknown issue with calculation")
+                assert False
+        else:
+            if not death_by_state(opj(root,"out"), log_fn):
+                log_fn("Calculation failed without state files interfering - check out file")
+            else:
+                log_fn("Recognizing failure by state files when supposeduly no files are present - insane")
+            assert False
+    if run_again:
+        run_ase_opt(atoms, root, opter, do_cell, log_fn, failed_before=True)
 
 
 
@@ -243,6 +272,7 @@ if __name__ == '__main__':
                 assert False
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=opt_log)
     atoms.set_calculator(get_calc(opt_dir))
+    run_ase_opt(atoms, opt_dir, FIRE, do_cell, opt_log)
 
     dyn = optimizer(atoms, opt_dir, FIRE)
     traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
