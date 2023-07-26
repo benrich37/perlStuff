@@ -7,11 +7,16 @@ from os.path import join as opj
 from os.path import exists as ope
 from ase.io import read
 from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
-from ase.units import Bohr
-from ase import Atoms, Atom
+from scripts.out_to_logx import out_to_logx_str, get_atoms_from_outfile_data, get_start_line
 from pathlib import Path
 import copy
 
+
+def log_def(s):
+    print(s)
+
+
+state_files = ["wfns", "eigenvals", "fillings", "fluidState"]
 
 gbrv_15_ref = [
     "sn f ca ta sc cd sb mg b se ga os ir li si co cr pt cu i pd br k as h mn cs rb ge bi ag fe tc hf ba ru al hg mo y re s tl te ti be p zn sr n rh au hf nb c w ni cl la in v pb zr o ",
@@ -19,17 +24,17 @@ gbrv_15_ref = [
 ]
 
 valence_electrons = {
-        'h': 1, 'he': 2,
-        'li': 1, 'be': 2, 'b': 3, 'c': 4, 'n': 5, 'o': 6, 'f': 7, 'ne': 8,
-        'na': 1, 'mg': 2, 'al': 3, 'si': 4, 'p': 5, 's': 6, 'cl': 7, 'ar': 8,
-        'k': 1, 'ca': 2, 'sc': 2, 'ti': 2, 'v': 2, 'cr': 1, 'mn': 2, 'fe': 2, 'co': 2, 'ni': 2, 'cu': 1, 'zn': 2,
-        'ga': 3, 'ge': 4, 'as': 5, 'se': 6, 'br': 7, 'kr': 8,
-        'rb': 1, 'sr': 2, 'y': 2, 'zr': 2, 'nb': 1, 'mo': 1, 'tc': 2, 'ru': 2, 'rh': 1, 'pd': 0, 'ag': 1, 'cd': 2,
-        'in': 3, 'sn': 4, 'sb': 5, 'te': 6, 'i': 7, 'xe': 8,
-        'cs': 1, 'ba': 2, 'la': 2, 'ce': 2, 'pr': 2, 'nd': 2, 'pm': 2, 'sm': 2, 'eu': 2, 'gd': 3, 'tb': 3, 'dy': 3,
-        'ho': 3, 'er': 3, 'tm': 2, 'yb': 2, 'lu': 2, 'hf': 2, 'ta': 2, 'w': 2, 're': 2, 'os': 2, 'ir': 2, 'pt': 2,
-        'au': 1, 'hg': 2, 'tl': 3, 'pb': 4, 'bi': 5, 'po': 6, 'at': 7, 'rn': 8,
-    }
+    'h': 1, 'he': 2,
+    'li': 1, 'be': 2, 'b': 3, 'c': 4, 'n': 5, 'o': 6, 'f': 7, 'ne': 8,
+    'na': 1, 'mg': 2, 'al': 3, 'si': 4, 'p': 5, 's': 6, 'cl': 7, 'ar': 8,
+    'k': 1, 'ca': 2, 'sc': 2, 'ti': 2, 'v': 2, 'cr': 1, 'mn': 2, 'fe': 2, 'co': 2, 'ni': 2, 'cu': 1, 'zn': 2,
+    'ga': 3, 'ge': 4, 'as': 5, 'se': 6, 'br': 7, 'kr': 8,
+    'rb': 1, 'sr': 2, 'y': 2, 'zr': 2, 'nb': 1, 'mo': 1, 'tc': 2, 'ru': 2, 'rh': 1, 'pd': 0, 'ag': 1, 'cd': 2,
+    'in': 3, 'sn': 4, 'sb': 5, 'te': 6, 'i': 7, 'xe': 8,
+    'cs': 1, 'ba': 2, 'la': 2, 'ce': 2, 'pr': 2, 'nd': 2, 'pm': 2, 'sm': 2, 'eu': 2, 'gd': 3, 'tb': 3, 'dy': 3,
+    'ho': 3, 'er': 3, 'tm': 2, 'yb': 2, 'lu': 2, 'hf': 2, 'ta': 2, 'w': 2, 're': 2, 'os': 2, 'ir': 2, 'pt': 2,
+    'au': 1, 'hg': 2, 'tl': 3, 'pb': 4, 'bi': 5, 'po': 6, 'at': 7, 'rn': 8,
+}
 
 submit_gpu_perl_ref = [
     "#!/bin/bash",
@@ -56,10 +61,10 @@ submit_gpu_perl_ref = [
 ]
 
 
-def copy_file(file, tgt_dir, log_fn = None):
+def copy_file(file, tgt_dir, log_fn=log_def):
     shutil.copy(file, tgt_dir)
-    if not log_fn is None:
-        log_fn(f"Copying {file} to {tgt_dir}")
+    log_fn(f"Copying {file} to {tgt_dir}")
+
 
 def copy_files(src_dir, tgt_dir):
     for filename in os.listdir(src_dir):
@@ -87,6 +92,7 @@ def get_int_dirs(dir_path):
                 continue
     return int_dir_list
 
+
 def insert_el(filename):
     """
     Inserts elements line in correct position for Vasp 5? Good for
@@ -102,6 +108,7 @@ def insert_el(filename):
         contents.insert(5, ele_line)
     with open(filename, 'w') as f:
         f.write('\n'.join(contents))
+
 
 def read_inputs(work_dir, ref_struct=None):
     inpfname = opj(work_dir, "inputs")
@@ -124,7 +131,7 @@ def read_inputs(work_dir, ref_struct=None):
                     if not skip:
                         cmd = line[:line.index(" ")]
                         rest = line.rstrip("\n")[line.index(" ") + 1:]
-                        if not cmd in ignore:
+                        if cmd not in ignore:
                             input_cmds[cmd] = rest
         do_n_bands = False
         if "elec-n-bands" in input_cmds.keys():
@@ -141,6 +148,7 @@ def read_inputs(work_dir, ref_struct=None):
         return input_cmds
     else:
         return None
+
 
 def get_nbands(poscar_fname):
     atoms = read(poscar_fname)
@@ -163,15 +171,14 @@ def get_nbands(poscar_fname):
 
 def dup_cmds(infile):
     lattice_line = None
-    infile_cmds = {}
-    infile_cmds["dump"] = "End State"
+    infile_cmds = {"dump": "End State"}
     ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump-name", "initial-state",
               "coulomb-interaction", "coulomb-truncation-embed"]
     with open(infile) as f:
         for i, line in enumerate(f):
             if "lattice " in line:
                 lattice_line = i
-            if not lattice_line is None:
+            if lattice_line is not None:
                 if i > lattice_line + 3:
                     if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
                         skip = False
@@ -183,31 +190,31 @@ def dup_cmds(infile):
                         if not skip:
                             cmd = line[:line.index(" ")]
                             rest = line.rstrip("\n")[line.index(" ") + 1:]
-                            if not cmd in ignore:
+                            if cmd not in ignore:
                                 if not cmd == "dump":
                                     infile_cmds[cmd] = rest
     return infile_cmds
 
-state_files = ["wfns", "eigenvals", "fillings", "fluidState"]
 
-def copy_state_files(src, dest):
-    # state_files = ["wfns", "eigenvals", "fillings", "fluidState","force","CONTCAR","POSCAR", "hessian.pckl","in"]
+def copy_state_files(src, dest, log_fn=log_def):
     for f in state_files:
-        if os.path.exists(os.path.join(src, f)):
-            print(f"copying {f} from {src} to {dest}")
-            shutil.copy(os.path.join(src, f), dest)
+        if ope(opj(src, f)):
+            log_fn(f"copying {f} from {src} to {dest}")
+            shutil.copy(opj(src, f), dest)
 
-def has_state_files(dir):
+
+def has_state_files(dirr):
     has = True
     for f in state_files:
-        has = has and ope(opj(dir, f))
+        has = has and ope(opj(dirr, f))
     return has
+
 
 def get_mtime(path_str):
     return Path(path_str).stat().st_mtime
 
 
-def get_best(dir_list, f, log_fn=lambda s: print(s)):
+def get_best(dir_list, f, log_fn=log_def):
     time_best = 0
     path_best = None
     for d in dir_list:
@@ -216,7 +223,7 @@ def get_best(dir_list, f, log_fn=lambda s: print(s)):
             if time > time_best:
                 time_best = time
                 path_best = opj(d, f)
-    if not path_best is None:
+    if path_best is not None:
         return path_best
     else:
         err = f"No dirs have {f}"
@@ -224,11 +231,12 @@ def get_best(dir_list, f, log_fn=lambda s: print(s)):
         raise ValueError(err)
 
 
-def get_best_state_files(dir_list, log_fn = lambda s: print(s)):
+def get_best_state_files(dir_list, log_fn=log_def):
     best_files = []
     for f in state_files:
-        best_files.append(get_best(dir_list, f, log_fn = log_fn))
+        best_files.append(get_best(dir_list, f, log_fn=log_fn))
     return best_files
+
 
 def copy_best_state_f(dir_list, target, log_fn):
     try:
@@ -243,60 +251,60 @@ def copy_best_state_f(dir_list, target, log_fn):
         pass
 
 
-
-
-def remove_restart_files(dir, log_fn = None):
+def remove_restart_files(dirr, log_fn=log_def):
     restart_files = ["wfns", "eigenvals", "fillings", "fluidState", "force", "hessian.pckl"]
     for f in restart_files:
-        if ope(opj(dir, f)):
-            if not log_fn is None:
-                log_fn(f"removing {f} from {dir}")
-            os.remove(opj(dir, f))
+        if ope(opj(dirr, f)):
+            log_fn(f"removing {f} from {dirr}")
+            os.remove(opj(dirr, f))
 
 
 def time_to_str(t):
     if t < 60:
-        print_str =  f"{t:.{3}g} sec"
+        print_str = f"{t:.{3}g} sec"
     elif t < 3600:
-        print_str =  f"{t/60.:.{3}g} min"
+        print_str = f"{t / 60.:.{3}g} min"
     else:
-        print_str = f"{t /3600.:.{3}g} hr"
+        print_str = f"{t / 3600.:.{3}g} hr"
     return print_str
 
 
 def atom_str(atoms, index):
     return f"{atoms.get_chemical_symbols()[index]}({index})"
 
+
 def need_sort(root):
     atoms = read(opj(root, "POSCAR"), format="vasp")
     ats = []
     dones = []
     for a in atoms.get_chemical_symbols():
-        if not a in ats:
+        if a not in ats:
             ats.append(ats)
         elif a in dones:
             return True
         for at in ats:
-            if not at in dones:
+            if at not in dones:
                 if at != a:
                     dones.append(at)
     return False
+
 
 def get_log_fn(work, calc_type, print_bool, restart=False):
     fname = opj(work, calc_type + ".log")
     if not restart:
         if ope(fname):
             os.remove(fname)
-    return lambda s: log_generic(s,work, calc_type, print_bool)
+    return lambda s: log_generic(s, work, calc_type, print_bool)
+
 
 def log_generic(message, work, calc_type, print_bool):
     message = str(message)
-    if not "\n" in message:
+    if "\n" not in message:
         message = message + "\n"
     prefix = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": "
     message = prefix + message
     log_fname = os.path.join(work, calc_type + ".log")
-    if not os.path.exists(log_fname):
+    if not ope(log_fname):
         with open(log_fname, "w") as f:
             f.write(prefix + "Starting\n")
             f.close()
@@ -306,7 +314,8 @@ def log_generic(message, work, calc_type, print_bool):
     if print_bool:
         print(message)
 
-def get_cmds(work_dir, ref_struct = None):
+
+def get_cmds(work_dir, ref_struct=None):
     os.chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
         return dup_cmds(opj(work_dir, "in"))
@@ -314,11 +323,10 @@ def get_cmds(work_dir, ref_struct = None):
         return read_inputs(work_dir, ref_struct=ref_struct)
 
 
-
 def read_line_generic(line):
     key = line.lower().split(":")[0]
     val = line.rstrip("\n").split(":")[1]
-    if not "#" in key:
+    if "#" not in key:
         if "#" in val:
             val = val[:val.index("#")]
         return key, val
@@ -343,23 +351,23 @@ def add_constraint(atoms, constraint):
         consts.append(constraint)
         atoms.set_constraint(consts)
 
-def add_bond_constraints(atoms, indices, log_fn=None):
-    try:
-        assert len(indices) % 2 == 0
-    except:
+
+def add_bond_constraints(atoms, indices, log_fn=log_def):
+    if not len(indices) % 2 == 0:
         raise ValueError("Uneven number of indices")
-    nPairs = int(len(indices)/2)
+    nPairs = int(len(indices) / 2)
     for i in range(nPairs):
-        add_constraint(atoms, FixBondLength(indices[2*i], indices[1+(2*i)]))
-        if not log_fn is None:
-            cur_length = np.linalg.norm(atoms.positions[indices[0]] - atoms.positions[indices[1]])
-            print_str = f"Fixed bond {atom_str(atoms, indices[0])} -"
-            print_str += f" {atom_str(atoms, indices[1])} fixed to {cur_length:.{4}g} A"
-            log_fn(print_str)
+        add_constraint(atoms, FixBondLength(indices[2 * i], indices[1 + (2 * i)]))
+        cur_length = np.linalg.norm(atoms.positions[indices[0]] - atoms.positions[indices[1]])
+        print_str = f"Fixed bond {atom_str(atoms, indices[0])} -"
+        print_str += f" {atom_str(atoms, indices[1])} fixed to {cur_length:.{4}g} A"
+        log_fn(print_str)
+
 
 def _write_contcar(atoms, root):
     atoms.write(os.path.join(root, 'CONTCAR'), format="vasp", direct=True)
     insert_el(os.path.join(root, 'CONTCAR'))
+
 
 def optimizer(atoms, root, opter, opt_alpha=150):
     traj = opj(root, "opt.traj")
@@ -380,9 +388,10 @@ def get_inputs_list(fname, auto_lower=True):
             if auto_lower:
                 key = key.lower()
                 val = val.lower()
-            if not "#" in key:
+            if "#" not in key:
                 inputs.append(tuple([key, val]))
     return inputs
+
 
 def fix_work_dir(work_dir):
     if work_dir is None:
@@ -391,10 +400,12 @@ def fix_work_dir(work_dir):
         work_dir += "/"
     return work_dir
 
+
 def get_bond_length(atoms, indices):
     posn1 = atoms.positions[indices[0]]
     posn2 = atoms.positions[indices[1]]
     return np.linalg.norm(posn2 - posn1)
+
 
 def step_bond_with_momentum(atom_pair, step_length, atoms_prev_2, atoms_prev_1):
     target_length = get_bond_length(atoms_prev_1, atom_pair) + step_length
@@ -407,7 +418,7 @@ def step_bond_with_momentum(atom_pair, step_length, atoms_prev_2, atoms_prev_1):
     cur_length = np.linalg.norm(dir_vec)
     should_be_0 = target_length - cur_length
     if not np.isclose(should_be_0, 0.0):
-        atoms_prev_1.positions[atom_pair[1]] += dir_vec*(should_be_0)/np.linalg.norm(dir_vec)
+        atoms_prev_1.positions[atom_pair[1]] += dir_vec * should_be_0 / np.linalg.norm(dir_vec)
     return atoms_prev_1
 
 
@@ -418,11 +429,13 @@ def dump_template_input(fname, template, cwd):
     with open(opj(cwd, fname), "w") as f:
         f.write(dump_str)
 
+
 def check_submit(gpu, cwd):
     if not ope(opj(cwd, "submit.sh")):
         if gpu:
             dump_template_input("submit.sh", submit_gpu_perl_ref, cwd)
         exit()
+
 
 def read_pbc_val(val):
     vsplit = val.strip().split(' ')
@@ -431,15 +444,14 @@ def read_pbc_val(val):
         pbc.append("true" in vsplit[i].lower())
     return pbc
 
-def _get_calc(exe_cmd, cmds, root, JDFTx_fn, debug=False, debug_fn=None, log_fn=None):
+
+def _get_calc(exe_cmd, cmds, root, jdftx_fn, debug=False, debug_fn=None, log_fn=log_def):
     if debug:
-        if not log_fn is None:
-            log_fn("Setting calc to debug calc")
+        log_fn("Setting calc to debug calc")
         return debug_fn()
     else:
-        if not log_fn is None:
-            log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
-        return JDFTx_fn(
+        log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
+        return jdftx_fn(
             executable=exe_cmd,
             pseudoSet="GBRV_v1.5",
             commands=cmds,
@@ -458,11 +470,13 @@ def get_exe_cmd(gpu, log_fn):
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
 
-def read_f(dir):
-    with open(os.path.join(dir, "Ecomponents")) as f:
+
+def read_f(dirr):
+    with open(os.path.join(dirr, "Ecomponents")) as f:
         for line in f:
             if "F =" in line:
                 return float(line.strip().split("=")[1])
+
 
 def _write_logx(atoms, fname, dyn, maxstep, do_cell=True, do_charges=True):
     if not ope(fname):
@@ -476,13 +490,15 @@ def _write_logx(atoms, fname, dyn, maxstep, do_cell=True, do_charges=True):
             f.write(log_charges(atoms))
         f.write(opt_spacer(step, maxstep))
 
+
 def _write_opt_log(atoms, dyn, max_steps, log_fn):
     step = dyn.nsteps
     log_fn(f"Step {step}/{max_steps}: E = {atoms.get_potential_energy()}")
     try:
         log_fn(f"Max Force: {np.max(atoms.get_forces())}")
         log_fn(f"Sum of Forces: {np.sum(atoms.get_forces())}")
-    except:
+    except Exception as e:
+        log_fn(e)
         pass
 
 
@@ -493,6 +509,7 @@ def finished_logx(atoms, fname, step, maxstep, do_cell=True):
         f.write(log_charges(atoms))
         f.write(opt_spacer(step, maxstep))
         f.write("\n Normal termination of Gaussian 16 at Fri Jul 21 12:28:14 2023.\n")
+
 
 def sp_logx(atoms, fname, do_cell=True):
     if ope(fname):
@@ -505,140 +522,26 @@ def sp_logx(atoms, fname, do_cell=True):
     with open(fname, "w") as f:
         f.write(dump_str)
 
-def get_start_line(outfname):
-        start = 0
-        for i, line in enumerate(open(outfname)):
-                if "JDFTx 1." in line:
-                        start = i
-        return start
 
 def get_count_dict(symbols):
     count_dict = {}
     for s in symbols:
-        if not s in count_dict.keys():
+        if s not in count_dict.keys():
             count_dict[s] = 1
         else:
             count_dict[s] += 1
     return count_dict
 
-def get_atoms_list_from_out_reset_vars(nAtoms=100, _def=100):
-    R = np.zeros([3, 3])
-    posns = []
-    names = []
-    chargeDir = {}
-    active_lattice = False
-    lat_row = 0
-    active_posns = False
-    log_vars = False
-    coords = None
-    new_posn = False
-    active_lowdin = False
-    idxMap = {}
-    j = 0
-    E = 0
-    if nAtoms is None:
-        nAtoms = _def
-    charges = np.zeros(nAtoms, dtype=float)
-    return R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
-        new_posn, log_vars, E, charges
-
-
-def get_atoms_list_from_out(outfile):
-    start = get_start_line(outfile)
-    charge_key = "oxidation-state"
-    opts = []
-    nAtoms = None
-    R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
-        new_posn, log_vars, E, charges = get_atoms_list_from_out_reset_vars()
-    for i, line in enumerate(open(outfile)):
-        if i > start:
-            if new_posn:
-                if "Lowdin population analysis " in line:
-                    active_lowdin = True
-                if "R =" in line:
-                    active_lattice = True
-                elif line.find('# Ionic positions in') >= 0:
-                    coords = line.split()[4]
-                    active_posns = True
-                elif active_lattice:
-                    if lat_row < 3:
-                        R[lat_row, :] = [float(x) for x in line.split()[1:-1]]
-                        lat_row += 1
-                    else:
-                        active_lattice = False
-                        lat_row = 0
-                elif active_posns:
-                    tokens = line.split()
-                    if len(tokens) and tokens[0] == 'ion':
-                        names.append(tokens[1])
-                        posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
-                        if tokens[1] not in idxMap:
-                                idxMap[tokens[1]] = []
-                        idxMap[tokens[1]].append(j)
-                        j += 1
-                    else:
-                        posns=np.array(posns)
-                        active_posns = False
-                        nAtoms = len(names)
-                        if len(charges) < nAtoms:
-                            charges=np.zeros(nAtoms)
-                elif "Minimize: Iter:" in line:
-                    if "F: " in line:
-                        E = float(line[line.index("F: "):].split(' ')[1])
-                    elif "G: " in line:
-                        E = float(line[line.index("G: "):].split(' ')[1])
-                elif active_lowdin:
-                    if charge_key in line:
-                        look = line.rstrip('\n')[line.index(charge_key):].split(' ')
-                        symbol = str(look[1])
-                        line_charges = [float(val) for val in look[2:]]
-                        chargeDir[symbol] = line_charges
-                        for atom in list(chargeDir.keys()):
-                            for i, idx in enumerate(idxMap[atom]):
-                                charges[idx] += chargeDir[atom][i]
-                    elif not "#" in line:
-                        active_lowdin = False
-                        log_vars = True
-                elif log_vars:
-                    if coords != 'cartesian':
-                        posns = np.dot(posns[1], R[2])
-                    opts.append(get_atoms_from_outfile_data(names, posns, R, charges=charges, E=E))
-                    R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
-                        new_posn, log_vars, E, charges = get_atoms_list_from_out_reset_vars(nAtoms=nAtoms)
-            elif "Computing DFT-D3 correction:" in line:
-                new_posn = True
-    return opts
-
-def get_do_cell(pbc):
-    return np.sum(pbc) > 0
-
-def out_to_logx_str(outfile, e_conv=(1/27.211397)):
-    atoms_list = get_atoms_list_from_out(outfile)
-    dump_str = "\n Entering Link 1 \n \n"
-    do_cell = get_do_cell(atoms_list[0].cell)
-    for i in range(len(atoms_list)):
-        dump_str += log_input_orientation(atoms_list[i], do_cell=do_cell)
-        dump_str += f"\n SCF Done:  E =  {atoms_list[i].E*e_conv}\n\n"
-        dump_str += log_charges(atoms_list[i])
-        dump_str += opt_spacer(i, len(atoms_list))
-    dump_str += log_input_orientation(atoms_list[-1])
-    dump_str += " Normal termination of Gaussian 16"
-    return dump_str
 
 def out_to_logx(save_dir, outfile, log_fn=lambda s: print(s)):
     try:
-        fname = opj(save_dir,"out.logx")
+        fname = opj(save_dir, "out.logx")
         with open(fname, "w") as f:
             f.write(out_to_logx_str(outfile))
         f.close()
     except Exception as e:
         log_fn(e)
         pass
-
-
-# def update_atoms(atoms, atoms_from_out):
-#     atoms.positions = atoms_from_out.positions
-#     atoms.cell = atoms_from_out.cell
 
 
 def parse_ionpos(ionpos_fname):
@@ -656,13 +559,15 @@ def parse_ionpos(ionpos_fname):
                     posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
     return names, np.array(posns), coords
 
+
 def parse_lattice(lattice_fname):
-    R = np.zeros([3,3], dtype=float)
+    R = np.zeros([3, 3], dtype=float)
     with open(lattice_fname, "r") as f:
         for i, line in enumerate(f):
             if i > 0:
                 R[i - 1, :] = [float(x) for x in line.split()[:3]]
     return R
+
 
 def parse_coords_out(ionpos_fname, lattice_fname):
     names, posns, coords = parse_ionpos(ionpos_fname)
@@ -671,31 +576,22 @@ def parse_coords_out(ionpos_fname, lattice_fname):
         posns = np.dot(posns, R)
     return names, posns, R
 
+
 def get_atoms_from_coords_out(ionpos_fname, lattice_fname):
     names, posns, R = parse_coords_out(ionpos_fname, lattice_fname)
     return get_atoms_from_outfile_data(names, posns, R)
 
 
-def get_atoms_from_outfile_data(names, posns, R, charges=None, E=0):
-    atoms = Atoms()
-    posns *= Bohr
-    R = R.T*Bohr
-    atoms.cell = R
-    if charges is None:
-        charges = np.zeros(len(names))
-    for i in range(len(names)):
-        atoms.append(Atom(names[i], posns[i], charge=charges[i]))
-    atoms.E = E
-    return atoms
-
 def has_coords_out_files(dir):
     return (ope(opj(dir, "ionpos"))) and (ope(opj(dir, "lattice")))
+
 
 def get_lattice_cmds(cmds, lat_iters, pbc):
     lat_cmds = copy.copy(cmds)
     lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
     lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
     return lat_cmds
+
 
 def death_by_state(outfname, log_fn=lambda s: print(s)):
     start_line = get_start_line(outfname)
@@ -722,12 +618,3 @@ def check_for_restart(e, failed_before, opt_dir, log_fn):
         else:
             log_fn("Recognizing failure by state files when supposeduly no files are present - insane")
         return False
-
-
-
-
-
-
-
-
-

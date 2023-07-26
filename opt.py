@@ -8,9 +8,10 @@ from JDFTx import JDFTx
 import datetime
 from generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
-from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_list_from_out, get_atoms_from_coords_out
+from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_from_coords_out
 from generic_helpers import copy_best_state_f, has_coords_out_files, get_lattice_cmds
-from generic_helpers import remove_restart_files, out_to_logx, get_do_cell, _write_opt_log, check_for_restart
+from generic_helpers import out_to_logx, _write_opt_log, check_for_restart
+from scripts.out_to_logx import get_do_cell, get_atoms_list_from_out
 
 
 """ HOW TO USE ME:
@@ -125,6 +126,22 @@ def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
             raise ValueError(err)
     return structure, restart
 
+def get_structure(structure, restart, opt_dir, lat_dir, opt_log):
+    if not restart:
+        for d in [opt_dir, lat_dir]:
+            if ope(d):
+                opt_log(f"Resetting {d}")
+                remove_dir_recursive(d)
+            os.mkdir(d)
+        if ope(structure):
+            opt_log(f"Found {structure} for structure")
+        else:
+            opt_log(f"Requested structure {structure} not found")
+            raise ValueError("Missing input structure")
+    else:
+        structure, restart = get_restart_structure(structure, restart, opt_dir, lat_dir, opt_log)
+    return structure, restart
+
 
 def run_lat_opt_runner(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds):
     lat_cmds = get_lattice_cmds(cmds, lat_iters, atoms.pbc)
@@ -200,19 +217,7 @@ if __name__ == '__main__':
     lat_dir = opj(work_dir, "lat")
     structure = opj(work_dir, structure)
     opt_log = get_log_fn(work_dir, "opt_io", False, restart=restart)
-    if not restart:
-        for d in [opt_dir, lat_dir]:
-            if ope(d):
-                opt_log(f"Resetting {d}")
-                remove_dir_recursive(d)
-            os.mkdir(d)
-        if ope(structure):
-            opt_log(f"Found {structure} for structure")
-        else:
-            opt_log(f"Requested structure {structure} not found")
-            raise ValueError("Missing input structure")
-    else:
-        structure, restart = get_restart_structure(structure, restart, opt_dir, lat_dir, opt_log)
+    structure, restart = get_structure(structure, restart, opt_dir, lat_dir, opt_log)
     exe_cmd = get_exe_cmd(gpu, opt_log)
     cmds = get_cmds(work_dir, ref_struct=structure)
     opt_log(f"Setting {structure} to atoms object")
