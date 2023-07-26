@@ -600,6 +600,12 @@ def death_by_state(outfname, log_fn=lambda s: print(s)):
             if i > start_line:
                 if ("bytes" in line) and ("instead of the expected" in line):
                     log_fn(line)
+                    b1 = int(line.rstrip("\n").split()[4])
+                    b2 = int(line.rstrip("\n").split()[-2])
+                    ratio = b1/b2
+                    diff = abs(ratio - 1.)
+                    if diff < 0.01:
+                        log_fn("You should feel fine about this - this magnitude of misalignment are caused by roundoff error")
                     return True
 
 
@@ -608,6 +614,7 @@ def check_for_restart(e, failed_before, opt_dir, log_fn):
     if not failed_before:
         if death_by_state(opj(opt_dir, "out"), log_fn):
             log_fn("Calculation failed due to state file. Will retry without state files present")
+            remove_restart_files(opt_dir, log_fn)
             return True
         else:
             log_fn("Check out file - unknown issue with calculation")

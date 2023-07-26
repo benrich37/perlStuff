@@ -38,6 +38,7 @@ opt_template = ["structure: POSCAR_new #using this one bc idk",
                 "pbc: False False False",
                 "lattice steps: 0"]
 
+
 def read_opt_inputs(fname = "opt_input"):
     """ Example:
     structure: POSCAR
@@ -80,14 +81,17 @@ def read_opt_inputs(fname = "opt_input"):
     work_dir = fix_work_dir(work_dir)
     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters
 
+
 def finished(dirname):
     with open(opj(dirname, "finished.txt"), 'w') as f:
         f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": Done")
+
 
 def get_atoms_from_lat_dir(dir):
     ionpos = opj(dir, "ionpos")
     lattice = opj(dir, "lattice")
     return get_atoms_from_coords_out(ionpos, lattice)
+
 
 def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
     if ope(opt_dir):
@@ -126,6 +130,7 @@ def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
             raise ValueError(err)
     return structure, restart
 
+
 def get_structure(structure, restart, opt_dir, lat_dir, opt_log):
     if not restart:
         for d in [opt_dir, lat_dir]:
@@ -162,6 +167,7 @@ def run_lat_opt_runner(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds)
     out_to_logx(lat_dir, opj(lat_dir, 'out'), log_fn=log_fn)
     return atoms, structure
 
+
 def run_lat_opt(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds, _failed_before=False):
     run_again = False
     try:
@@ -194,19 +200,19 @@ def run_ase_opt_runner(atoms, root, opter, do_cell, log_fn):
     sp_logx(atoms, "sp.logx", do_cell=do_cell)
     finished(root)
 
-def run_ase_opt(atoms, opt_dir, opter, do_cell, log_fn, exe_cmd, cmds, _failed_before = False):
+
+def run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed_before = False):
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=log_fn)
     atoms.set_calculator(get_calc(opt_dir))
     run_again = False
     try:
-        run_ase_opt_runner(atoms, opt_dir, opter, do_cell, log_fn)
+        run_ase_opt_runner(atoms, opt_dir, opter, cell_bool, log_fn)
     except Exception as e:
         assert check_for_restart(e, _failed_before, opt_dir, log_fn)
         run_again = True
         pass
     if run_again:
-        run_ase_opt(atoms, opt_dir, opter, do_cell, log_fn, exe_cmd, cmds, _failed_before=True)
-
+        run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed_before=True)
 
 
 if __name__ == '__main__':
