@@ -10,7 +10,7 @@ from generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, 
 from generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
 from generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_list_from_out, get_atoms_from_coords_out
 from generic_helpers import copy_best_state_f, has_coords_out_files, get_lattice_cmds,  death_by_state
-from generic_helpers import remove_restart_files, out_to_logx, get_do_cell, _write_opt_log
+from generic_helpers import remove_restart_files, out_to_logx, get_do_cell, _write_opt_log, check_for_restart
 
 
 """ HOW TO USE ME:
@@ -125,54 +125,36 @@ def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
             raise ValueError(err)
     return structure, restart
 
-# def get_restart_structure(structure, restart, opt_dir, lat_dir, log_fn):
-#     if ope(opj(opt_dir, "CONTCAR")):
-#         structure = opj(opt_dir, "CONTCAR")
-#         log_fn(f"Found {structure} for restart structure")
-#     elif ope(lat_dir):
-#         if not has_coords_out_files(lat_dir):
-#             log_fn(f"No ionpos and/or lattice found in {lat_dir}")
-#             lat_out = opj(lat_dir, "out")
-#             if ope(lat_out):
-#                 log_fn(f"Reading recent structure from out file in {lat_out}")
-#                 atoms = get_atoms_list_from_out(lat_out)[-1]
-#                 structure = opj(lat_dir, "POSCAR_lat_out")
-#                 log_fn(f"Saving read structure to {structure}")
-#                 write(structure, atoms, format="vasp")
-#         else:
-#             log_fn(f"Reading structure from {lat_dir}")
-#             atoms = get_atoms_from_lat_dir(lat_dir)
-#             structure = opj(lat_dir, "POSCAR_coords_out")
-#             log_fn(f"Saving read structure to {structure}")
-#             write(structure, atoms, format="vasp")
-#     else:
-#         log_fn(f"Could not gather restart structure from {work_dir}")
-#         if ope(structure):
-#             log_fn(f"Using {structure} for structure")
-#             log_fn(f"Changing restart to False")
-#             restart = False
-#             log_fn("setting up lattice and opt dir")
-#             os.mkdir(lat_dir)
-#             os.mkdir(opt_dir)
-#         else:
-#             err = f"Requested structure {structure} not found"
-#             log_fn(err)
-#             raise ValueError(err)
-#     return structure, restart
 
-
-def run_lat_opt_runner(atoms, structure, lat_dir, work_dir, log_fn):
+def run_lat_opt_runner(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds):
+    lat_cmds = get_lattice_cmds(cmds, lat_iters, atoms.pbc)
+    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=log_fn)
+    atoms.set_calculator(get_lat_calc(lat_dir))
+    log_fn("lattice optimization starting")
+    log_fn(f"Fmax: n/a, max_steps: {lat_iters}")
     atoms.get_forces()
     ionpos = opj(lat_dir, "ionpos")
     lattice = opj(lat_dir, "lattice")
     pbc = atoms.pbc
     atoms = get_atoms_from_coords_out(ionpos, lattice)
     atoms.pbc = pbc
-    structure = opj(work_dir, structure + "_lat_opted")
+    structure = opj(root, structure + "_lat_opted")
     write(structure, atoms, format="vasp")
     opt_log(f"Finished lattice optimization")
     finished(lat_dir)
     out_to_logx(lat_dir, opj(lat_dir, 'out'), log_fn=log_fn)
+    return atoms, structure
+
+def run_lat_opt(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds, _failed_before=False):
+    run_again = False
+    try:
+        atoms, structure = run_lat_opt_runner(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds)
+    except Exception as e:
+        assert check_for_restart(e, _failed_before, lat_dir, log_fn)
+        run_again = True
+        pass
+    if run_again:
+        atoms, structure = run_lat_opt(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds, _failed_before=True)
     return atoms, structure
 
 
@@ -195,28 +177,18 @@ def run_ase_opt_runner(atoms, root, opter, do_cell, log_fn):
     sp_logx(atoms, "sp.logx", do_cell=do_cell)
     finished(root)
 
-def run_ase_opt(atoms, root, opter, do_cell, log_fn, failed_before = False):
+def run_ase_opt(atoms, opt_dir, opter, do_cell, log_fn, exe_cmd, cmds, _failed_before = False):
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=log_fn)
+    atoms.set_calculator(get_calc(opt_dir))
     run_again = False
     try:
-        run_ase_opt_runner(atoms, root, opter, do_cell, log_fn)
+        run_ase_opt_runner(atoms, opt_dir, opter, do_cell, log_fn)
     except Exception as e:
-        log_fn(e)
-        if not failed_before:
-            if death_by_state(opj(root,"out"), log_fn):
-                log_fn("Calculation failed due to state file. Will retry without state files present")
-                run_again = True
-                pass
-            else:
-                log_fn("Check out file - unknown issue with calculation")
-                assert False
-        else:
-            if not death_by_state(opj(root,"out"), log_fn):
-                log_fn("Calculation failed without state files interfering - check out file")
-            else:
-                log_fn("Recognizing failure by state files when supposeduly no files are present - insane")
-            assert False
+        assert check_for_restart(e, _failed_before, opt_dir, log_fn)
+        run_again = True
+        pass
     if run_again:
-        run_ase_opt(atoms, root, opter, do_cell, log_fn, failed_before=True)
+        run_ase_opt(atoms, opt_dir, opter, do_cell, log_fn, exe_cmd, cmds, _failed_before=True)
 
 
 
@@ -248,49 +220,5 @@ if __name__ == '__main__':
     do_cell = get_do_cell(pbc)
     atoms.pbc = pbc
     if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
-        lat_cmds = get_lattice_cmds(cmds, lat_iters, pbc)
-        get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=opt_log)
-        copy_best_state_f([work_dir, lat_dir], lat_dir, log_fn=opt_log)
-        atoms.set_calculator(get_lat_calc(lat_dir))
-        opt_log("lattice optimization starting")
-        opt_log(f"Fmax: n/a, max_steps: {lat_iters}")
-        try:
-            atoms, structure = run_lat_opt_runner(atoms, structure, lat_dir, work_dir, opt_log)
-        except Exception as e:
-            opt_log("couldnt run??")
-            opt_log(e)
-            pass
-        if death_by_state(opj(lat_dir, "out"), log_fn=opt_log):
-            remove_restart_files(lat_dir, log_fn=opt_log)
-            atoms.set_calculator(get_lat_calc(lat_dir))
-            opt_log("Retrying lattice opt without state files present")
-            try:
-                atoms, structure = run_lat_opt_runner(atoms, structure, lat_dir, work_dir, opt_log)
-            except Exception as e:
-                opt_log("Check out file - unknown issue with calculation")
-                opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
-                assert False
-    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=opt_log)
-    atoms.set_calculator(get_calc(opt_dir))
-    run_ase_opt(atoms, opt_dir, FIRE, do_cell, opt_log)
-
-    dyn = optimizer(atoms, opt_dir, FIRE)
-    traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
-    dyn.attach(traj.write, interval=1)
-    write_contcar = lambda: _write_contcar(atoms, opt_dir)
-    dyn.attach(write_contcar, interval=1)
-    logx = opj(opt_dir, "opt.logx")
-    write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
-    dyn.attach(write_logx, interval=1)
-    opt_log("optimization starting")
-    opt_log(f"Fmax: {fmax}, max_steps: {max_steps}")
-    try:
-        dyn.run(fmax=fmax, steps=max_steps)
-        opt_log(f"Finished in {dyn.nsteps}/{max_steps}")
-        finished_logx(atoms, logx, dyn.nsteps, max_steps)
-        sp_logx(atoms, "sp.logx", do_cell=do_cell)
-        finished(opt_dir)
-    except Exception as e:
-        opt_log("couldnt run??")
-        opt_log(e)  # Done: make sure this syntax will still print JDFT errors correctly
-        assert False, str(e)
+        atoms, structure = run_lat_opt(atoms, structure, lat_iters, lat_dir, work_dir, opt_log, cmds)
+    run_ase_opt(atoms, opt_dir, FIRE, do_cell, opt_log, exe_cmd, cmds)

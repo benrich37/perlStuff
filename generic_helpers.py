@@ -709,6 +709,23 @@ def death_by_state(outfname, log_fn=lambda s: print(s)):
                     return True
 
 
+def check_for_restart(e, failed_before, opt_dir, log_fn):
+    log_fn(e)
+    if not failed_before:
+        if death_by_state(opj(opt_dir, "out"), log_fn):
+            log_fn("Calculation failed due to state file. Will retry without state files present")
+            return True
+        else:
+            log_fn("Check out file - unknown issue with calculation")
+            return False
+    else:
+        if not death_by_state(opj(opt_dir, "out"), log_fn):
+            log_fn("Calculation failed without state files interfering - check out file")
+        else:
+            log_fn("Recognizing failure by state files when supposeduly no files are present - insane")
+        return False
+
+
 
 
 
