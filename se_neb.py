@@ -157,9 +157,6 @@ def _prep_input(step_idx, atom_pair, step_length, start_length, follow, step_dir
 
 def get_start_dist(work_dir, atom_pair, restart=False, log_fn=log_def):
     dir0 = opj(work_dir, "0")
-    POSCAR = opj(dir0, "POSCAR")
-    CONTCAR = opj(dir0, "CONTCAR")
-    atoms = read(opj(dir0, "POSCAR"))
     atoms = get_atoms(dir0, [False,False,False], restart=restart, log_fn=log_fn)
     dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
     start_dist = np.linalg.norm(dir_vec)
