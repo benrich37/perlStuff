@@ -155,8 +155,8 @@ def _prep_input(step_idx, atom_pair, step_length, start_length, follow, step_dir
 
 
 
-def get_start_dist(work_dir, atom_pair, restart=False, log_fn=log_def):
-    dir0 = opj(work_dir, "0")
+def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
+    dir0 = opj(scan_dir, "0")
     atoms = get_atoms(dir0, [False,False,False], restart=restart, log_fn=log_fn)
     dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
     start_dist = np.linalg.norm(dir_vec)
@@ -379,7 +379,7 @@ if __name__ == '__main__':
     if not skip_to_neb:
         relax_start = setup_scan_dir(work_dir, scan_dir, relax_start, restart_idx, pbc, log_fn=se_log)
         do_relax_start(relax_start, scan_dir, get_calc, log_fn=se_log, fmax=fmax, max_steps=max_steps)
-        start_length = get_start_dist(work_dir, atom_pair, log_fn=se_log, restart=relax_start)
+        start_length = get_start_dist(scan_dir, atom_pair, log_fn=se_log, restart=relax_start)
         prep_input = lambda i, step_dir_var: _prep_input(i, atom_pair, step_length, start_length, follow, step_dir_var,
                                                          step_type=1, log_func=se_log)
         for i in list(range(scan_steps))[restart_idx:]:
