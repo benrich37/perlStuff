@@ -385,12 +385,12 @@ if __name__ == '__main__':
         for i in list(range(scan_steps))[restart_idx:]:
             if relax_start and (i == 0):
                 continue
-            step_dir = opj(work_dir, str(i))
+            step_dir = opj(scan_dir, str(i))
             restart_step = (i == restart_idx) and (not is_done(step_dir, i))
             if (not ope(step_dir)) or (not os.path.isdir(step_dir)):
                 os.mkdir(step_dir)
             if i > 0 and not restart_step:
-                prev_step_dir = opj(work_dir, str(i-1))
+                prev_step_dir = opj(scan_dir, str(i-1))
                 copy_state_files(prev_step_dir, step_dir, log_fn=se_log)
                 prep_input(i, step_dir)
             atoms = get_atoms(step_dir, pbc, restart=restart_step, log_fn=se_log)
