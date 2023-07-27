@@ -122,8 +122,7 @@ def get_atoms_prep_follow(atoms, prev_2_out, atom_pair, target_length):
     return atoms
 
 
-def _prep_input(step_idx, atom_pair, step_length, start_length, follow, step_dir, log_func=log_def, step_type=1):
-    scan_dir = os.path.basename(step_dir)
+def _prep_input(step_idx, atom_pair, step_length, start_length, follow, step_dir, scan_dir, log_func=log_def, step_type=1):
     step_prev_1_dir = opj(scan_dir, str(step_idx-1))
     step_prev_2_dir = opj(scan_dir, str(step_idx - 2))
     prev_1_out = opj(step_prev_1_dir, "CONTCAR")
@@ -381,7 +380,7 @@ if __name__ == '__main__':
         do_relax_start(relax_start, scan_dir, get_calc, log_fn=se_log, fmax=fmax, max_steps=max_steps)
         start_length = get_start_dist(scan_dir, atom_pair, log_fn=se_log, restart=relax_start)
         prep_input = lambda i, step_dir_var: _prep_input(i, atom_pair, step_length, start_length, follow, step_dir_var,
-                                                         step_type=1, log_func=se_log)
+                                                         scan_dir, step_type=1, log_func=se_log)
         for i in list(range(scan_steps))[restart_idx:]:
             if relax_start and (i == 0):
                 continue
