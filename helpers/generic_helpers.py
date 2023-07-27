@@ -501,13 +501,14 @@ def _write_logx(atoms, fname, dyn, maxstep, do_cell=True, do_charges=True):
 
 def _write_opt_log(atoms, dyn, max_steps, log_fn):
     step = dyn.nsteps
-    log_fn(f"Step {step}/{max_steps}: ")
-    log_fn(f"\t E = {atoms.get_potential_energy()}")
+    dump_str = f"Step {step}/{max_steps}: "
+    dump_str += f"\t E = {atoms.get_potential_energy()}"
     try:
-        log_fn(f"\t Max Force: {np.max(abs(atoms.get_forces()))}")
-        log_fn(f"\t Sum of Forces: {np.sum(atoms.get_forces())}")
+        dump_str += f"\t Max Force: {np.max(abs(atoms.get_forces()))}"
+        dump_str += f"\t Sum of Forces: {np.sum(atoms.get_forces())}"
     except Exception as e:
         pass
+    log_fn(dump_str)
 
 
 def finished_logx(atoms, fname, step, maxstep, do_cell=True):
