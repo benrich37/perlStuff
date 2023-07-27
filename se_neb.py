@@ -378,8 +378,7 @@ if __name__ == '__main__':
     ####################################################################################################################
     if not skip_to_neb:
         relax_start = setup_scan_dir(work_dir, scan_dir, relax_start, restart_idx, pbc, log_fn=se_log)
-        do_relax_start(relax_start, scan_dir, get_calc, work_dir,
-                       log_fn=se_log, fmax=fmax, max_steps=max_steps)
+        do_relax_start(relax_start, scan_dir, get_calc, log_fn=se_log, fmax=fmax, max_steps=max_steps)
         start_length = get_start_dist(work_dir, atom_pair, log_fn=se_log)
         prep_input = lambda i, step_dir_var: _prep_input(i, atom_pair, step_length, start_length, follow, step_dir_var,
                                                          step_type=1, log_func=se_log)
