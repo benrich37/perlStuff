@@ -277,6 +277,7 @@ def run_step(atoms, step_dir, fix_pair, get_calc_fn, opter,
              fmax=0.1, max_steps=50, log_fn=log_def, _failed_before=False):
     run_again = False
     add_bond_constraints(atoms, fix_pair, log_fn=log_fn)
+    atoms.set_calculator(get_calc_fn(step_dir))
     try:
         run_opt_runner(atoms, step_dir, opter, log_fn=log_fn, fmax=fmax, max_steps=max_steps)
     except Exception as e:
