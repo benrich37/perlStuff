@@ -121,6 +121,20 @@ def get_atoms_list_from_out(outfile):
                 new_posn = True
     return opts
 
+def is_done(outfile):
+    start_line = get_start_line(outfile)
+    after = 0
+    with open(outfile, "r") as f:
+        for i, line in enumerate(f):
+            if i > start_line:
+                if "Minimize: Iter:" in line:
+                    after = i
+                elif "Minimize: Converged" in line:
+                    if i > after:
+                        return True
+    return False
+
+
 
 def out_to_logx_str(outfile, e_conv=(1/27.211397)):
     atoms_list = get_atoms_list_from_out(outfile)
@@ -131,8 +145,9 @@ def out_to_logx_str(outfile, e_conv=(1/27.211397)):
         dump_str += f"\n SCF Done:  E =  {atoms_list[i].E*e_conv}\n\n"
         dump_str += log_charges(atoms_list[i])
         dump_str += opt_spacer(i, len(atoms_list))
-    dump_str += log_input_orientation(atoms_list[-1])
-    dump_str += " Normal termination of Gaussian 16"
+    if is_done(outfile):
+        dump_str += log_input_orientation(atoms_list[-1])
+        dump_str += " Normal termination of Gaussian 16"
     return dump_str
 
 

@@ -141,7 +141,10 @@ def read_inputs(work_dir, ref_struct=None):
         else:
             do_n_bands = True
         if do_n_bands:
-            ref_paths = [opj(work_dir, ref_struct), opj(work_dir, "CONTCAR"), opj(work_dir, "POSCAR")]
+            if ref_struct is None:
+                ref_paths = [opj(work_dir, "POSCAR"), opj(work_dir, "CONTCAR")]
+            else:
+                ref_paths = [opj(work_dir, ref_struct), opj(work_dir, "CONTCAR"), opj(work_dir, "POSCAR")]
             for p in ref_paths:
                 if ope(p):
                     input_cmds["elec-n-bands"] = str(get_nbands(p))
