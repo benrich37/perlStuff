@@ -603,19 +603,23 @@ def get_lattice_cmds(cmds, lat_iters, pbc):
 
 
 def death_by_state(outfname, log_fn=lambda s: print(s)):
-    start_line = get_start_line(outfname)
-    with open(outfname) as f:
-        for i, line in enumerate(f):
-            if i > start_line:
-                if ("bytes" in line) and ("instead of the expected" in line):
-                    log_fn(line)
-                    b1 = int(line.rstrip("\n").split()[4])
-                    b2 = int(line.rstrip("\n").split()[-2])
-                    ratio = b1/b2
-                    diff = abs(ratio - 1.)
-                    if diff < 0.01:
-                        log_fn("You should feel fine about this - this magnitude of misalignment are caused by roundoff error")
-                    return True
+    if not ope(outfname):
+        return False
+    else:
+        start_line = get_start_line(outfname)
+        with open(outfname) as f:
+            for i, line in enumerate(f):
+                if i > start_line:
+                    if ("bytes" in line) and ("instead of the expected" in line):
+                        log_fn(line)
+                        b1 = int(line.rstrip("\n").split()[4])
+                        b2 = int(line.rstrip("\n").split()[-2])
+                        ratio = b1/b2
+                        diff = abs(ratio - 1.)
+                        if diff < 0.01:
+                            log_fn("You should feel fine about this - this magnitude of misalignment are caused by roundoff error")
+                        return True
+    return False
 
 
 def check_for_restart(e, failed_before, opt_dir, log_fn):
