@@ -297,7 +297,7 @@ def need_sort(root):
 
 
 def get_log_fn(work, calc_type, print_bool, restart=False):
-    fname = opj(work, calc_type + ".log")
+    fname = opj(work, calc_type + "io.log")
     if not restart:
         if ope(fname):
             os.remove(fname)
