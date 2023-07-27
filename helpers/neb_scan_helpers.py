@@ -1,27 +1,6 @@
-from helpers.generic_helpers import time_to_str, log_generic, need_sort
-from ase.optimize import BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin, FIRE
-from ase.io import read, write
-from ase.build.tools import sort
+from helpers.generic_helpers import log_generic
 import os
-import time
 
-
-def total_elapsed_str(start1, neb_time, front_time):
-    total_time = time.time() - start1
-    print_str = f"Total time: " + time_to_str(total_time) + "\n"
-    print_str += f"Scan opt time: {time_to_str(front_time)} ({(front_time/total_time):.{2}g}%)\n"
-    print_str += f"NEB opt time: {time_to_str(neb_time)} ({(neb_time / total_time):.{2}g}%)\n"
-    return print_str
-
-
-def log_total_elapsed(start1, neb_time, front_time, work):
-    log_fname = os.path.join(work, "time.log")
-    if not os.path.exists(log_fname):
-        with open(log_fname, "w") as f:
-            f.write("Starting")
-            f.close()
-    with open(log_fname, "a") as f:
-        f.write(total_elapsed_str(start1, neb_time, front_time))
 
 def _neb_scan_log(log_str, work, print_bool=False):
     log_generic(log_str, work, "neb_scan", print_bool)
@@ -100,31 +79,26 @@ def read_neb_scan_inputs(fname="neb_scan_input"):
         work_dir += "/"
     return atom_pair, scan_steps, step_length, restart_idx, work_dir, follow, debug, max_steps, fmax, neb_method, interp_method, k, neb_max_steps
 
-def check_poscar(work_dir, log_fn):
-    if need_sort(work_dir):
-        atoms = sort(read("POSCAR", format="vasp"))
-        write("POSCAR_sorted", atoms, format="vasp")
-        log_fn("Unsorted POSCAR - saved sorted POCSAR to POSCAR_sorted - please update atom indices for scan accordingly", work_dir)
-        raise ValueError("Unsorted POSCAR - saved sorted POCSAR to POSCAR_sorted - please update atom indices for scan accordingly")
+# def neb_optimizer(neb, neb_dir, opt="FIRE", opt_alpha=150):
+#     """
+#     ASE Optimizers:
+#         BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin and FIRE.
+#     """
+#
+#     opt_dict = {'BFGS': BFGS, 'BFGSLineSearch': BFGSLineSearch,
+#                 'LBFGS': LBFGS, 'LBFGSLineSearch': LBFGSLineSearch,
+#                 'GPMin': GPMin, 'MDMin': MDMin, 'FIRE': FIRE}
+#     traj = os.path.join(neb_dir, "neb.traj")
+#     logfile = os.path.join(neb_dir, "neb.log")
+#     restart = os.path.join(neb_dir, "hessian.pckl")
+#     if opt in ['BFGS', 'LBFGS']:
+#         dyn = opt_dict[opt](neb, trajectory=traj, logfile=logfile, restart=restart, alpha=opt_alpha)
+#     elif opt == 'FIRE':
+#         dyn = opt_dict[opt](neb, trajectory=traj, logfile=logfile, restart=restart, a=(opt_alpha / 70) * 0.1)
+#     else:
+#         dyn = opt_dict[opt](neb, trajectory=traj, logfile=logfile, restart=restart)
+#     return dyn
 
 
-def neb_optimizer(neb, neb_dir, opt="FIRE", opt_alpha=150):
-    """
-    ASE Optimizers:
-        BFGS, BFGSLineSearch, LBFGS, LBFGSLineSearch, GPMin, MDMin and FIRE.
-    """
 
-    opt_dict = {'BFGS': BFGS, 'BFGSLineSearch': BFGSLineSearch,
-                'LBFGS': LBFGS, 'LBFGSLineSearch': LBFGSLineSearch,
-                'GPMin': GPMin, 'MDMin': MDMin, 'FIRE': FIRE}
-    traj = os.path.join(neb_dir, "neb.traj")
-    logfile = os.path.join(neb_dir, "neb.log")
-    restart = os.path.join(neb_dir, "hessian.pckl")
-    if opt in ['BFGS', 'LBFGS']:
-        dyn = opt_dict[opt](neb, trajectory=traj, logfile=logfile, restart=restart, alpha=opt_alpha)
-    elif opt == 'FIRE':
-        dyn = opt_dict[opt](neb, trajectory=traj, logfile=logfile, restart=restart, a=(opt_alpha / 70) * 0.1)
-    else:
-        dyn = opt_dict[opt](neb, trajectory=traj, logfile=logfile, restart=restart)
-    return dyn
 

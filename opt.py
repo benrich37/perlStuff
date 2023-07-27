@@ -173,6 +173,7 @@ def run_lat_opt(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds, _faile
     try:
         atoms, structure = run_lat_opt_runner(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds)
     except Exception as e:
+        log_fn(e)
         assert check_for_restart(e, _failed_before, lat_dir, log_fn)
         run_again = True
         pass
@@ -192,10 +193,10 @@ def run_ase_opt_runner(atoms, root, opter, do_cell, log_fn):
     dyn.attach(write_contcar, interval=1)
     dyn.attach(write_logx, interval=1)
     dyn.attach(write_opt_log, interval=1)
-    opt_log("Optimization starting")
-    opt_log(f"Fmax: {fmax}, max_steps: {max_steps}")
+    log_fn("Optimization starting")
+    log_fn(f"Fmax: {fmax}, max_steps: {max_steps}")
     dyn.run(fmax=fmax, steps=max_steps)
-    opt_log(f"Finished in {dyn.nsteps}/{max_steps}")
+    log_fn(f"Finished in {dyn.nsteps}/{max_steps}")
     finished_logx(atoms, logx, dyn.nsteps, max_steps)
     sp_logx(atoms, "sp.logx", do_cell=do_cell)
     finished(root)

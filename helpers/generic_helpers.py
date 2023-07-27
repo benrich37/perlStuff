@@ -78,12 +78,13 @@ def get_int_dirs_indices(int_dirs):
     for dirr in int_dirs:
         ints.append(int(dirr.split("/")[-1]))
     return np.array(ints).argsort()
+    return np.array(ints).argsort()
 
 
 def get_int_dirs(dir_path):
     int_dir_list = []
     for name in os.listdir(dir_path):
-        full_path = os.path.join(dir_path, name)
+        full_path = opj(dir_path, name)
         if os.path.isdir(full_path):
             try:
                 int(name)
@@ -272,6 +273,9 @@ def time_to_str(t):
 def atom_str(atoms, index):
     return f"{atoms.get_chemical_symbols()[index]}({index})"
 
+def bond_str(atoms, i1, i2):
+    return atom_str(atoms, i1) + "-" + atom_str(atoms, i2)
+
 
 def need_sort(root):
     atoms = read(opj(root, "POSCAR"), format="vasp")
@@ -334,7 +338,8 @@ def read_line_generic(line):
         return None, None
 
 
-def remove_dir_recursive(path):
+def remove_dir_recursive(path, log_fn=log_def):
+    log_fn(f"Removing directory {path}")
     for root, dirs, files in os.walk(path, topdown=False):  # topdown=False makes the walk visit subdirectories first
         for name in files:
             os.remove(os.path.join(root, name))
@@ -493,12 +498,12 @@ def _write_logx(atoms, fname, dyn, maxstep, do_cell=True, do_charges=True):
 
 def _write_opt_log(atoms, dyn, max_steps, log_fn):
     step = dyn.nsteps
-    log_fn(f"Step {step}/{max_steps}: E = {atoms.get_potential_energy()}")
+    log_fn(f"Step {step}/{max_steps}: ")
+    log_fn(f"\t E = {atoms.get_potential_energy()}")
     try:
-        log_fn(f"Max Force: {np.max(atoms.get_forces())}")
-        log_fn(f"Sum of Forces: {np.sum(atoms.get_forces())}")
+        log_fn(f"\t Max Force: {np.max(abs(atoms.get_forces()))}")
+        log_fn(f"\t Sum of Forces: {np.sum(atoms.get_forces())}")
     except Exception as e:
-        log_fn(e)
         pass
 
 
@@ -615,6 +620,7 @@ def check_for_restart(e, failed_before, opt_dir, log_fn):
         if death_by_state(opj(opt_dir, "out"), log_fn):
             log_fn("Calculation failed due to state file. Will retry without state files present")
             remove_restart_files(opt_dir, log_fn)
+            # TODO: Write something to recognize misaligned hessian.pckl's so we can remove those and try again
             return True
         else:
             log_fn("Check out file - unknown issue with calculation")
@@ -623,5 +629,5 @@ def check_for_restart(e, failed_before, opt_dir, log_fn):
         if not death_by_state(opj(opt_dir, "out"), log_fn):
             log_fn("Calculation failed without state files interfering - check out file")
         else:
-            log_fn("Recognizing failure by state files when supposeduly no files are present - insane")
+            log_fn("Recognizing failure by state files when supposedly no files are present - insane")
         return False
