@@ -655,18 +655,19 @@ def check_structure(structure, work, log_fn=log_def):
             if ope(opj(work, structure + "." + s)):
                 gauss_struct = structure + "." + s
         if gauss_struct is None:
-            log_fn(f"Could not find {structure}")
-            assert False
+            if "." in structure:
+                suffix = structure.split(".")[1]
+                if suffix in suffixes:
+                    use_fmt = "gaussian-in"
+                else:
+                    log_fn(f"Not sure which format {structure} is in - setting format for reader to None")
+                    use_fmt = None
+            else:
+                log_fn(f"Could not find {structure} - aborting")
+                assert False
         else:
             structure = gauss_struct
             use_fmt = "gaussian-in"
-    elif "." in structure:
-        suffix = structure.split(".")[1]
-        if suffix in suffixes:
-            use_fmt = "gaussian-in"
-        else:
-            log_fn(f"Not sure which format {structure} is in - setting format for reader to None")
-            use_fmt = None
     structure = opj(work, fname_out)
     try:
         atoms_obj = read(structure, format=use_fmt)
