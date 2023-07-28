@@ -652,7 +652,7 @@ def check_structure(structure, work, log_fn=log_def):
     suffixes = ["com", "gjf"]
     if not ope(opj(work, structure)):
         for s in suffixes:
-            if ope(opj(work, structure) + "." + s):
+            if ope(opj(work, structure + "." + s)):
                 gauss_struct = structure + "." + s
         if gauss_struct is None:
             log_fn(f"Could not find {structure}")
