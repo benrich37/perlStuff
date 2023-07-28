@@ -4,7 +4,7 @@ from ase.build import sort
 from ase.io import read, write
 
 from helpers.generic_helpers import get_int_dirs, get_int_dirs_indices, need_sort
-from helpers.generic_helpers import time_to_str, log_generic, need_sort
+from helpers.generic_helpers import time_to_str, log_generic, need_sort, log_def
 import os
 from os.path import join as opj
 from os.path import exists as ope
@@ -62,3 +62,9 @@ def check_poscar(work_dir, log_fn):
         write("POSCAR_sorted", atoms, format="vasp")
         log_fn("Unsorted POSCAR - saved sorted POCSAR to POSCAR_sorted - please update atom indices for scan accordingly", work_dir)
         raise ValueError("Unsorted POSCAR - saved sorted POCSAR to POSCAR_sorted - please update atom indices for scan accordingly")
+
+def fix_step_size(starting_length, target_length, nSteps, log_fn = log_def):
+    dLength = target_length - starting_length
+    fixed = dLength/(nSteps - 1) # Step 0 is a step, so subtract 1 from nSteps
+    log_fn(f"Updating step size to {fixed}")
+    return fixed
