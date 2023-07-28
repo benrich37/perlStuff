@@ -18,7 +18,7 @@ from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer,
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
-                   "scan: 0, 5, 10, 0.23 # (1st atom index (numbering from 0), 2nd atom index, number of steps, step size)",
+                   "scan: 1, 5, 10, 0.23 # (1st atom index (counting from 1 (1-based indexing)), 2nd atom index, number of steps, step size)",
                    "# target: 1.0 # (Not implemented yet) Modifies step size such that the final step's bond length matches",
                    "the target length",
                    "guess type: 0 # how structures are generated for the start of each bond scan step",
@@ -107,7 +107,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
             if guess_type == 3:
                 follow = True
                 guess_type = 2
-    atom_pair = [int(lookline[0]), int(lookline[1])]
+    atom_pair = [int(lookline[0]) - 1, int(lookline[1]) - 1] # Convert to 0-based indexing
     scan_steps = int(lookline[2])
     step_length = float(lookline[3])
     if restart_neb:
