@@ -13,7 +13,7 @@ from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, ge
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
 from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def
 from helpers.generic_helpers import _write_logx, _write_opt_log, check_for_restart, finished_logx, sp_logx, bond_str
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
@@ -365,7 +365,7 @@ def setup_neb(scan_steps_int, k_float, neb_method_str, pbc_list_of_bool, get_cal
                               properties=['energy', 'forces']))
         dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
                    interval=1, img_dir=img_dirs[i], img=imgs_list_of_atoms[i])
-    return dyn
+    return dyn, restart_bool
 
 
 def setup_scan_dir(work_dir_path, scan_dir_path, relax_start_bool, restart_at_idx, pbc_bool_list, log_fn=log_def):
@@ -395,6 +395,7 @@ def setup_scan_dir(work_dir_path, scan_dir_path, relax_start_bool, restart_at_id
 if __name__ == '__main__':
     atom_pair, scan_steps, step_length, restart_at, work_dir, follow, debug, max_steps, fmax, neb_method,\
         interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode = read_se_neb_inputs()
+    gpu = True # Make this an input argument eventually
     os.chdir(work_dir)
     scan_dir = opj(work_dir, "scan")
     restart_at = get_restart_idx(restart_at, scan_dir) # If was none, finds most recently converged step
@@ -425,7 +426,9 @@ if __name__ == '__main__':
     if not skip_to_neb:
         se_log("Entering scan")
         relax_start = setup_scan_dir(work_dir, scan_dir, relax_start, restart_at, pbc, log_fn=se_log)
-        do_relax_start(relax_start, scan_dir, get_calc, log_fn=se_log, fmax_float=fmax, max_steps_int=max_steps)
+        if relax_start:
+            check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
+            do_relax_start(relax_start, scan_dir, get_calc, log_fn=se_log, fmax_float=fmax, max_steps_int=max_steps)
         start_length = get_start_dist(scan_dir, atom_pair, log_fn=se_log, restart=relax_start)
         if not target is None:
             step_length = fix_step_size(start_length, target, scan_steps, log_fn=se_log)
@@ -443,6 +446,9 @@ if __name__ == '__main__':
                 copy_state_files(prev_step_dir, step_dir, log_fn=se_log)
                 prep_input(i, step_dir)
             atoms = get_atoms(step_dir, pbc, restart_bool=restart_step, log_fn=se_log)
+            if not relax_start:
+                if i == 0:
+                    check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
             run_step(atoms, step_dir, atom_pair, get_calc, FIRE,
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
         if relax_end:
@@ -458,8 +464,10 @@ if __name__ == '__main__':
     use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES have a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
-    dyn_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
+    dyn_neb, skip_to_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
                         restart_bool=skip_to_neb, use_ci_bool=use_ci, log_fn=se_log)
+    if skip_to_neb:
+        check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
     se_log("Running NEB now")
     dyn_neb.run(fmax=fmax, steps=neb_max_steps)
     se_log(f"finished neb in {dyn_neb.nsteps}/{neb_max_steps} steps")

@@ -294,7 +294,7 @@ if __name__ == '__main__':
     atoms = read(structure, format="vasp")
     do_cell = get_do_cell(pbc)
     atoms.pbc = pbc
-    check_submit(gpu, os.getcwd(), "opt")
+    check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
     if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
         atoms, structure = run_lat_opt(atoms, structure, lat_iters, lat_dir, work_dir, opt_log, cmds)
     opt_log(f"Finding/copying any state files to {opt_dir}")

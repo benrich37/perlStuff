@@ -441,9 +441,11 @@ def dump_template_input(fname, template, cwd):
         f.write(dump_str)
 
 
-def check_submit(gpu, cwd, jobtype):
+def check_submit(gpu, cwd, jobtype, log_fn=log_def):
     fname = opj(cwd, "submit.sh")
     if not ope(fname):
+        log_fn(f"No submit.sh found in work dir - assuming we're in a dry run")
+        log_fn(f"Dumping template submit.sh and aborting")
         if gpu:
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
         subprocess.run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
