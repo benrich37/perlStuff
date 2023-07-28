@@ -319,16 +319,22 @@ def setup_neb_imgs(front, img_dirs, pbc, get_calc_fn, log_fn=log_def, restart=Fa
 def setup_neb(scan_steps, k, neb_method, pbc, get_calc_fn, neb_dir, scan_dir,
               opter=FIRE, restart = False, use_ci = False, log_fn=log_def):
     restart = restart and ope(neb_dir + "hessian.pckl")
+    log_fn(f"Setting up image directories in {neb_dir}")
     img_dirs, restart = setup_img_dirs(neb_dir, scan_dir, scan_steps, restart=restart, log_fn=log_fn)
+    log_fn(f"Creating image objects")
     imgs = setup_neb_imgs(scan_steps, img_dirs, pbc, get_calc_fn, restart=restart, log_fn=log_fn)
+    log_fn(f"Creating NEB object")
     neb = NEB(imgs, parallel=False, climb=use_ci, k=k, method=neb_method)
+    log_fn(f"Creating optimizer object")
     dyn = neb_optimizer(neb, neb_dir, opter=opter)
+    log_fn(f"Attaching log functions to optimizer object")
     traj = Trajectory(opj(neb_dir, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)
-    write_contcar = lambda img_dir, img: _write_contcar(img, img_dir)
+    write_contcar = lambda img, img_dir: _write_contcar(img, img_dir)
+    log_fn(f"Attaching log functions to each image")
     for i in range(scan_steps):
         dyn.attach(Trajectory(opj(img_dirs[i], 'opt-' + str(i) + '.traj'), 'w', imgs[i], properties=['energy', 'forces']))
-        dyn.attach(write_contcar, interval=1, img_dir=img_dirs[i], image=imgs[i])
+        dyn.attach(write_contcar, interval=1, img_dir=img_dirs[i], img=imgs[i])
     return dyn
 
 def setup_scan_dir(work_dir, scan_dir, relax_start_bool, restart_idx, pbc_bool_list, log_fn=log_def):
@@ -400,12 +406,16 @@ if __name__ == '__main__':
             do_relax_end(scan_steps, scan_dir, restart_idx, pbc, get_calc,
                          log_fn=se_log, fmax=fmax, max_steps=max_steps)
     ####################################################################################################################
+    se_log("Beginning NEB setup")
     neb_dir = opj(work_dir, "neb")
     if not ope(neb_dir):
         skip_to_neb = False
         os.mkdir(neb_dir)
     use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES have a local maximum
+    if use_ci:
+        se_log("Local maximum found within scan - using climbing image method in NEB")
     dyn_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
                         restart=skip_to_neb, use_ci=use_ci, log_fn=se_log)
+    se_log("Running NEB now")
     dyn_neb.run(fmax=fmax, steps=neb_max_steps)
     se_log(f"finished neb in {dyn_neb.nsteps}/{neb_max_steps} steps")
