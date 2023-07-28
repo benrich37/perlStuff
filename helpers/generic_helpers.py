@@ -460,7 +460,8 @@ def check_submit(gpu, cwd, jobtype, log_fn=log_def):
 
 
 def read_pbc_val(val):
-    vsplit = val.strip().split(' ')
+    splitter = " "
+    vsplit = val.strip().split(splitter)
     pbc = []
     for i in range(3):
         pbc.append("true" in vsplit[i].lower())
