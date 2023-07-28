@@ -213,14 +213,15 @@ def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn
     atoms_obj.get_forces()
     outfile = opj(ion_dir_path, "out")
     if ope(outfile):
-        atoms_obj = get_atoms_list_from_out(outfile)[-1]
+        atoms_obj_list = get_atoms_list_from_out(outfile)
+        atoms_obj = atoms_obj_list[-1]
     else:
         log_fn(f"No output data given - check error file")
         assert False
     atoms_obj.pbc = pbc
     structure_path = opj(ion_dir_path, "CONTCAR")
     write(structure_path, atoms_obj, format="vasp")
-    opt_log(f"Finished ionic optimization")
+    opt_log(f"Finished ionic optimization in {len(atoms_obj_list) - 1}/{ion_iters_int}")
     finished(ion_dir_path)
     out_to_logx(ion_dir_path, opj(ion_dir_path, 'out'), log_fn=log_fn)
     return atoms_obj
