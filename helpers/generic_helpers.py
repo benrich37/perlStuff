@@ -447,9 +447,13 @@ def check_submit(gpu, cwd, jobtype):
         if gpu:
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
         subprocess.run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
-        bar = opj(os.environ["HOME"], "perlStuff")
-        print(__main__.__file__)
-        subprocess.run(f"sed -i 's/bar/{__main__.__file__}/g' {fname}", shell=True, check=True)
+        _bar = __main__.__file__
+        bar = ""
+        for s in _bar:
+            if s == "/":
+                bar += "\\"
+            bar += s
+        subprocess.run(f"sed -i 's/bar/{bar}/g' {fname}", shell=True, check=True)
         exit()
 
 
