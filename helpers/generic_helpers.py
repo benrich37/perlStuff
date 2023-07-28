@@ -445,10 +445,10 @@ def check_submit(gpu, cwd, jobtype):
     if not ope(fname):
         if gpu:
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
-        subprocess.run(f"sed -i s'/foo/{jobtype}/g' {fname}", shell=True, check=True)
+        subprocess.run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
         bar = opj(os.environ["HOME"], "perlStuff")
         bar = opj(bar, f"{jobtype}.py")
-        subprocess.run(f"sed -i s'/bar/{bar}/g' {fname}")
+        subprocess.run(f"sed -i 's/bar/{bar}/g' {fname}", shell=True, check=True)
         exit()
 
 
