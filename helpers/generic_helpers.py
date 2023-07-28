@@ -9,6 +9,7 @@ from ase.io import read, write
 from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
 from scripts.out_to_logx import out_to_logx_str, get_atoms_from_outfile_data, get_start_line
 from pathlib import Path
+import subprocess
 import copy
 
 
@@ -439,10 +440,15 @@ def dump_template_input(fname, template, cwd):
         f.write(dump_str)
 
 
-def check_submit(gpu, cwd):
-    if not ope(opj(cwd, "submit.sh")):
+def check_submit(gpu, cwd, jobtype):
+    fname = opj(cwd, "submit.sh")
+    if not ope(fname):
         if gpu:
-            dump_template_input("submit.sh", submit_gpu_perl_ref, cwd)
+            dump_template_input(fname, submit_gpu_perl_ref, cwd)
+        subprocess.run(f"sed -i s'/foo/{jobtype}/g' {fname}")
+        bar = opj(os.environ["HOME"], "perlStuff")
+        bar = opj(bar, f"{jobtype}.py")
+        subprocess.run(f"sed -i s'/bar/{bar}/g' {fname}")
         exit()
 
 
