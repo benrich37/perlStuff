@@ -281,7 +281,6 @@ def run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed
 
 if __name__ == '__main__':
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft = read_opt_inputs()
-    check_submit(gpu, os.getcwd())
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
@@ -295,6 +294,7 @@ if __name__ == '__main__':
     atoms = read(structure, format="vasp")
     do_cell = get_do_cell(pbc)
     atoms.pbc = pbc
+    check_submit(gpu, os.getcwd())
     if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
         atoms, structure = run_lat_opt(atoms, structure, lat_iters, lat_dir, work_dir, opt_log, cmds)
     copy_best_state_f([work_dir, lat_dir], opt_dir, log_fn=opt_log)
