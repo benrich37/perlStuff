@@ -294,7 +294,6 @@ if __name__ == '__main__':
     atoms = read(structure, format="vasp")
     do_cell = get_do_cell(pbc)
     atoms.pbc = pbc
-    opt_log(os.environ["__main__"])
     opt_log(__name__)
     check_submit(gpu, os.getcwd(), "opt")
     if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
