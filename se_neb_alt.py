@@ -490,7 +490,10 @@ if __name__ == '__main__':
     cmds = get_cmds(work_dir, ref_struct="POSCAR")
     exe_cmd = get_exe_cmd(True, se_log)
     ion_opt_cmds = get_ionic_opt_cmds(cmds, jdft_steps)
-    lat_opt_cmds = get_lattice_cmds(cmds, max_steps, pbc=pbc)
+    if True in pbc:
+        lat_opt_cmds = get_lattice_cmds(cmds, max_steps, pbc=pbc)
+    else:
+        lat_opt_cmds = get_ionic_opt_cmds(cmds, max_steps)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, debug=False, log_fn=se_log)
     get_ionopt_calc = lambda root: _get_calc(exe_cmd, ion_opt_cmds, root, JDFTx, debug=False, log_fn=se_log)
     get_latopt_calc = lambda root: _get_calc(exe_cmd, lat_opt_cmds, root, JDFTx, debug=False, log_fn=se_log)
