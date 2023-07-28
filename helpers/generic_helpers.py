@@ -695,3 +695,8 @@ def check_structure(structure, work, log_fn=log_def):
     return structure
 
 
+def get_bond_length(atoms, atom_pair):
+    dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
+    bond_length = np.linalg.norm(dir_vec)
+    return bond_length
+

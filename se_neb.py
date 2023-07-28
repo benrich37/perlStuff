@@ -13,7 +13,7 @@ from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, ge
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
 from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def
 from helpers.generic_helpers import _write_logx, _write_opt_log, check_for_restart, finished_logx, sp_logx, bond_str
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_bond_length
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
@@ -169,21 +169,20 @@ def _prep_input(step_idx, atom_pair, step_length, start_length, follow, step_dir
 def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
     dir0 = opj(scan_dir, "0")
     atoms = get_atoms(dir0, [False,False,False], restart_bool=restart, log_fn=log_fn)
-    dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
-    start_dist = np.linalg.norm(dir_vec)
+    start_dist = get_bond_length(atoms, atom_pair)
     log_fn(f"Bond {bond_str(atoms, atom_pair[0], atom_pair[1])} starting at {start_dist}")
     return start_dist
 
 
-def do_relax_start(relax_start_bool, scan_dir_path, get_calc_fn, log_fn=log_def, fmax_float=0.05, max_steps_int=100):
+def do_relax_start(relax_start_bool, scan_path, get_calc_fn, log_fn=log_def, fmax_float=0.05, max_steps_int=100):
     if relax_start_bool:
-        dir0 = opj(scan_dir_path, "0")
+        dir0 = opj(scan_path, "0")
         se_log(f"Relaxing initial geometry in {dir0}")
         atoms = get_atoms(dir0, pbc, restart_bool=True, log_fn=log_fn)
         run_relax_opt(atoms, dir0, FIRE, get_calc_fn, fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn)
 
 
-def do_relax_end(scan_steps_int, scan_dir_str, restart_idx, pbc_list_of_bool, get_calc_fn, log_fn=log_def,
+def do_relax_end(scan_steps_int, scan_dir_str, restart_idx, pbc_bool_list, get_calc_fn, log_fn=log_def,
                  fmax_float=0.05, max_steps_int=100):
     end_idx = scan_steps_int
     end_dir = opj(scan_dir_str, str(end_idx))
@@ -195,7 +194,7 @@ def do_relax_end(scan_steps_int, scan_dir_str, restart_idx, pbc_list_of_bool, ge
         prep_input(scan_steps_int, end_dir)
     else:
         restart_end = (end_idx == restart_idx) and (not is_done(end_dir, end_idx))
-    atoms = get_atoms(end_dir, pbc_list_of_bool, restart_bool=restart_end, log_fn=log_fn)
+    atoms = get_atoms(end_dir, pbc_bool_list, restart_bool=restart_end, log_fn=log_fn)
     run_relax_opt(atoms, end_dir, FIRE, get_calc_fn, fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn)
 
 
@@ -209,15 +208,15 @@ def is_done(dir_path, idx):
     return ope(opj(dir_path, f"finished_{idx}.txt"))
 
 
-def get_restart_idx(restart_idx, scan_dir):
+def get_restart_idx(restart_idx, scan_path):
     if not restart_idx is None:
         return restart_idx
     else:
         restart_idx = 0
-        if not ope(scan_dir):
+        if not ope(scan_path):
             return restart_idx
         else:
-            int_dirs = get_int_dirs(scan_dir)
+            int_dirs = get_int_dirs(scan_path)
             int_dirs_indices = get_int_dirs_indices(int_dirs)
             for i in range(len(int_dirs)):
                 look_dir = int_dirs[int_dirs_indices[i]]
@@ -227,7 +226,7 @@ def get_restart_idx(restart_idx, scan_dir):
                     return restart_idx
 
 
-def get_atoms(dir_path, pbc_list_of_bool, restart_bool=False, log_fn=log_def):
+def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
     _abort = False
     POSCAR = opj(dir_path, "POSCAR")
     CONTCAR = opj(dir_path, "CONTCAR")
@@ -252,8 +251,8 @@ def get_atoms(dir_path, pbc_list_of_bool, restart_bool=False, log_fn=log_def):
     if _abort:
         log_fn(f"Could not find structure from {dir_path} - aborting")
         assert False
-    atoms_obj.pbc = pbc_list_of_bool
-    log_fn(f"Setting pbc for atoms to {pbc_list_of_bool}")
+    atoms_obj.pbc = pbc_bool_list
+    log_fn(f"Setting pbc for atoms to {pbc_bool_list}")
     return atoms_obj
 
 
@@ -275,43 +274,68 @@ def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max
     finished(root_path)
 
 
-def run_relax_opt(atoms_obj, opt_dir_path, opter_ase_fn, get_calc_fn,
+def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
                   fmax_float=0.05, max_steps_int=100, log_fn=log_def, _failed_before_bool=False):
-    atoms_obj.set_calculator(get_calc_fn(opt_dir_path))
+    atoms_obj.set_calculator(get_calc_fn(opt_path))
     run_again = False
     try:
-        run_opt_runner(atoms_obj, opt_dir_path, opter_ase_fn, fmax=fmax_float, max_steps=max_steps_int, log_fn=log_fn)
+        run_opt_runner(atoms_obj, opt_path, opter_ase_fn, fmax=fmax_float, max_steps=max_steps_int, log_fn=log_fn)
     except Exception as e:
-        assert check_for_restart(e, _failed_before_bool, opt_dir_path, log_fn=log_fn)
+        assert check_for_restart(e, _failed_before_bool, opt_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
-        run_relax_opt(atoms_obj, opt_dir_path, opter_ase_fn, get_calc_fn,
+        run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
                       fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 
-def run_step(atoms_obj, step_dir_path, fix_pair_list_of_int, get_calc_fn, opter_ase_fn,
+def run_step(atoms_obj, step_path, fix_pair_int_list, get_calc_fn, opter_ase_fn,
              fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False):
     run_again = False
-    add_bond_constraints(atoms_obj, fix_pair_list_of_int, log_fn=log_fn)
-    atoms_obj.set_calculator(get_calc_fn(step_dir_path))
+    add_bond_constraints(atoms_obj, fix_pair_int_list, log_fn=log_fn)
+    atoms_obj.set_calculator(get_calc_fn(step_path))
     try:
-        run_opt_runner(atoms_obj, step_dir_path, opter_ase_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
+        run_opt_runner(atoms_obj, step_path, opter_ase_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
     except Exception as e:
         log_fn(e)
-        assert check_for_restart(e, _failed_before_bool, step_dir_path, log_fn=log_fn)
+        assert check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
-        run_step(atoms_obj, step_dir_path, fix_pair_list_of_int, get_calc_fn, opter_ase_fn,
+        run_step(atoms_obj, step_path, fix_pair_int_list, get_calc_fn, opter_ase_fn,
                  fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 
-def setup_img_dirs(neb_dir_path, scan_dir_path, scan_steps_int, restart_bool=False, log_fn=log_def):
-    img_dirs = []
+def safe_mode_check(scan_path, scan_steps_int, atom_pair_int_list, log_fn=log_def):
+    def bond_length(step_idx):
+        return get_bond_length(get_atoms(opj(scan_path, str(step_idx)), [False, False, False],
+                                         restart_bool=True, log_fn=log_fn),
+                               atom_pair_int_list)
+    dstart = bond_length(0)
+    dend = bond_length(scan_steps_int)
+    dmax = dend - dstart
+    sign = 1
+    if dmax < 0:
+        sign = -1
+    dont_include = []
+    for j in range(scan_steps_int - 1): # -1 so we don't accidentally exclude final optimization
+        if sign*(bond_length(j) - dstart) > dmax:
+            dont_include.append(j)
+    include = []
     for j in range(scan_steps_int):
-        step_dir_str = opj(scan_dir_path, str(j))
-        img_dir_str = opj(neb_dir_path, str(j))
+        if not j in dont_include:
+            include.append(j)
+    return include
+
+
+def setup_img_dirs(neb_path, scan_path, scan_steps_int, restart_bool=False, log_fn=log_def, safe_mode=False):
+    img_dirs = []
+    scan_steps_list = list(range(scan_steps_int))
+    if safe_mode:
+        scan_steps_list = safe_mode_check(scan_path, scan_steps_int, atom_pair, log_fn=log_def)
+    for j, scan_idx in scan_steps_list:
+        step_dir_str = opj(scan_path, str(scan_idx))
+        img_dir_str = opj(neb_path, str(j))
         img_dirs.append(img_dir_str)
         if restart_bool:
             if not (ope(opj(img_dir_str, "POSCAR"))) and (ope(opj(img_dir_str, "CONTCAR"))):
@@ -329,61 +353,61 @@ def setup_img_dirs(neb_dir_path, scan_dir_path, scan_steps_int, restart_bool=Fal
     return img_dirs, restart_bool
 
 
-def setup_neb_imgs(scab_steps_int, img_dirs_list_of_path, pbc_list_of_bool, get_calc_fn, log_fn=log_def, restart_bool=False):
+def setup_neb_imgs(img_path_list, pbc_bool_list, get_calc_fn, log_fn=log_def, restart_bool=False):
     imgs = []
-    for i in range(scab_steps_int):
-        img_dir = img_dirs_list_of_path[i]
+    for i in range(len(img_path_list)):
+        img_dir = img_path_list[i]
         log_fn(f"Looking for structure for image {i} in {img_dir}")
-        img = get_atoms(img_dir, pbc_list_of_bool, restart_bool=restart_bool, log_fn=log_fn)
-        img.set_calculator(get_calc_fn(img_dirs_list_of_path[i]))
+        img = get_atoms(img_dir, pbc_bool_list, restart_bool=restart_bool, log_fn=log_fn)
+        img.set_calculator(get_calc_fn(img_path_list[i]))
         imgs.append(img)
     return imgs
 
 
-def setup_neb(scan_steps_int, k_float, neb_method_str, pbc_list_of_bool, get_calc_fn, neb_dir_path, scan_dir_path,
-              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def):
+
+def setup_neb(scan_steps_int, k_float, neb_method_str, pbc_bool_list, get_calc_fn, neb_path, scan_path,
+              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def, safe_mode=False):
     if restart_bool:
-        if not ope(opj(neb_dir_path,"hessian.pckl")):
+        if not ope(opj(neb_path,"hessian.pckl")):
             log_fn(f"Restart NEB requested but no hessian pckl found - ignoring restart request")
             restart_bool = False
-    log_fn(f"Setting up image directories in {neb_dir_path}")
-    img_dirs, restart_bool = setup_img_dirs(neb_dir_path, scan_dir_path, scan_steps_int,
-                                            restart_bool=restart_bool, log_fn=log_fn)
+    log_fn(f"Setting up image directories in {neb_path}")
+    img_dirs, restart_bool = setup_img_dirs(neb_path, scan_path, scan_steps_int,
+                                            restart_bool=restart_bool, log_fn=log_fn, safe_mode=safe_mode)
     log_fn(f"Creating image objects")
-    imgs_list_of_atoms = setup_neb_imgs(scan_steps_int, img_dirs, pbc_list_of_bool, get_calc_fn,
-                                        restart_bool=restart_bool, log_fn=log_fn)
+    imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating NEB object")
-    neb = NEB(imgs_list_of_atoms, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
+    neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
     log_fn(f"Creating optimizer object")
-    dyn = neb_optimizer(neb, neb_dir_path, opter=opter_ase_fn)
+    dyn = neb_optimizer(neb, neb_path, opter=opter_ase_fn)
     log_fn(f"Attaching log functions to optimizer object")
-    traj = Trajectory(opj(neb_dir_path, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
+    traj = Trajectory(opj(neb_path, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)
     log_fn(f"Attaching log functions to each image")
     for i in range(scan_steps_int):
-        dyn.attach(Trajectory(opj(img_dirs[i], 'opt-' + str(i) + '.traj'), 'w', imgs_list_of_atoms[i],
+        dyn.attach(Trajectory(opj(img_dirs[i], 'opt-' + str(i) + '.traj'), 'w', imgs_atoms_list[i],
                               properties=['energy', 'forces']))
         dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
-                   interval=1, img_dir=img_dirs[i], img=imgs_list_of_atoms[i])
+                   interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
     return dyn, restart_bool
 
 
-def setup_scan_dir(work_dir_path, scan_dir_path, relax_start_bool, restart_at_idx, pbc_bool_list, log_fn=log_def):
-    dir0 = opj(scan_dir_path, "0")
-    if not ope(scan_dir_path):
+def setup_scan_dir(work_path, scan_path, relax_start_bool, restart_at_idx, pbc_bool_list, log_fn=log_def):
+    dir0 = opj(scan_path, "0")
+    if not ope(scan_path):
         log_fn("Creating scan directory")
-        os.mkdir(scan_dir_path)
+        os.mkdir(scan_path)
     if not ope(dir0):
         log_fn(f"Setting up directory for step 0 (this is special for step 0 - please congratulate him)")
         os.mkdir(dir0)
-        copy_state_files(work_dir_path, dir0)
-        atoms_obj = get_atoms(work_dir_path, pbc_bool_list, restart_bool=True, log_fn=log_fn)
+        copy_state_files(work_path, dir0)
+        atoms_obj = get_atoms(work_path, pbc_bool_list, restart_bool=True, log_fn=log_fn)
         write(opj(dir0, "POSCAR"), atoms_obj, format="vasp")
     elif is_done(dir0, 0) and (not restart_at_idx == 0):
         log_fn(f"Step 0 appears to be done and we're restarting this scan beyond step 0")
         relax_start_bool = False
     log_fn("Checking for scan steps to be overwritten")
-    int_dirs = get_int_dirs(work_dir_path)
+    int_dirs = get_int_dirs(work_path)
     for dir_path in int_dirs:
         idx = os.path.basename(dir_path)
         if idx > restart_at_idx:

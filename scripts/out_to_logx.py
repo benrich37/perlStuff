@@ -32,6 +32,38 @@ def get_atoms_from_outfile_data(names, posns, R, charges=None, E=0):
     atoms.E = E
     return atoms
 
+def get_input_coord_vars_from_outfile(outfname):
+    start_line = get_start_line(outfname)
+    names = []
+    posns = []
+    R = np.zeros([3,3])
+    lat_row = 0
+    active_lattice = False
+    with open(outfname) as f:
+        for i, line in enumerate(f):
+            if i > start_line:
+                tokens = line.split()
+                if tokens[0] == "ion":
+                    names.append(tokens[1])
+                    posns.append(posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])])))
+                elif tokens[0] == "lattice":
+                    active_lattice = True
+                elif active_lattice:
+                    if lat_row < 3:
+                        R[lat_row, :] = [float(x) for x in line.split()[1:-1]]
+                        lat_row += 1
+                    else:
+                        active_lattice = False
+                elif "Initializing the Grid" in line:
+                    break
+    assert len(names) > 0
+    assert len(names) == len(posns)
+    assert np.sum(R) > 0
+    return names, posns, R
+
+
+
+
 
 def get_atoms_list_from_out_reset_vars(nAtoms=100, _def=100):
     R = np.zeros([3, 3])
@@ -112,8 +144,10 @@ def get_atoms_list_from_out(outfile):
                         active_lowdin = False
                         log_vars = True
                 elif log_vars:
+                    if np.sum(R) == 0.0:
+                        R = get_input_coord_vars_from_outfile(outfile)[2]
                     if coords != 'cartesian':
-                        posns = np.dot(posns[1], R[2])
+                        posns = np.dot(posns, R)
                     opts.append(get_atoms_from_outfile_data(names, posns, R, charges=charges, E=E))
                     R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
                         new_posn, log_vars, E, charges = get_atoms_list_from_out_reset_vars(nAtoms=nAtoms)
