@@ -22,6 +22,7 @@ def get_fs(work):
     fs = []
     for i in indices:
         fs.append(get_f(os.path.join(work, int_dirs[i])))
+    return fs
 
 def has_max(fs):
     for i in range(len(fs) - 2):
