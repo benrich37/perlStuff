@@ -195,7 +195,7 @@ def do_relax_end(scan_steps_int, scan_dir_str, restart_idx, pbc_list_of_bool, ge
         prep_input(scan_steps_int, end_dir)
     else:
         restart_end = (end_idx == restart_idx) and (not is_done(end_dir, end_idx))
-    atoms = get_atoms(end_dir, pbc_list_of_bool, restart_bool=restart_end, log_fn=se_log)
+    atoms = get_atoms(end_dir, pbc_list_of_bool, restart_bool=restart_end, log_fn=log_fn)
     run_relax_opt(atoms, end_dir, FIRE, get_calc_fn, fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn)
 
 
@@ -334,7 +334,7 @@ def setup_neb_imgs(scab_steps_int, img_dirs_list_of_path, pbc_list_of_bool, get_
     for i in range(scab_steps_int):
         img_dir = img_dirs_list_of_path[i]
         log_fn(f"Looking for structure for image {i} in {img_dir}")
-        img = get_atoms(img_dir, pbc_list_of_bool, restart_bool=restart_bool)
+        img = get_atoms(img_dir, pbc_list_of_bool, restart_bool=restart_bool, log_fn=log_fn)
         img.set_calculator(get_calc_fn(img_dirs_list_of_path[i]))
         imgs.append(img)
     return imgs
