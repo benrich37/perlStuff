@@ -309,9 +309,7 @@ def run_preopt(atoms_obj, root_path, log_fn=log_def):
     return atoms_obj
 
 
-def run_opt_runner(atoms_obj, root_path, opter, get_calc_fn, log_fn = log_def, fmax=0.05, max_steps=100):
-    atoms_obj = run_preopt(atoms_obj, root_path, log_fn=log_fn)
-    atoms_obj.set_calculator(get_calc_fn(root_path))
+def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max_steps=100):
     dyn = optimizer(atoms_obj, root_path, opter)
     traj = Trajectory(opj(root_path, "opt.traj"), 'w', atoms_obj, properties=['energy', 'forces', 'charges'])
     logx = opj(root_path, "opt.logx")
@@ -328,20 +326,25 @@ def run_opt_runner(atoms_obj, root_path, opter, get_calc_fn, log_fn = log_def, f
     sp_logx(atoms_obj, "sp.logx", do_cell=do_cell)
     finished(root_path)
 
+def run_step_runner(atoms_obj, root_path, opter, get_calc_fn, log_fn = log_def, fmax=0.05, max_steps=100):
+    atoms_obj = run_preopt(atoms_obj, root_path, log_fn=log_fn)
+    atoms_obj.set_calculator(get_calc_fn(root_path))
+    run_opt_runner(atoms_obj, root_path, opter, log_fn=log_fn, fmax=fmax, max_steps=max_steps)
+
 def run_step(atoms_obj, step_path, fix_pair_int_list, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
              fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False):
     run_again = False
     add_bond_constraints(atoms_obj, fix_pair_int_list, log_fn=log_fn)
     atoms_obj.set_calculator(get_jdft_opt_calc_fn(step_path))
     try:
-        run_opt_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, log_fn=log_fn, fmax=fmax_float)
+        run_step_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
     except Exception as e:
         log_fn(e)
         assert check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
-        run_step(atoms_obj, step_path, fix_pair_int_list, get_calc_fn, opter_ase_fn,
+        run_step(atoms_obj, step_path, fix_pair_int_list, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
                  fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
