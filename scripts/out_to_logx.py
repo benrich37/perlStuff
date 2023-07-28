@@ -43,19 +43,20 @@ def get_input_coord_vars_from_outfile(outfname):
         for i, line in enumerate(f):
             if i > start_line:
                 tokens = line.split()
-                if tokens[0] == "ion":
-                    names.append(tokens[1])
-                    posns.append(posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])])))
-                elif tokens[0] == "lattice":
-                    active_lattice = True
-                elif active_lattice:
-                    if lat_row < 3:
-                        R[lat_row, :] = [float(x) for x in line.split()[1:-1]]
-                        lat_row += 1
-                    else:
-                        active_lattice = False
-                elif "Initializing the Grid" in line:
-                    break
+                if len(tokens) > 0:
+                    if tokens[0] == "ion":
+                        names.append(tokens[1])
+                        posns.append(posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])])))
+                    elif tokens[0] == "lattice":
+                        active_lattice = True
+                    elif active_lattice:
+                        if lat_row < 3:
+                            R[lat_row, :] = [float(x) for x in line.split()[1:-1]]
+                            lat_row += 1
+                        else:
+                            active_lattice = False
+                    elif "Initializing the Grid" in line:
+                        break
     assert len(names) > 0
     assert len(names) == len(posns)
     assert np.sum(R) > 0
