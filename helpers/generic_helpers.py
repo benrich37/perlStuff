@@ -649,18 +649,29 @@ def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
 def check_structure(structure, work, log_fn=log_def):
     use_fmt = "vasp"
     fname_out = "POSCAR"
-    if "." in structure:
+    suffixes = ["com", "gjf"]
+    if not ope(opj(work, structure)):
+        for s in suffixes:
+            if ope(opj(work, structure) + "." + s):
+                gauss_struct = structure + "." + s
+        if gauss_struct is None:
+            log_fn(f"Could not find {structure}")
+            assert False
+        else:
+            structure = gauss_struct
+            use_fmt = "gaussian-in"
+    elif "." in structure:
         suffix = structure.split(".")[1]
-        if suffix is ["com", "gjf"]:
+        if suffix in suffixes:
             use_fmt = "gaussian-in"
         else:
             log_fn(f"Not sure which format {structure} is in - setting format for reader to None")
             use_fmt = None
+    structure = opj(work, fname_out)
     try:
         atoms_obj = read(structure, format=use_fmt)
     except Exception as e:
         log_fn(e)
-    structure = opj(work, fname_out)
     write(structure, atoms_obj, format="vasp")
     return structure
 
