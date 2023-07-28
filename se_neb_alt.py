@@ -1,4 +1,5 @@
 import os
+from JDFTx import JDFTx
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
@@ -8,12 +9,13 @@ import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from scripts.out_to_logx import get_do_cell
+from scripts.out_to_logx import get_do_cell, get_atoms_list_from_out
 from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
-from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def
+from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.generic_helpers import _write_logx, _write_opt_log, check_for_restart, finished_logx, sp_logx, bond_str
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_bond_length
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_bond_length, get_lattice_cmds
+from helpers.generic_helpers import get_atoms_from_coords_out, out_to_logx
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
@@ -29,6 +31,7 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "restart: 3 # step number to resume (if not given, this will be found automatically)",
                    "# restart: neb # would trigger a restart for the neb if scan has been completed"
                    "max_steps: 100 # max number of steps for scan opts",
+                   "jdft steps: 5 # Number of ion-opt steps to take before running ASE opt",
                    "neb max steps: 30 # max number of steps for neb opt",
                    "fmax: 0.05 # fmax perameter for both neb and scan opt",
                    "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
@@ -51,7 +54,6 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     fmax = 0.01
     work_dir = None
     follow = False
-    debug = False
     relax_start = True
     relax_end = True
     inputs = get_inputs_list(fname)
@@ -59,6 +61,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     guess_type = 2
     target = None
     safe_mode = False
+    jdft_steps = 5
     for input in inputs:
         key, val = input[0], input[1]
         if "scan" in key:
@@ -68,9 +71,6 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
                 restart_neb = True
             else:
                 restart_at = int(val.strip())
-        if "debug" in key:
-            restart_bool_str = val
-            debug = "true" in restart_bool_str.lower()
         if "work" in key:
             work_dir = val.strip()
         if ("method" in key) and ("neb" in key):
@@ -106,7 +106,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
             guess_type = int(val)
             if guess_type == 3:
                 follow = True
-                guess_type = 2
+                guess_type = 1 # Only move second atom, guess type 2 is bad for how JDFTx will handle bond freezing
     atom_pair = [int(lookline[0]) - 1, int(lookline[1]) - 1] # Convert to 0-based indexing
     scan_steps = int(lookline[2])
     step_length = float(lookline[3])
@@ -115,8 +115,8 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if neb_max_steps is None:
         neb_max_steps = int(max_steps / 10.)
     work_dir = fix_work_dir(work_dir)
-    return atom_pair, scan_steps, step_length, restart_at, work_dir, follow, debug, max_steps, fmax, neb_method,\
-        interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode
+    return atom_pair, scan_steps, step_length, restart_at, work_dir, follow, max_steps, fmax, neb_method,\
+        interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps
 
 
 def get_atoms_prep_follow(atoms, prev_2_out, atom_pair, target_length):
@@ -172,6 +172,46 @@ def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
     start_dist = get_bond_length(atoms, atom_pair)
     log_fn(f"Bond {bond_str(atoms, atom_pair[0], atom_pair[1])} starting at {start_dist}")
     return start_dist
+
+def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
+    ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
+    atoms_obj.set_calculator(_get_calc(exe_cmd, ion_cmds, ion_dir_path, JDFTx, log_fn=log_fn))
+    log_fn("lattice optimization starting")
+    log_fn(f"Fmax: n/a, max_steps: {ion_iters_int}")
+    pbc = atoms_obj.pbc
+    atoms_obj.get_forces()
+    if has_coords_out_files(ion_dir_path):
+        ionpos = opj(ion_dir_path, "ionpos")
+        lattice = opj(ion_dir_path, "lattice")
+        atoms_obj = get_atoms_from_coords_out(ionpos, lattice)
+    else:
+        outfile = opj(ion_dir_path, "out")
+        if ope(outfile):
+            atoms_obj = get_atoms_list_from_out(outfile)[-1]
+        else:
+            log_fn(f"No output data given - check error file")
+            assert False
+    atoms_obj.pbc = pbc
+    structure_path = opj(ion_dir_path, "CONTCAR")
+    write(structure_path, atoms_obj, format="vasp")
+    log_fn(f"Finished lattice optimization")
+    finished(ion_dir_path)
+    out_to_logx(ion_dir_path, opj(ion_dir_path, 'out'), log_fn=log_fn)
+    return atoms_obj
+
+
+def run_ion_opt(atoms_obj, ion_iters_int, ion_dir_path, root_path, cmds_list, _failed_before=False, log_fn=log_def):
+    run_again = False
+    try:
+        atoms_obj = run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_fn)
+    except Exception as e:
+        log_fn(e)
+        assert check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
+        run_again = True
+        pass
+    if run_again:
+        atoms_obj = run_ion_opt(atoms_obj, ion_iters_int, ion_dir_path, root_path, cmds_list, _failed_before=True, log_fn=log_fn)
+    return atoms_obj
 
 
 def do_relax_start(relax_start_bool, scan_path, get_calc_fn, log_fn=log_def, fmax_float=0.05, max_steps_int=100):
@@ -255,8 +295,22 @@ def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
     log_fn(f"Setting pbc for atoms to {pbc_bool_list}")
     return atoms_obj
 
+def run_preopt(atoms_obj, root_path, log_fn=log_def):
+    outfile = opj(root_path, "out")
+    log_fn("JDFTx pre-optimization starting")
+    atoms_obj.get_forces()
+    log_fn("JDFTx pre-optimization finished")
+    jdft_opt = opj(root_path, "pre_opt")
+    os.mkdir(jdft_opt)
+    out_to_logx(jdft_opt, outfile, log_fn=log_fn)
+    new_atoms = get_atoms_list_from_out(outfile)[-1]
+    atoms_obj.set_positions(new_atoms.positions)
+    write(opj(jdft_opt, "CONTCAR"), atoms_obj, format="vasp")
+    return atoms_obj
+
 
 def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max_steps=100):
+    atoms_obj = run_preopt(atoms_obj, root_path, log_fn=log_fn)
     dyn = optimizer(atoms_obj, root_path, opter)
     traj = Trajectory(opj(root_path, "opt.traj"), 'w', atoms_obj, properties=['energy', 'forces', 'charges'])
     logx = opj(root_path, "opt.logx")
@@ -273,6 +327,21 @@ def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max
     sp_logx(atoms_obj, "sp.logx", do_cell=do_cell)
     finished(root_path)
 
+def run_step(atoms_obj, step_path, fix_pair_int_list, get_calc_fn, opter_ase_fn,
+             fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False):
+    run_again = False
+    add_bond_constraints(atoms_obj, fix_pair_int_list, log_fn=log_fn)
+    atoms_obj.set_calculator(get_calc_fn(step_path))
+    try:
+        run_opt_runner(atoms_obj, step_path, opter_ase_fn, log_fn=log_fn, fmax=fmax_float)
+    except Exception as e:
+        log_fn(e)
+        assert check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
+        run_again = True
+        pass
+    if run_again:
+        run_step(atoms_obj, step_path, fix_pair_int_list, get_calc_fn, opter_ase_fn,
+                 fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
                   fmax_float=0.05, max_steps_int=100, log_fn=log_def, _failed_before_bool=False):
@@ -287,23 +356,6 @@ def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
     if run_again:
         run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
                       fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
-
-
-def run_step(atoms_obj, step_path, fix_pair_int_list, get_calc_fn, opter_ase_fn,
-             fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False):
-    run_again = False
-    add_bond_constraints(atoms_obj, fix_pair_int_list, log_fn=log_fn)
-    atoms_obj.set_calculator(get_calc_fn(step_path))
-    try:
-        run_opt_runner(atoms_obj, step_path, opter_ase_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
-    except Exception as e:
-        log_fn(e)
-        assert check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
-        run_again = True
-        pass
-    if run_again:
-        run_step(atoms_obj, step_path, fix_pair_int_list, get_calc_fn, opter_ase_fn,
-                 fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 
 def safe_mode_check(scan_path, scan_steps_int, atom_pair_int_list, log_fn=log_def):
@@ -417,8 +469,8 @@ def setup_scan_dir(work_path, scan_path, relax_start_bool, restart_at_idx, pbc_b
 
 
 if __name__ == '__main__':
-    atom_pair, scan_steps, step_length, restart_at, work_dir, follow, debug, max_steps, fmax, neb_method,\
-        interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode = read_se_neb_inputs()
+    atom_pair, scan_steps, step_length, restart_at, work_dir, follow, max_steps, fmax, neb_method,\
+        interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps = read_se_neb_inputs()
     gpu = True # Make this an input argument eventually
     os.chdir(work_dir)
     scan_dir = opj(work_dir, "scan")
@@ -436,23 +488,19 @@ if __name__ == '__main__':
     ####################################################################################################################
     se_log(f"Reading JDFTx commands")
     cmds = get_cmds(work_dir, ref_struct="POSCAR")
-    if not debug:
-        from JDFTx import JDFTx
-        exe_cmd = get_exe_cmd(True, se_log)
-        get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx,
-                                          debug=debug, log_fn=se_log)
-    else:
-        exe_cmd = " "
-        from ase.calculators.emt import EMT as debug_calc
-        get_calc = lambda root: _get_calc(exe_cmd, cmds, root, None,
-                                          debug=debug, debug_fn=debug_calc, log_fn=se_log)
+    exe_cmd = get_exe_cmd(True, se_log)
+    ion_opt_cmds = get_ionic_opt_cmds(cmds, jdft_steps)
+    lat_opt_cmds = get_lattice_cmds(cmds, max_steps, pbc=pbc)
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, debug=False, log_fn=se_log)
+    get_ionopt_calc = lambda root: _get_calc(exe_cmd, ion_opt_cmds, root, JDFTx, debug=False, log_fn=se_log)
+    get_latopt_calc = lambda root: _get_calc(exe_cmd, lat_opt_cmds, root, JDFTx, debug=False, log_fn=se_log)
     ####################################################################################################################
     if not skip_to_neb:
         se_log("Entering scan")
         relax_start = setup_scan_dir(work_dir, scan_dir, relax_start, restart_at, pbc, log_fn=se_log)
         if relax_start:
             check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
-            do_relax_start(relax_start, scan_dir, get_calc, log_fn=se_log, fmax_float=fmax, max_steps_int=max_steps)
+            do_relax_start(relax_start, scan_dir, get_latopt_calc, log_fn=se_log, fmax_float=fmax, max_steps_int=max_steps)
         start_length = get_start_dist(scan_dir, atom_pair, log_fn=se_log, restart=relax_start)
         if not target is None:
             step_length = fix_step_size(start_length, target, scan_steps, log_fn=se_log)
@@ -473,7 +521,7 @@ if __name__ == '__main__':
             if not relax_start:
                 if i == 0:
                     check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
-            run_step(atoms, step_dir, atom_pair, get_calc, FIRE,
+            run_step(atoms, step_dir, atom_pair, get_ionopt_calc, FIRE,
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
         if relax_end:
             do_relax_end(scan_steps, scan_dir, restart_at, pbc, get_calc,
