@@ -405,7 +405,7 @@ if __name__ == '__main__':
         skip_to_neb = False
         os.mkdir(neb_dir)
     use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES have a local maximum
-    dyn_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, work_dir,
+    dyn_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
                         restart=skip_to_neb, use_ci=use_ci, log_fn=se_log)
     dyn_neb.run(fmax=fmax, steps=neb_max_steps)
     se_log(f"finished neb in {dyn_neb.nsteps}/{neb_max_steps} steps")
