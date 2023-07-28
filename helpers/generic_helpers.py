@@ -11,6 +11,7 @@ from scripts.out_to_logx import out_to_logx_str, get_atoms_from_outfile_data, ge
 from pathlib import Path
 import subprocess
 import copy
+import __main__
 
 
 def log_def(s):
@@ -447,7 +448,7 @@ def check_submit(gpu, cwd, jobtype):
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
         subprocess.run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
         bar = opj(os.environ["HOME"], "perlStuff")
-        subprocess.run(f"sed -i 's/bar/{bar.lstrip('/').rstrip('/')}/g' {fname}", shell=True, check=True)
+        subprocess.run(f"sed -i 's/bar/{__main__.__file__}/g' {fname}", shell=True, check=True)
         exit()
 
 
