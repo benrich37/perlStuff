@@ -290,9 +290,9 @@ def run_step(atoms, step_dir, fix_pair, get_calc_fn, opter,
                  fmax=fmax, max_steps=max_steps, log_fn=log_fn, _failed_before=True)
 
 
-def setup_img_dirs(neb_dir, scan_dir, front, restart = False, log_fn=log_def):
+def setup_img_dirs(neb_dir, scan_dir, scan_steps, restart = False, log_fn=log_def):
     img_dirs = []
-    for i in range(front + 1):
+    for i in range(scan_steps):
         step_dir = opj(scan_dir, str(i))
         img_dir = opj(neb_dir, str(i))
         img_dirs.append(img_dir)
@@ -316,17 +316,17 @@ def setup_neb_imgs(front, img_dirs, pbc, get_calc_fn, log_fn=log_def, restart=Fa
     return imgs
 
 
-def setup_neb(front, k, neb_method, pbc, get_calc_fn, neb_dir, scan_dir,
+def setup_neb(scan_steps, k, neb_method, pbc, get_calc_fn, neb_dir, scan_dir,
               opter=FIRE, restart = False, use_ci = False, log_fn=log_def):
     restart = restart and ope(neb_dir + "hessian.pckl")
-    img_dirs, restart = setup_img_dirs(neb_dir, scan_dir, front, restart=restart, log_fn=log_fn)
-    imgs = setup_neb_imgs(front, img_dirs, pbc, get_calc_fn, restart=restart, log_fn=log_fn)
+    img_dirs, restart = setup_img_dirs(neb_dir, scan_dir, scan_steps, restart=restart, log_fn=log_fn)
+    imgs = setup_neb_imgs(scan_steps, img_dirs, pbc, get_calc_fn, restart=restart, log_fn=log_fn)
     neb = NEB(imgs, parallel=False, climb=use_ci, k=k, method=neb_method)
     dyn = neb_optimizer(neb, neb_dir, opter=opter)
     traj = Trajectory(opj(neb_dir, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)
     write_contcar = lambda img_dir, img: _write_contcar(img, img_dir)
-    for i in range(front+1):
+    for i in range(scan_steps):
         dyn.attach(Trajectory(opj(img_dirs[i], 'opt-' + str(i) + '.traj'), 'w', imgs[i], properties=['energy', 'forces']))
         dyn.attach(write_contcar, interval=1, img_dir=img_dirs[i], image=imgs[i])
     return dyn
