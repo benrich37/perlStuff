@@ -57,7 +57,7 @@ submit_gpu_perl_ref = [
     "export SLURM_CPU_BIND=\"cores\"",
     "export JDFTX_MEMPOOL_SIZE=36000",
     "export MPICH_GPU_SUPPORT_ENABLED=1\n",
-    "python bar/foo.py > foo.out",
+    "python bar > foo.out",
     "exit 0"
 ]
 
