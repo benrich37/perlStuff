@@ -309,8 +309,9 @@ def run_preopt(atoms_obj, root_path, log_fn=log_def):
     return atoms_obj
 
 
-def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max_steps=100):
+def run_opt_runner(atoms_obj, root_path, opter, get_calc_fn, log_fn = log_def, fmax=0.05, max_steps=100):
     atoms_obj = run_preopt(atoms_obj, root_path, log_fn=log_fn)
+    atoms_obj.set_calculator(get_calc_fn(root_path))
     dyn = optimizer(atoms_obj, root_path, opter)
     traj = Trajectory(opj(root_path, "opt.traj"), 'w', atoms_obj, properties=['energy', 'forces', 'charges'])
     logx = opj(root_path, "opt.logx")
@@ -327,13 +328,13 @@ def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max
     sp_logx(atoms_obj, "sp.logx", do_cell=do_cell)
     finished(root_path)
 
-def run_step(atoms_obj, step_path, fix_pair_int_list, get_calc_fn, opter_ase_fn,
+def run_step(atoms_obj, step_path, fix_pair_int_list, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
              fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False):
     run_again = False
     add_bond_constraints(atoms_obj, fix_pair_int_list, log_fn=log_fn)
-    atoms_obj.set_calculator(get_calc_fn(step_path))
+    atoms_obj.set_calculator(get_jdft_opt_calc_fn(step_path))
     try:
-        run_opt_runner(atoms_obj, step_path, opter_ase_fn, log_fn=log_fn, fmax=fmax_float)
+        run_opt_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, log_fn=log_fn, fmax=fmax_float)
     except Exception as e:
         log_fn(e)
         assert check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
@@ -524,7 +525,7 @@ if __name__ == '__main__':
             if not relax_start:
                 if i == 0:
                     check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
-            run_step(atoms, step_dir, atom_pair, get_ionopt_calc, FIRE,
+            run_step(atoms, step_dir, atom_pair, get_ionopt_calc, get_calc, FIRE,
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
         if relax_end:
             do_relax_end(scan_steps, scan_dir, restart_at, pbc, get_calc,
