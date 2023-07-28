@@ -207,25 +207,20 @@ def run_lat_opt(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds, _faile
 def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
     ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
     atoms_obj.set_calculator(_get_calc(exe_cmd, ion_cmds, ion_dir_path, JDFTx, log_fn=log_fn))
-    log_fn("lattice optimization starting")
+    log_fn("ionic optimization starting")
     log_fn(f"Fmax: n/a, max_steps: {ion_iters_int}")
     pbc = atoms_obj.pbc
     atoms_obj.get_forces()
-    if has_coords_out_files(ion_dir_path):
-        ionpos = opj(ion_dir_path, "ionpos")
-        lattice = opj(ion_dir_path, "lattice")
-        atoms_obj = get_atoms_from_coords_out(ionpos, lattice)
+    outfile = opj(ion_dir_path, "out")
+    if ope(outfile):
+        atoms_obj = get_atoms_list_from_out(outfile)[-1]
     else:
-        outfile = opj(ion_dir_path, "out")
-        if ope(outfile):
-            atoms_obj = get_atoms_list_from_out(outfile)[-1]
-        else:
-            log_fn(f"No output data given - check error file")
-            assert False
+        log_fn(f"No output data given - check error file")
+        assert False
     atoms_obj.pbc = pbc
     structure_path = opj(ion_dir_path, "CONTCAR")
     write(structure_path, atoms_obj, format="vasp")
-    opt_log(f"Finished lattice optimization")
+    opt_log(f"Finished ionic optimization")
     finished(ion_dir_path)
     out_to_logx(ion_dir_path, opj(ion_dir_path, 'out'), log_fn=log_fn)
     return atoms_obj
