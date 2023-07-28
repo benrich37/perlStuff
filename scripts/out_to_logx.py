@@ -1,7 +1,10 @@
 import os
 import sys
 from os.path import join as opj
-from traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
+if __name__ == "__main__":
+    from traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
+else:
+    from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
 import numpy as np
 from ase.units import Bohr
 from ase import Atoms, Atom
