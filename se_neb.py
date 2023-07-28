@@ -314,7 +314,7 @@ def setup_img_dirs(neb_dir_path, scan_dir_path, scan_steps_int, restart_bool=Fal
         img_dir_str = opj(neb_dir_path, str(j))
         img_dirs.append(img_dir_str)
         if restart_bool:
-            if not (ope(opj(img_dir_str, "POSCAR"))) or (ope(opj(img_dir_str, "CONTCAR"))):
+            if not (ope(opj(img_dir_str, "POSCAR"))) and (ope(opj(img_dir_str, "CONTCAR"))):
                 log_fn(f"Restart NEB requested but dir for image {j} does not appear to have a structure to use")
                 log_fn(f"(Image {j}'s directory is {img_dir_str}")
                 log_fn(f"Ignoring restart NEB request")
