@@ -5,7 +5,7 @@ from datetime import datetime
 from ase.constraints import FixBondLength
 from os.path import join as opj
 from os.path import exists as ope
-from ase.io import read
+from ase.io import read, write
 from scripts.traj_to_logx import log_charges, log_input_orientation, scf_str, opt_spacer
 from scripts.out_to_logx import out_to_logx_str, get_atoms_from_outfile_data, get_start_line
 from pathlib import Path
@@ -644,3 +644,23 @@ def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
         else:
             log_fn("Recognizing failure by state files when supposedly no files are present - insane")
         return False
+
+def check_structure(structure, work, log_fn=log_def):
+    use_fmt = "vasp"
+    fname_out = "POSCAR"
+    if "." in structure:
+        suffix = structure.split(".")[1]
+        if suffix is ["com", "gjf"]:
+            use_fmt = "gaussian-in"
+        else:
+            log_fn(f"Not sure which format {structure} is in - setting format for reader to None")
+            use_fmt = None
+    try:
+        atoms_obj = read(structure, format=use_fmt)
+    except Exception as e:
+        log_fn(e)
+    structure = opj(work, fname_out)
+    write(structure, atoms_obj, format="vasp")
+    return structure
+
+
