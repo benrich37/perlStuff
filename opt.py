@@ -286,7 +286,7 @@ if __name__ == '__main__':
     lat_dir = opj(work_dir, "lat_opt")
     structure = opj(work_dir, structure)
     opt_log = get_log_fn(work_dir, "opt", False, restart=restart)
-    structure = check_structure(structure, work_dir)
+    structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, opt_dir, lat_dir, lat_iters, use_jdft)
     exe_cmd = get_exe_cmd(gpu, opt_log)
     cmds = get_cmds(work_dir, ref_struct=structure)
