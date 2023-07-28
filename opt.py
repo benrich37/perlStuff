@@ -297,8 +297,11 @@ if __name__ == '__main__':
     check_submit(gpu, os.getcwd(), "opt")
     if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
         atoms, structure = run_lat_opt(atoms, structure, lat_iters, lat_dir, work_dir, opt_log, cmds)
+    opt_log(f"Finding/copying any state files to {opt_dir}")
     copy_best_state_f([work_dir, lat_dir], opt_dir, log_fn=opt_log)
     if use_jdft:
+        opt_log(f"Running ion optimization with JDFTx optimizer")
         run_ion_opt(atoms, max_steps, opt_dir, work_dir, cmds, log_fn=opt_log)
     else:
+        opt_log(f"Running ion optimization with ASE optimizer")
         run_ase_opt(atoms, opt_dir, FIRE, do_cell, opt_log, exe_cmd, cmds)
