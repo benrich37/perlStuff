@@ -46,7 +46,7 @@ def get_input_coord_vars_from_outfile(outfname):
                 if len(tokens) > 0:
                     if tokens[0] == "ion":
                         names.append(tokens[1])
-                        posns.append(posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])])))
+                        posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
                     elif tokens[0] == "lattice":
                         active_lattice = True
                     elif active_lattice:
