@@ -307,7 +307,7 @@ def setup_img_dirs(neb_dir, scan_dir, scan_steps, restart = False, log_fn=log_de
 
 def setup_neb_imgs(front, img_dirs, pbc, get_calc_fn, log_fn=log_def, restart=False):
     imgs = []
-    for i in range(front + 1):
+    for i in range(front):
         img_dir = img_dirs[i]
         log_fn(f"Looking for structure for image {i} in {img_dir}")
         img = get_atoms(img_dir, pbc, restart=restart)
