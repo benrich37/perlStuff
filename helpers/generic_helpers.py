@@ -297,7 +297,7 @@ def need_sort(root):
 
 
 def get_log_fn(work, calc_type, print_bool, restart=False):
-    fname = opj(work, calc_type + "io.log")
+    fname = opj(work, calc_type + ".iolog")
     if not restart:
         if ope(fname):
             os.remove(fname)
@@ -601,6 +601,11 @@ def get_lattice_cmds(cmds, lat_iters, pbc):
     lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
     return lat_cmds
 
+def get_ionic_opt_cmds(cmds, lat_iters):
+    lat_cmds = copy.copy(cmds)
+    lat_cmds["ionic-minimize"] = f"nIterations {lat_iters}"
+    return lat_cmds
+
 
 def death_by_state(outfname, log_fn=lambda s: print(s)):
     if not ope(outfname):
@@ -622,7 +627,7 @@ def death_by_state(outfname, log_fn=lambda s: print(s)):
     return False
 
 
-def check_for_restart(e, failed_before, opt_dir, log_fn):
+def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
     log_fn(e)
     if not failed_before:
         if death_by_state(opj(opt_dir, "out"), log_fn):

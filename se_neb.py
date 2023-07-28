@@ -13,7 +13,7 @@ from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, ge
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
 from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def
 from helpers.generic_helpers import _write_logx, _write_opt_log, check_for_restart, finished_logx, sp_logx, bond_str
-from helpers.generic_helpers import remove_dir_recursive
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
@@ -282,7 +282,7 @@ def run_relax_opt(atoms_obj, opt_dir_path, opter_ase_fn, get_calc_fn,
     try:
         run_opt_runner(atoms_obj, opt_dir_path, opter_ase_fn, fmax=fmax_float, max_steps=max_steps_int, log_fn=log_fn)
     except Exception as e:
-        assert check_for_restart(e, _failed_before_bool, opt_dir_path, log_fn)
+        assert check_for_restart(e, _failed_before_bool, opt_dir_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
@@ -299,7 +299,7 @@ def run_step(atoms_obj, step_dir_path, fix_pair_list_of_int, get_calc_fn, opter_
         run_opt_runner(atoms_obj, step_dir_path, opter_ase_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
     except Exception as e:
         log_fn(e)
-        assert check_for_restart(e, _failed_before_bool, step_dir_path, log_fn)
+        assert check_for_restart(e, _failed_before_bool, step_dir_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
