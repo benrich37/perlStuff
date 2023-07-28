@@ -51,7 +51,7 @@ def get_input_coord_vars_from_outfile(outfname):
                         active_lattice = True
                     elif active_lattice:
                         if lat_row < 3:
-                            R[lat_row, :] = [float(x) for x in line.split()[1:-1]]
+                            R[lat_row, :] = [float(x) for x in tokens[:3]]
                             lat_row += 1
                         else:
                             active_lattice = False
