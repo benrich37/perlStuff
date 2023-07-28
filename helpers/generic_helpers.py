@@ -306,13 +306,13 @@ def get_log_fn(work, calc_type, print_bool, restart=False):
     return lambda s: log_generic(s, work, calc_type, print_bool)
 
 
-def log_generic(message, work, calc_type, print_bool):
+def log_generic(message, work, fname, print_bool):
     message = str(message)
     if "\n" not in message:
         message = message + "\n"
     prefix = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": "
     message = prefix + message
-    log_fname = os.path.join(work, calc_type + ".log")
+    log_fname = opj(work, fname)
     if not ope(log_fname):
         with open(log_fname, "w") as f:
             f.write(prefix + "Starting\n")
