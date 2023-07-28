@@ -650,29 +650,34 @@ def check_structure(structure, work, log_fn=log_def):
     use_fmt = "vasp"
     fname_out = "POSCAR"
     suffixes = ["com", "gjf"]
+    have_gauss = False
     if not ope(opj(work, structure)):
+        log_fn(f"Could not find {structure} - checking if gaussian input")
         for s in suffixes:
-            if ope(opj(work, structure + "." + s)):
-                gauss_struct = structure + "." + s
-        if gauss_struct is None:
-            if "." in structure:
-                suffix = structure.split(".")[1]
-                if suffix in suffixes:
-                    use_fmt = "gaussian-in"
-                else:
-                    log_fn(f"Not sure which format {structure} is in - setting format for reader to None")
-                    use_fmt = None
-            else:
-                log_fn(f"Could not find {structure} - aborting")
-                assert False
+            gauss_struct = structure + "." + s
+            if ope(opj(work, gauss_struct)):
+                log_fn(f"Found matching gaussian input ({gauss_struct})")
+                have_gauss = True
+        if not have_gauss:
+            log_fn(f"Could not find {structure} - aborting")
+            assert False
         else:
             structure = gauss_struct
             use_fmt = "gaussian-in"
-    structure = opj(work, fname_out)
+    elif "." in structure:
+        log_fn(f"Checking if gave gaussian structure")
+        suffix = structure.split(".")[1]
+        if suffix in suffixes:
+            use_fmt = "gaussian-in"
+        else:
+            log_fn(f"Not sure which format {structure} is in - setting format for reader to None")
+            use_fmt = None
+    structure = opj(work, structure)
     try:
         atoms_obj = read(structure, format=use_fmt)
     except Exception as e:
         log_fn(e)
+    structure = opj(work, fname_out)
     write(structure, atoms_obj, format="vasp")
     return structure
 
