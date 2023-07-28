@@ -648,7 +648,7 @@ def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
 
 def check_structure(structure, work, log_fn=log_def):
     use_fmt = "vasp"
-    fname_out = "POSCAR"
+    fname_out = "_POSCAR"
     suffixes = ["com", "gjf"]
     have_gauss = False
     if not ope(opj(work, structure)):
