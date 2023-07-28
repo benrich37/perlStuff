@@ -303,7 +303,7 @@ def get_log_fn(work, calc_type, print_bool, restart=False):
     if not restart:
         if ope(fname):
             os.remove(fname)
-    return lambda s: log_generic(s, work, calc_type, print_bool)
+    return lambda s: log_generic(s, work, fname, print_bool)
 
 
 def log_generic(message, work, fname, print_bool):
