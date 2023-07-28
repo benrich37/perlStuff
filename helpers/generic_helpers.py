@@ -389,15 +389,16 @@ def get_inputs_list(fname, auto_lower=True):
     inputs = []
     with open(fname, "r") as f:
         for line in f:
-            key = line.split(":")[0]
-            val = line.rstrip("\n").split(":")[1]
-            if "#" in val:
-                val = val[:val.index("#")]
-            if auto_lower:
-                key = key.lower()
-                val = val.lower()
-            if "#" not in key:
-                inputs.append(tuple([key, val]))
+            if ":" in line:
+                key = line.split(":")[0]
+                val = line.rstrip("\n").split(":")[1]
+                if "#" in val:
+                    val = val[:val.index("#")]
+                if auto_lower:
+                    key = key.lower()
+                    val = val.lower()
+                if "#" not in key:
+                    inputs.append(tuple([key, val]))
     return inputs
 
 
