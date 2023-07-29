@@ -391,7 +391,7 @@ def setup_img_dirs(neb_path, scan_path, scan_steps_int, restart_bool=False, log_
     scan_steps_list = list(range(scan_steps_int))
     if safe_mode:
         scan_steps_list = safe_mode_check(scan_path, scan_steps_int, atom_pair, log_fn=log_def)
-    for j, scan_idx in scan_steps_list:
+    for j, scan_idx in enumerate(scan_steps_list):
         step_dir_str = opj(scan_path, str(scan_idx))
         img_dir_str = opj(neb_path, str(j))
         img_dirs.append(img_dir_str)
