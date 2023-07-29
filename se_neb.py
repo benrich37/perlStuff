@@ -253,14 +253,10 @@ def is_done(dir_path, idx):
 def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
     if not restart_idx is None:
         log_fn(f"Restart index specified at {restart_idx}")
-        print(f"Restart index specified at {restart_idx}")
         return restart_idx
     else:
-        print("Setting restart idx to 0")
         restart_idx = 0
-        print(restart_idx)
         if not ope(scan_path):
-            print(restart_idx)
             return restart_idx
         else:
             int_dirs = get_int_dirs(scan_path)
@@ -269,12 +265,14 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
                 look_dir = int_dirs[int_dirs_indices[i]]
                 if ope(look_dir):
                     if is_done(look_dir, i):
-                        print(restart_idx)
                         restart_idx = i
                     else:
+                        print(restart_idx)
                         return restart_idx
                 else:
+                    print(restart_idx)
                     return restart_idx
+            return restart_idx
 
 
 def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
