@@ -267,10 +267,8 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
                     if is_done(look_dir, i):
                         restart_idx = i
                     else:
-                        print(restart_idx)
                         return restart_idx
                 else:
-                    print(restart_idx)
                     return restart_idx
             return restart_idx
 
@@ -310,7 +308,8 @@ def run_preopt(atoms_obj, root_path, log_fn=log_def):
     atoms_obj.get_forces()
     log_fn("JDFTx pre-optimization finished")
     jdft_opt = opj(root_path, "pre_opt")
-    os.mkdir(jdft_opt)
+    if not ope(jdft_opt):
+        os.mkdir(jdft_opt)
     out_to_logx(jdft_opt, outfile, log_fn=log_fn)
     new_atoms = get_atoms_list_from_out(outfile)[-1]
     atoms_obj.set_positions(new_atoms.positions)
