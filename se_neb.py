@@ -253,10 +253,13 @@ def is_done(dir_path, idx):
 def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
     if not restart_idx is None:
         log_fn(f"Restart index specified at {restart_idx}")
+        print(f"Restart index specified at {restart_idx}")
         return restart_idx
     else:
+        print("Setting restart idx to 0")
         restart_idx = 0
         if not ope(scan_path):
+            print(restart_idx)
             return restart_idx
         else:
             int_dirs = get_int_dirs(scan_path)
