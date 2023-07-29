@@ -258,6 +258,7 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
     else:
         print("Setting restart idx to 0")
         restart_idx = 0
+        print(restart_idx)
         if not ope(scan_path):
             print(restart_idx)
             return restart_idx
@@ -268,6 +269,7 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
                 look_dir = int_dirs[int_dirs_indices[i]]
                 if ope(look_dir):
                     if is_done(look_dir, i):
+                        print(restart_idx)
                         restart_idx = i
                     else:
                         return restart_idx
