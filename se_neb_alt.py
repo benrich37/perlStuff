@@ -107,6 +107,8 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
             if guess_type == 3:
                 follow = True
                 guess_type = 1 # Only move second atom, guess type 2 is bad for how JDFTx will handle bond freezing
+        if ("jdft" in key) and ("step" in key):
+            jdft_steps = int(val)
     atom_pair = [int(lookline[0]) - 1, int(lookline[1]) - 1] # Convert to 0-based indexing
     scan_steps = int(lookline[2])
     step_length = float(lookline[3])
