@@ -250,8 +250,9 @@ def is_done(dir_path, idx):
     return ope(opj(dir_path, f"finished_{idx}.txt"))
 
 
-def get_restart_idx(restart_idx, scan_path):
+def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
     if not restart_idx is None:
+        log_fn(f"Restart index specified at {restart_idx}")
         return restart_idx
     else:
         restart_idx = 0
@@ -262,8 +263,11 @@ def get_restart_idx(restart_idx, scan_path):
             int_dirs_indices = get_int_dirs_indices(int_dirs)
             for i in range(len(int_dirs)):
                 look_dir = int_dirs[int_dirs_indices[i]]
-                if is_done(look_dir, i):
-                    restart_idx = i
+                if ope(look_dir):
+                    if is_done(look_dir, i):
+                        restart_idx = i
+                    else:
+                        return restart_idx
                 else:
                     return restart_idx
 
