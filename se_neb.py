@@ -485,6 +485,7 @@ if __name__ == '__main__':
     os.chdir(work_dir)
     scan_dir = opj(work_dir, "scan")
     restart_at = get_restart_idx(restart_at, scan_dir) # If was none, finds most recently converged step
+    print(restart_at)
     restart = restart_at > 0
     skip_to_neb = (restart_at > scan_steps)
     se_log = get_log_fn(work_dir, "se_neb", False, restart=restart)
