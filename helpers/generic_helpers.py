@@ -282,13 +282,12 @@ def bond_str(atoms, i1, i2):
     return atom_str(atoms, i1) + "-" + atom_str(atoms, i2)
 
 
-def need_sort(root):
-    atoms = read(opj(root, "POSCAR"), format="vasp")
+def get_sort_bool(symbols):
     ats = []
     dones = []
-    for a in atoms.get_chemical_symbols():
+    for a in symbols:
         if a not in ats:
-            ats.append(ats)
+            ats.append(a)
         elif a in dones:
             return True
         for at in ats:
@@ -296,6 +295,11 @@ def need_sort(root):
                 if at != a:
                     dones.append(at)
     return False
+
+
+def need_sort(root):
+    atoms = read(opj(root, "POSCAR"), format="vasp")
+    return get_sort_bool(atoms.get_chemical_symbols())
 
 
 def get_log_fn(work, calc_type, print_bool, restart=False):

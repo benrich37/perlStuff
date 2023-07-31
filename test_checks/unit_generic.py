@@ -47,6 +47,14 @@ class TestGeomHelpers(unittest.TestCase):
         gen.add_bond_constraints(atoms, [0, 1])
         self.assertEqual(len(atoms.constraints), 1)
 
+    def test_sort_bool(self):
+        test1 = ["H", "H", "O", "H"]
+        test1_bool = gen.get_sort_bool(test1)
+        self.assertTrue(test1_bool)
+        test2 = ["H", "H", "H", "O"]
+        test2_bool = gen.get_sort_bool(test2)
+        self.assertFalse(test2_bool)
+
 
 class TestIoHelpers(unittest.TestCase):
     def test_copy_files(self):
@@ -92,9 +100,10 @@ class TestIoHelpers(unittest.TestCase):
         if ope(dir1):
             gen.remove_dir_recursive(dir1)
         os.mkdir(dir1)
-        gen.log_generic(messages[0], dir1, "test", False)
-        self.assertTrue(ope(opj(dir1, "test.log")))
-        with open(opj(dir1, "test.log"), "r") as f:
+        fname="test"
+        gen.log_generic(messages[0], dir1, fname, False)
+        self.assertTrue(ope(opj(dir1, fname)))
+        with open(opj(dir1, fname), "r") as f:
             length = 0
             for i, line in enumerate(f):
                 length += 1
@@ -103,8 +112,8 @@ class TestIoHelpers(unittest.TestCase):
                 if i == 1:
                     self.assertTrue(messages[i - 1] in line)
             self.assertEqual(length, 2)
-        gen.log_generic(messages[1], dir1, "test", False)
-        with open(opj(dir1, "test.log"), "r") as f:
+        gen.log_generic(messages[1], dir1, fname, False)
+        with open(opj(dir1, fname), "r") as f:
             length = 0
             for i, line in enumerate(f):
                 length += 1
