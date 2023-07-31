@@ -276,7 +276,7 @@ def time_to_str(t):
 
 
 def atom_str(atoms, index):
-    return f"{atoms.get_chemical_symbols()[index]}({index})"
+    return f"{atoms.get_chemical_symbols()[index]}({index - 1})"
 
 def bond_str(atoms, i1, i2):
     return atom_str(atoms, i1) + "-" + atom_str(atoms, i2)
