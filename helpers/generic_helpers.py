@@ -646,19 +646,68 @@ def death_by_state(outfname, log_fn=lambda s: print(s)):
     return False
 
 
+def death_by_nan(outfname, log_fn=lambda s: print(s)):
+    if not ope(outfname):
+        return False
+    else:
+        start_line = get_start_line(outfname)
+        with open(outfname) as f:
+            for i, line in enumerate(f):
+                if i > start_line:
+                    if ("nan" in line):
+                        log_fn(f"Nan found in line {line}")
+                        return True
+    return False
+
+def has_nan(file):
+    with open(file, "r") as f:
+        for line in f:
+            if "nan" in line:
+                return True
+    return False
+
+def reset_atoms_death_by_nan_helper(file):
+    if ope(file):
+        if not has_nan(file):
+            return True
+        else:
+            return False
+    return False
+
+def reset_atoms_death_by_nan(cur_dir, recent_dir):
+    if reset_atoms_death_by_nan_helper(opj(cur_dir, "CONTCAR")):
+        return read(opj(cur_dir, "CONTCAR"), format="vasp")
+    elif reset_atoms_death_by_nan_helper(opj(cur_dir, "POSCAR")):
+        return read(opj(cur_dir, "CONTCAR"), format="vasp")
+    elif reset_atoms_death_by_nan_helper(opj(recent_dir, "CONTCAR")):
+        return read(opj(cur_dir, "CONTCAR"), format="vasp")
+    elif reset_atoms_death_by_nan_helper(opj(recent_dir, "POSCAR")):
+        return read(opj(cur_dir, "CONTCAR"), format="vasp")
+    else:
+        assert False
+
+
+
+
+
 def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
     log_fn(e)
+    out = opj(opt_dir, "out")
     if not failed_before:
-        if death_by_state(opj(opt_dir, "out"), log_fn):
+        if death_by_state(out, log_fn):
             log_fn("Calculation failed due to state file. Will retry without state files present")
             remove_restart_files(opt_dir, log_fn)
             # TODO: Write something to recognize misaligned hessian.pckl's so we can remove those and try again
+            return True
+        elif death_by_nan(out, log_fn):
+            log_fn("Caculation dead to Nan - removing state files and hoping for the best")
+            remove_restart_files(opt_dir, log_fn)
             return True
         else:
             log_fn("Check out file - unknown issue with calculation")
             return False
     else:
-        if not death_by_state(opj(opt_dir, "out"), log_fn):
+        if not death_by_state(out, log_fn):
             log_fn("Calculation failed without state files interfering - check out file")
         else:
             log_fn("Recognizing failure by state files when supposedly no files are present - insane")

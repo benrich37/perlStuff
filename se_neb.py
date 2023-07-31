@@ -15,7 +15,7 @@ from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list,
 from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.generic_helpers import _write_logx, _write_opt_log, check_for_restart, finished_logx, sp_logx, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_bond_length, get_lattice_cmds
-from helpers.generic_helpers import get_atoms_from_coords_out, out_to_logx
+from helpers.generic_helpers import get_atoms_from_coords_out, out_to_logx, death_by_nan, reset_atoms_death_by_nan
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
@@ -62,10 +62,14 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     target = None
     safe_mode = False
     jdft_steps = 5
+    schedule = False
     for input in inputs:
         key, val = input[0], input[1]
         if "scan" in key:
-            lookline = val.split(",")
+            if "schedule" in val:
+                schedule = True
+            else:
+                lookline = val.split(",")
         if "restart" in key:
             if "neb" in val:
                 restart_neb = True
@@ -111,16 +115,17 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
             jdft_steps = int(val)
         if ("safe" in key) and ("mode" in key):
             safe_mode = "true" in val.lower()
-    atom_pair = [int(lookline[0]) - 1, int(lookline[1]) - 1] # Convert to 0-based indexing
-    scan_steps = int(lookline[2])
-    step_length = float(lookline[3])
+    if not lookline is None:
+        atom_pair = [int(lookline[0]) - 1, int(lookline[1]) - 1] # Convert to 0-based indexing
+        scan_steps = int(lookline[2])
+        step_length = float(lookline[3])
     if restart_neb:
         restart_at = scan_steps + 1
     if neb_max_steps is None:
         neb_max_steps = int(max_steps / 10.)
     work_dir = fix_work_dir(work_dir)
     return atom_pair, scan_steps, step_length, restart_at, work_dir, follow, max_steps, fmax, neb_method,\
-        interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps
+        interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule
 
 
 def get_atoms_prep_follow(atoms, prev_2_out, atom_pair, target_length):
@@ -351,6 +356,10 @@ def run_step(atoms_obj, step_path, fix_pair_int_list, get_jdft_opt_calc_fn, get_
     except Exception as e:
         log_fn(e)
         assert check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
+        if death_by_nan(opj(step_path, "out"), log_def):
+            atoms_obj = reset_atoms_death_by_nan(step_path, step_path)
+            add_bond_constraints(atoms_obj, fix_pair_int_list, log_fn=log_fn)
+            atoms_obj.set_calculator(get_jdft_opt_calc_fn(step_path))
         run_again = True
         pass
     if run_again:
@@ -484,7 +493,8 @@ def setup_scan_dir(work_path, scan_path, relax_start_bool, restart_at_idx, pbc_b
 
 if __name__ == '__main__':
     atom_pair, scan_steps, step_length, restart_at, work_dir, follow, max_steps, fmax, neb_method,\
-        interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps = read_se_neb_inputs()
+        interp_method, k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps,\
+        schedule = read_se_neb_inputs()
     gpu = True # Make this an input argument eventually
     os.chdir(work_dir)
     scan_dir = opj(work_dir, "scan")
