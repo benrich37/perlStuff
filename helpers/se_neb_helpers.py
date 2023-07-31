@@ -9,6 +9,8 @@ import os
 from os.path import join as opj
 from os.path import exists as ope
 import time
+import numpy as np
+
 
 def get_f(path):
     with open(os.path.join(path, "Ecomponents")) as f:
@@ -68,3 +70,45 @@ def fix_step_size(starting_length, target_length, nSteps, log_fn = log_def):
     fixed = dLength/(nSteps - 1) # Step 0 is a step, so subtract 1 from nSteps
     log_fn(f"Updating step size to {fixed}")
     return fixed
+
+def get_index_map(atoms):
+    index_map = {}
+    symbols = atoms.get_chemical_symbols()
+    for i, atom in enumerate(symbols):
+        if not atom in index_map:
+            index_map[atom] = []
+        index_map[atom].append(i)
+    return index_map
+
+def get_sorted_positions(atoms_old, atoms_new):
+    map1 = get_index_map(atoms_old)
+    map2 = get_index_map(atoms_new)
+    posns_new = atoms_new.positions
+    posns_sorted = np.zeros(np.shape(posns_new))
+    for atom in list(map1.keys()):
+        assert(len(map1[atom]) == len(map2[atom]))
+        for i in range(len(map1[atom])):
+            posns_sorted[map1[atom][i]] = posns_new[map2[atom][i]]
+    return posns_sorted
+
+def read_schedule_line(line):
+    """ Example line:
+    0: 54, 55, 0.1, 1 (#increase bond 54-55 by 0.1 with guess type #1 (move second atom))
+    1: 54, 55, 0.1, 0 (#same but move first atom only for guess)
+    2: 55, 58, 0.5, 2 (#Increase bond 55-58 by 0.5 moving both equidistant)
+    3: 55, 58, 0.5, 3 (#Same but use momentum following)
+    :return:
+    """
+    idx = int(line.split(":")[0])
+    valsplit = line.split(":")[1].split(",")
+    atom_pair = [int(valsplit[0] - 1), int(valsplit[1] - 1)]
+    dx = float(valsplit[2])
+    guess_idx = int(valsplit[3])
+    return idx, atom_pair, dx, guess_idx
+
+def read_schedule_file(fname):
+    schedule = {}
+    with open(fname, "r") as f:
+        for line in f:
+            step_idx, atom_pair, dx, guess_type = read_schedule_line(line)
+

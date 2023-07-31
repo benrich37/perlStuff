@@ -9,13 +9,13 @@ import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from scripts.out_to_logx import get_do_cell, get_atoms_list_from_out
-from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices
+from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices, \
+    get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
 from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.generic_helpers import _write_logx, _write_opt_log, check_for_restart, finished_logx, sp_logx, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_bond_length, get_lattice_cmds
-from helpers.generic_helpers import get_atoms_from_coords_out, out_to_logx, death_by_nan, reset_atoms_death_by_nan
+from helpers.generic_helpers import get_atoms_from_coords_out, out_to_logx, death_by_nan, reset_atoms_death_by_nan, write_scan_logx
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
@@ -550,9 +550,11 @@ if __name__ == '__main__':
                     check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
             run_step(atoms, step_dir, atom_pair, get_ionopt_calc, get_calc, FIRE,
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
+            write_scan_logx(scan_dir, log_fn=se_log)
         if relax_end:
             do_relax_end(scan_steps, scan_dir, restart_at, pbc, get_calc,
                          log_fn=se_log, fmax_float=fmax, max_steps_int=max_steps)
+            write_scan_logx(scan_dir, log_fn=se_log)
     ####################################################################################################################
     se_log("Beginning NEB setup")
     neb_dir = opj(work_dir, "neb")

@@ -6,13 +6,12 @@ from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from JDFTx import JDFTx
 from datetime import datetime
-from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive
+from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
+    get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
 from helpers.generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_f, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
 from helpers.generic_helpers import out_to_logx, _write_opt_log, check_for_restart, log_def, check_structure
-from scripts.out_to_logx import get_do_cell, get_atoms_list_from_out
-
 
 """ HOW TO USE ME:
 - Be on perlmutter
