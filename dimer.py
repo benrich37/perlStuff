@@ -20,23 +20,10 @@ from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer,
 from ase.dimer import DimerControl, MinModeAtoms, MinModeTranslate
 
 dimer_template = [ "bond: 1, 5 (1st atom index (counting from 1 (1-based indexing)), 2nd atom index, number of steps, step size)",
-                   "# target: 1.0 # (Not implemented yet) Modifies step size such that the final step's bond length matches",
-                   "# the target length",
-                   "guess type: 0 # how structures are generated for the start of each bond scan step",
-                   "# 0 = only move first atom (starting from previous step optimized geometry)",
-                   "# 1 = only move second atom (starting from previous step optimized geometry)",
-                   "# 2 = move both atoms equidistantly (starting from previous step optimized geometry)",
-                   "# 3 = move all atoms following trajectory of previous two steps' optimized geometry (bond length enforced by a type 2 guess)"
-                   "restart: 3 # step number to resume (if not given, this will be found automatically)",
-                   "# restart: neb # would trigger a restart for the neb if scan has been completed"
+                   "restart: False # ",
                    "max_steps: 100 # max number of steps for scan opts",
-                   "jdft steps: 5 # Number of ion-opt steps to take before running ASE opt",
-                   "neb max steps: 30 # max number of steps for neb opt",
                    "fmax: 0.05 # fmax perameter for both neb and scan opt",
-                   "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
-                   "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
-                   "# optimizes final structure without frozen bond",
-                   "# safe mode: True # (Not implemented yet) If end is relaxed and bond length becomes",]
+                   "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",]
 
 def read_dimer_inputs(fname="dimer_inputs"):
     if not ope(fname):
@@ -48,6 +35,7 @@ def read_dimer_inputs(fname="dimer_inputs"):
     work_dir = None
     inputs = get_inputs_list(fname)
     pbc = [True, True, False]
+    restart = False
     for input in inputs:
         key, val = input[0], input[1]
         if "bond" in key:
@@ -61,10 +49,12 @@ def read_dimer_inputs(fname="dimer_inputs"):
                 fmax = float(val.strip())
         if "pbc" in key:
             pbc = read_pbc_val(val)
+        if "restart" in key:
+            restart = "true" in val.lower()
     if not lookline is None:
         atom_pair = [int(lookline[0]) - 1, int(lookline[1]) - 1] # Convert to 0-based indexing
     work_dir = fix_work_dir(work_dir)
-    return atom_pair, work_dir, max_steps, fmax, pbc
+    return atom_pair, work_dir, max_steps, fmax, pbc, restart
 
 def get_d_vector(atoms, atom_pair, d_mag=0.1):
     posns = atoms.positions
@@ -79,8 +69,7 @@ def get_d_vector(atoms, atom_pair, d_mag=0.1):
 
 
 if __name__ == '__main__':
-    work_dir = os.getcwd()
-    atom_pair, work_dir, max_steps, fmax, pbc = read_dimer_inputs()
+    atom_pair, work_dir, max_steps, fmax, pbc, restart = read_dimer_inputs()
     gpu = True  # Make this an input argument eventually
     os.chdir(work_dir)
     dimer_dir = opj(work_dir, "dimer")
