@@ -449,6 +449,8 @@ def dump_template_input(fname, template, cwd):
 def check_submit(gpu, cwd, jobtype, log_fn=log_def):
     fname = opj(cwd, "submit.sh")
     if not ope(fname):
+        log_def(f"No submit.sh found in work dir - assuming we're in a dry run")
+        log_def(f"Dumping template submit.sh and aborting")
         log_fn(f"No submit.sh found in work dir - assuming we're in a dry run")
         log_fn(f"Dumping template submit.sh and aborting")
         if gpu:
