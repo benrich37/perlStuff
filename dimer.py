@@ -64,7 +64,7 @@ def get_d_vector(atoms, atom_pair, d_mag=0.1):
     v *= (1/np.linalg.norm(v))*(d_mag/2.)
     d_vector_array = np.zeros(np.shape(posns))
     d_vector_array[atom_pair[0]] = v
-    d_vector_array[atom_pair[0]] = -v
+    d_vector_array[atom_pair[1]] = -v
     return d_vector_array
 
 
