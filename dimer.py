@@ -39,7 +39,7 @@ def read_dimer_inputs(fname="dimer_inputs"):
     for input in inputs:
         key, val = input[0], input[1]
         if "bond" in key:
-            lookline = val.split(",")
+            lookline = val.strip().split(",")
         if "work" in key:
             work_dir = val.strip()
         if "max" in key:
