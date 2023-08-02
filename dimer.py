@@ -77,14 +77,25 @@ if __name__ == '__main__':
     if not ope(dimer_dir):
         dimer_log("Creating dimer directory")
         os.mkdir(dimer_dir)
-    if not restart:
-        dimer_log("Copying over available state files")
-        copy_best_state_f([work_dir, work_dir], dimer_dir, log_fn=dimer_log)
     check_poscar(work_dir, dimer_log)
     cmds = get_cmds(work_dir, ref_struct="POSCAR")
     exe_cmd = get_exe_cmd(True, dimer_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, debug=False, log_fn=dimer_log)
-    atoms = read(opj(work_dir, "POSCAR"), format="vasp")
+    if restart:
+        if ope(opj(dimer_dir, "CONTCAR")):
+            dimer_log("Found restart CONTCAR")
+            atoms = read(opj(dimer_dir, "CONTCAR"))
+        else:
+            dimer_log("Could not find restart CONTCAR in dimer dir - setting restart to false and using POSCAR instead")
+            restart = False
+            atoms = read(opj(work_dir, "POSCAR"), format="vasp")
+    else:
+        atoms = read(opj(work_dir, "POSCAR"), format="vasp")
+    if not restart:
+        dimer_log("Copying over available state files")
+        copy_best_state_f([work_dir, work_dir], dimer_dir, log_fn=dimer_log)
+    else:
+        copy_best_state_f([work_dir, dimer_dir], dimer_dir, log_fn=dimer_log)
     dimer_log("attaching calculator")
     atoms.set_calculator(get_calc(dimer_dir))
     atoms.pbc = pbc
