@@ -86,7 +86,7 @@ if __name__ == '__main__':
     atoms.pbc = pbc
     d_vector = get_d_vector(atoms, atom_pair)
     d_control = DimerControl(initial_eigenmode_method='displacement', displacement_method='vector',
-                             logfile=opj(dimer_dir, "dimercontrol.log")))
+                             logfile=opj(dimer_dir, "dimercontrol.log"))
     d_atoms = MinModeAtoms(atoms, d_control)
     d_atoms.displace(displacement_vector=d_vector)
     dim_rlx = MinModeTranslate(d_atoms, trajectory=opj(dimer_dir,"minmodetranslate.traj"), logfile=opj(dimer_dir, "dimercontrol.log"))
