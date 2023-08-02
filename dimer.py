@@ -83,6 +83,7 @@ if __name__ == '__main__':
     exe_cmd = get_exe_cmd(True, dimer_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, debug=False, log_fn=dimer_log)
     atoms = read(opj(work_dir, "POSCAR"), format="vasp")
+    atoms.set_calculator(get_calc(dimer_dir))
     atoms.pbc = pbc
     d_vector = get_d_vector(atoms, atom_pair)
     d_control = DimerControl(initial_eigenmode_method='displacement', displacement_method='vector',
