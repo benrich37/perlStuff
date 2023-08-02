@@ -91,24 +91,157 @@ def get_sorted_positions(atoms_old, atoms_new):
             posns_sorted[map1[atom][i]] = posns_new[map2[atom][i]]
     return posns_sorted
 
+
+def read_schedule_line_helper(val):
+    val_sections = val.strip().split("|")
+    constraint_tuples = []
+    for section in val_sections:
+        if len(section) > 1:
+            section_split = section.strip().split(",")
+            command = section_split[0]
+            if "bs" in command:
+                scan_pair = [int(int(section_split[1]) - 1), int(int(section_split[2]) - 1)]
+                dx = float(section_split[3])
+                guess_type = int(section_split[4])
+            elif "j" in command:
+                j_steps = int(section_split[1])
+            elif "f" in command:
+                nAtoms = len(section_split) - 1
+                freeze_tuple = []
+                for i in range(nAtoms):
+                    try:
+                        freeze_tuple.append(int(int(section_split[i]) - 1))
+                    except:
+                        pass
+                constraint_tuples.append(tuple(freeze_tuple))
+    return scan_pair, dx, guess_type, j_steps, constraint_tuples
+
+
+
 def read_schedule_line(line):
     """ Example line:
-    0: 54, 55, 0.1, 1 (#increase bond 54-55 by 0.1 with guess type #1 (move second atom))
-    1: 54, 55, 0.1, 0 (#same but move first atom only for guess)
-    2: 55, 58, 0.5, 2 (#Increase bond 55-58 by 0.5 moving both equidistant)
-    3: 55, 58, 0.5, 3 (#Same but use momentum following)
+    0: bs, 54, 55, 0.1, 1 | j, 100 | f, 54, 55 # (increase bond 54-55 by 0.1 with guess type #1 (move second atom), and run jdftx 100 steps before ASE)
+    1: bs, 54, 55, 0.1, 0 | j, 0 | f, 55, 58 # (same but move first atom only for guess, run 0 jdft steps, and freeze bond 55-58 as well)
+    2: bs, 55, 58, 0.5, 2 (#Increase bond 55-58 by 0.5 moving both equidistant)
+    3: bs, 55, 58, 0.5, 3 (#Same but use momentum following)
     :return:
     """
     idx = int(line.split(":")[0])
-    valsplit = line.split(":")[1].split(",")
-    atom_pair = [int(valsplit[0] - 1), int(valsplit[1] - 1)]
-    dx = float(valsplit[2])
-    guess_idx = int(valsplit[3])
-    return idx, atom_pair, dx, guess_idx
+    val = line.split(":")[1]
+    scan_pair, dx, guess_type, j_steps, constraint_tuples = read_schedule_line_helper(val)
+    return idx, scan_pair, dx, guess_type, j_steps, constraint_tuples
 
-def read_schedule_file(fname):
+
+step_atoms_key = "step_atoms"
+step_size_key = "step_size"
+guess_type_key = "guess_type"
+j_steps_key = "jdftx_steps"
+freeze_list_key = "freeze_list"
+
+
+def write_step_to_schedule_dict(schedule, idx, scan_pair, dx, guess_type, j_steps, constraint_tuples):
+    schedule[str(idx)] = {}
+    schedule[str(idx)][step_atoms_key] = scan_pair
+    schedule[str(idx)][step_size_key] = dx
+    schedule[str(idx)][guess_type_key] = guess_type
+    schedule[str(idx)][j_steps_key] = j_steps
+    schedule[str(idx)][freeze_list_key] = constraint_tuples
+
+
+def read_schedule_file(root_path):
+    fname = opj(root_path, "schedule")
     schedule = {}
     with open(fname, "r") as f:
         for line in f:
-            step_idx, atom_pair, dx, guess_type = read_schedule_line(line)
+            if ":" in line:
+                if not "#" in line.split(":")[0]:
+                    idx, scan_pair, dx, guess_type, j_steps, constraint_tuples = read_schedule_line(line)
+                    write_step_to_schedule_dict(schedule, idx, scan_pair, dx, guess_type, j_steps, constraint_tuples)
+    return schedule
+
+def get_schedule_step_str_commands(atom_pair, step_length, guess_type, j_steps, constraint_tuples):
+    dump_str = f"bs, {int(atom_pair[0] + 1)}, {int(atom_pair[1] + 1)}, {float(step_length)}, {int(guess_type)}|"
+    dump_str += f"j, {int(j_steps)}|"
+    for c in constraint_tuples:
+        dump_str += "f, "
+        for atom in c:
+            dump_str += f"{int(atom + 1)}, "
+        dump_str += "|"
+    return dump_str
+
+
+def get_schedule_step_str(i, atom_pair, step_length, guess_type, j_steps, constraint_tuples):
+    dump_str = f"{i}: "
+    dump_str += get_schedule_step_str_commands(atom_pair, step_length, guess_type, j_steps, constraint_tuples)
+    dump_str += "\n"
+    return dump_str
+
+
+def get_schedule_str(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples):
+    dump_str = ""
+    for i in range(scan_steps):
+        dump_str += get_schedule_step_str(i, atom_pair, step_length, guess_type, j_steps, constraint_tuples)
+    return dump_str
+
+
+def autofill_schedule(step_atoms, scan_steps, step_size, guess_type, j_steps, constraint_tuples):
+    schedule = {}
+    for idx in range(scan_steps):
+        write_step_to_schedule_dict(schedule, idx, step_atoms, step_size, guess_type, j_steps, constraint_tuples)
+    return schedule
+
+
+def write_auto_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples, work_dir):
+    fname = opj(work_dir, "schedule")
+    dump_str = get_schedule_str(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples)
+    with open(fname, "w") as f:
+        f.write(dump_str)
+
+def write_step_command(schedule_dict_val):
+    dump_str = ""
+    step_atoms = schedule_dict_val[step_atoms_key]
+    step_size = schedule_dict_val[step_size_key]
+    guess_type = schedule_dict_val[guess_type_key]
+    nAtoms = len(step_atoms)
+    if nAtoms == 2:
+        dump_str += "bs, "
+    else:
+        raise ValueError("Scans for angles not yet implemented")
+    for idx in step_atoms:
+        dump_str += f"{idx + 1}, "
+    dump_str += f"{step_size}, "
+    dump_str += f"{guess_type}|"
+    return dump_str
+
+def write_jdftx_steps(schedule_dict_val):
+    dump_str = "j, "
+    j_steps = schedule_dict_val[j_steps_key]
+    dump_str += f"{j_steps}|"
+    return dump_str
+
+def write_freeze_list(schedule_dict_val):
+    dump_str = ""
+    freeze_list = schedule_dict_val[freeze_list_key]
+    for group in freeze_list:
+        dump_str += "f"
+        for idx in group:
+            dump_str += f", {idx + 1}"
+        dump_str += "|"
+    return dump_str
+
+
+def get_schedule_dict_str(schedule_dict):
+    dump_str = ""
+    for key in schedule_dict.keys():
+        dump_str += str(key) + ": "
+        dump_str += write_step_command(schedule_dict[key])
+        dump_str += write_jdftx_steps(schedule_dict[key])
+        dump_str += write_freeze_list(schedule_dict[key])
+        dump_str += "\n"
+    return dump_str
+
+def write_schedule_dict(schedule_dict, work_dir):
+    fname = opj(work_dir, "schedule")
+    with open(fname, "w") as f:
+        f.write(get_schedule_dict_str(schedule_dict))
 
