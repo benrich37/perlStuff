@@ -93,5 +93,6 @@ if __name__ == '__main__':
     traj = Trajectory(opj(dimer_dir, "dimer.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
     dim_rlx = MinModeTranslate(d_atoms, trajectory=opj(dimer_dir,"minmodetranslate.traj"), logfile=opj(dimer_dir, "dimercontrol.log"))
     dim_rlx.attach(traj.write, interval=1)
+    dim_rlx.attach(lambda: _write_contcar(atoms, dimer_dir), interval=1)
     check_submit(gpu, os.getcwd(), "dimer", log_fn=dimer_log)
     dim_rlx.run(fmax=fmax)
