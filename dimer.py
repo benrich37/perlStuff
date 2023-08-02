@@ -19,7 +19,7 @@ from helpers.generic_helpers import get_atoms_from_coords_out, out_to_logx, deat
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
 from ase.dimer import DimerControl, MinModeAtoms, MinModeTranslate
 
-dimer_template = [ "bond: 1, 5 (1st atom index (counting from 1 (1-based indexing)), 2nd atom index, number of steps, step size)",
+dimer_template = [ "bond: 1, 5 # (1st atom index (counting from 1 (1-based indexing)), 2nd atom index, number of steps, step size)",
                    "restart: False # ",
                    "max_steps: 100 # max number of steps for scan opts",
                    "fmax: 0.05 # fmax perameter for both neb and scan opt",
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     atoms.pbc = pbc
     d_vector = get_d_vector(atoms, atom_pair)
     d_control = DimerControl(initial_eigenmode_method='displacement', displacement_method='vector',
-                             logfile=opj(dimer_dir, "dimercontrol.log"), trajectory=opj(dimer_dir,"dimercontrol.traj"))
+                             logfile=opj(dimer_dir, "dimercontrol.log")))
     d_atoms = MinModeAtoms(atoms, d_control)
     d_atoms.displace(displacement_vector=d_vector)
     dim_rlx = MinModeTranslate(d_atoms, trajectory=opj(dimer_dir,"minmodetranslate.traj"), logfile=opj(dimer_dir, "dimercontrol.log"))
