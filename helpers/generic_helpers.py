@@ -303,11 +303,15 @@ def need_sort(root):
     return get_sort_bool(atoms.get_chemical_symbols())
 
 
+
 def get_log_fn(work, calc_type, print_bool, restart=False):
     fname = opj(work, calc_type + ".iolog")
     if not restart:
         if ope(fname):
             os.remove(fname)
+    else:
+        if ope(fname):
+            log_generic("-------------------------- RESTARTING --------------------------", work, fname, print_bool)
     return lambda s: log_generic(s, work, fname, print_bool)
 
 
