@@ -117,8 +117,37 @@ def read_schedule_line_helper(val):
     return scan_pair, dx, guess_type, j_steps, constraint_tuples
 
 
+def get_schedule_neb_str(schedule_dict_val):
+    extract_steps = schedule_dict_val[extract_steps_key]
+    neb_steps =schedule_dict_val[neb_steps_key]
+    k = schedule_dict_val[neb_k_key]
+    neb_method = schedule_dict_val[neb_method_key]
+    dump_str = f"{neb_key}: "
+    dump_str += f"{neb_steps}, {k}, {neb_method} |"
+    dump_str += f"{extract_steps[0]}"
+    for i in range(len(extract_steps) - 1):
+        dump_str += f", {extract_steps[i+1]}"
+    return dump_str
 
-def read_schedule_line(line):
+def read_schedule_neb_line(line):
+    groups = line.split(":")[1].rstrip("\n").strip().split("|")
+    g1 = groups[0].split(",")
+    g2 = groups[1].split(",")
+    neb_steps = int(g1[0])
+    k = float(g1[1])
+    neb_method = str(g1[2])
+    extract_steps = []
+    for v in g2:
+        try:
+            extract_steps.append(int(v))
+        except:
+            pass
+    return neb_steps, k, neb_method, extract_steps
+
+
+
+
+def read_schedule_step_line(line):
     """ Example line:
     0: bs, 54, 55, 0.1, 1 | j, 100 | f, 54, 55 # (increase bond 54-55 by 0.1 with guess type #1 (move second atom), and run jdftx 100 steps before ASE)
     1: bs, 54, 55, 0.1, 0 | j, 0 | f, 55, 58 # (same but move first atom only for guess, run 0 jdft steps, and freeze bond 55-58 as well)
@@ -148,6 +177,22 @@ def write_step_to_schedule_dict(schedule, idx, scan_pair, dx, guess_type, j_step
     schedule[str(idx)][freeze_list_key] = constraint_tuples
 
 
+neb_key = "neb"
+neb_steps_key = "neb_steps"
+neb_k_key = "k"
+neb_method_key = "neb_method"
+extract_steps_key = "from"
+
+
+def write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, extract_step_idcs):
+    schedule[neb_key] = {}
+    schedule[neb_key][neb_steps_key] = neb_steps
+    schedule[neb_key][neb_k_key] = k
+    schedule[neb_key][neb_method_key] = neb_method
+    schedule[neb_key][extract_steps_key] = extract_step_idcs
+
+
+
 def read_schedule_file(root_path):
     fname = opj(root_path, "schedule")
     schedule = {}
@@ -155,9 +200,14 @@ def read_schedule_file(root_path):
         for line in f:
             if ":" in line:
                 if not "#" in line.split(":")[0]:
-                    idx, scan_pair, dx, guess_type, j_steps, constraint_tuples = read_schedule_line(line)
-                    write_step_to_schedule_dict(schedule, idx, scan_pair, dx, guess_type, j_steps, constraint_tuples)
+                    if line.split(":")[0] == neb_key:
+                        neb_steps, k, neb_method, extract_steps = read_schedule_neb_line(line)
+                        write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, extract_steps)
+                    else:
+                        idx, scan_pair, dx, guess_type, j_steps, constraint_tuples = read_schedule_step_line(line)
+                        write_step_to_schedule_dict(schedule, idx, scan_pair, dx, guess_type, j_steps, constraint_tuples)
     return schedule
+
 
 def get_schedule_step_str_commands(atom_pair, step_length, guess_type, j_steps, constraint_tuples):
     dump_str = f"bs, {int(atom_pair[0] + 1)}, {int(atom_pair[1] + 1)}, {float(step_length)}, {int(guess_type)}|"
@@ -177,23 +227,28 @@ def get_schedule_step_str(i, atom_pair, step_length, guess_type, j_steps, constr
     return dump_str
 
 
-def get_schedule_str(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples):
-    dump_str = ""
-    for i in range(scan_steps):
-        dump_str += get_schedule_step_str(i, atom_pair, step_length, guess_type, j_steps, constraint_tuples)
-    return dump_str
 
 
-def autofill_schedule(step_atoms, scan_steps, step_size, guess_type, j_steps, constraint_tuples):
+
+
+def autofill_schedule(step_atoms, scan_steps, step_size, guess_type, j_steps, constraint_tuples,
+                      relax_start, relax_end, neb_steps, k, neb_method):
     schedule = {}
     for idx in range(scan_steps):
-        write_step_to_schedule_dict(schedule, idx, step_atoms, step_size, guess_type, j_steps, constraint_tuples)
+        if ((idx == 0) and relax_start) or ((idx == scan_steps) and relax_end):
+            write_step_to_schedule_dict(schedule, idx, step_atoms, step_size, guess_type, j_steps, [])
+        else:
+            write_step_to_schedule_dict(schedule, idx, step_atoms, step_size, guess_type, j_steps, constraint_tuples)
+    write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, list(range(scan_steps)))
     return schedule
 
 
-def write_auto_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples, work_dir):
+def write_auto_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples, relax_start,
+                        relax_end, neb_steps, k, neb_method, work_dir):
     fname = opj(work_dir, "schedule")
-    dump_str = get_schedule_str(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples)
+    schedule = autofill_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples,
+                                 relax_start, relax_end, neb_steps, k, neb_method)
+    dump_str = get_schedule_dict_str(schedule)
     with open(fname, "w") as f:
         f.write(dump_str)
 
@@ -233,11 +288,15 @@ def write_freeze_list(schedule_dict_val):
 def get_schedule_dict_str(schedule_dict):
     dump_str = ""
     for key in schedule_dict.keys():
-        dump_str += str(key) + ": "
-        dump_str += write_step_command(schedule_dict[key])
-        dump_str += write_jdftx_steps(schedule_dict[key])
-        dump_str += write_freeze_list(schedule_dict[key])
-        dump_str += "\n"
+        if not (key == neb_key):
+            dump_str += str(key) + ": "
+            dump_str += write_step_command(schedule_dict[key])
+            dump_str += write_jdftx_steps(schedule_dict[key])
+            dump_str += write_freeze_list(schedule_dict[key])
+            dump_str += "\n"
+        else:
+            dump_str += get_schedule_neb_str(schedule_dict[key])
+            dump_str += "\n"
     return dump_str
 
 def write_schedule_dict(schedule_dict, work_dir):

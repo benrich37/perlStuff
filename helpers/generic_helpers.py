@@ -382,6 +382,25 @@ def add_bond_constraints(atoms, indices, log_fn=log_def):
         print_str += f" {atom_str(atoms, indices[1])} fixed to {cur_length:.{4}g} A"
         log_fn(print_str)
 
+def add_bond_constraint(atoms, i1, i2, log_fn=log_def):
+    add_constraint(atoms, FixBondLength(i1, i2))
+    cur_length = np.linalg.norm(atoms.positions[i1] - atoms.positions[i2])
+    print_str = f"Fixed bond {atom_str(atoms, i1)} -"
+    print_str += f" {atom_str(atoms, i2)} fixed to {cur_length:.{4}g} A"
+    log_fn(print_str)
+
+
+def add_freeze_list_constraints(atoms, freeze_list, log_fn=log_def):
+    for group in freeze_list:
+        if len(group) == 2:
+            add_bond_constraint(atoms, group[0], group[1], log_fn=log_fn)
+        elif len(group) == 0:
+            continue
+        else:
+            err_msg = f"Unsure how to add constraint with {len(group)} atoms / or not yet implemented"
+            log_fn(err_msg)
+            raise ValueError(err_msg)
+
 
 def _write_contcar(atoms, root):
     atoms.write(os.path.join(root, 'CONTCAR'), format="vasp", direct=True)
