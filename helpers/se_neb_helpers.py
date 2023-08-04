@@ -99,20 +99,18 @@ def read_schedule_line_helper(val):
         if len(section) > 1:
             section_split = section.strip().split(",")
             command = section_split[0]
+            info = section_split[1:]
             if "bs" in command:
-                scan_pair = [int(int(section_split[1]) - 1), int(int(section_split[2]) - 1)]
-                dx = float(section_split[3])
-                guess_type = int(section_split[4])
+                scan_pair = [int(int(info[0]) - 1), int(int(info[1]) - 1)]
+                dx = float(info[2])
+                guess_type = int(info[3])
             elif "j" in command:
-                j_steps = int(section_split[1])
+                j_steps = int(info[0])
             elif "f" in command:
-                nAtoms = len(section_split) - 1
+                nAtoms = len(info)
                 freeze_tuple = []
                 for i in range(nAtoms):
-                    try:
-                        freeze_tuple.append(int(int(section_split[i]) - 1))
-                    except:
-                        pass
+                    freeze_tuple.append(int(int(info[i].strip()) - 1))
                 constraint_tuples.append(tuple(freeze_tuple))
     return scan_pair, dx, guess_type, j_steps, constraint_tuples
 
