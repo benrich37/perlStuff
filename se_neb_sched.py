@@ -302,7 +302,10 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
                     if is_done(look_dir, i):
                         restart_idx = i
                     else:
-                        return restart_idx
+                        if ope(opj(look_dir, "CONTCAR")):
+                            restart_idx = i
+                        else:
+                            return restart_idx
                 else:
                     return restart_idx
             return restart_idx
