@@ -114,8 +114,24 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if neb_max_steps is None:
         neb_max_steps = int(max_steps / 10.)
     work_dir = fix_work_dir(work_dir)
+    if schedule:
+        scan_steps = count_scan_steps(work_dir)
     return atom_pair, scan_steps, step_length, restart_at, work_dir, max_steps, fmax, neb_method,\
         k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule
+
+
+def count_scan_steps(work_dir):
+    scan_ints = []
+    fname = opj(work_dir, "schedule")
+    with open(fname, "r") as f:
+        for line in f:
+            if ":" in line:
+                key = line.split(":")[0]
+                if (not "#" in key) and (not "neb" in key):
+                    scan_ints.append(int(key.strip()))
+    return max(scan_ints)
+
+
 
 
 def get_atoms_prep_follow(atoms, prev_2_out, atom_pair, target_length):
