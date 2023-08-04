@@ -568,7 +568,7 @@ if __name__ == '__main__':
             else:
                 prev_step_dir = work_dir
             copy_best_state_files([prev_step_dir, step_dir], step_dir, log_fn=se_log)
-            prep_input(i, step_dir)
+            prep_input(step, step_dir)
             atoms = get_atoms(step_dir, pbc, restart_bool=restart_step, log_fn=se_log)
             check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
             run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE,
