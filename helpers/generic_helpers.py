@@ -245,7 +245,7 @@ def get_best_state_files(dir_list, log_fn=log_def):
     return best_files
 
 
-def copy_best_state_f(dir_list, target, log_fn):
+def copy_best_state_files(dir_list, target, log_fn):
     try:
         best = get_best_state_files(dir_list, log_fn=log_fn)
         for f in best:

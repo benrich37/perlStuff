@@ -16,7 +16,7 @@ from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd,
 from helpers.generic_helpers import _write_logx, _write_opt_log, check_for_restart, finished_logx, sp_logx, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_bond_length, get_lattice_cmds
 from helpers.generic_helpers import get_atoms_from_coords_out, out_to_logx, death_by_nan, reset_atoms_death_by_nan, write_scan_logx
-from helpers.generic_helpers import add_freeze_list_constraints
+from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size, write_auto_schedule, read_schedule_file
 from helpers.se_neb_helpers import step_atoms_key, step_size_key, guess_type_key, j_steps_key, freeze_list_key
 
@@ -47,7 +47,6 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
         raise ValueError(f"No se neb input supplied: dumping template {fname}")
     k = 1.0
     neb_method = "spline"
-    interp_method = "linear"
     lookline = None
     restart_at = None
     restart_neb = False
@@ -165,17 +164,21 @@ def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_length, guess_
     return print_str
 
 
-def _prep_input(step_idx, schedule, step_dir, scan_dir, log_func=log_def):
+
+def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def):
     step_atoms, step_size, guess_type = read_instructions_prep_input(schedule[str(step_idx)])
     step_prev_1_dir = opj(scan_dir, str(step_idx-1))
     step_prev_2_dir = opj(scan_dir, str(step_idx - 2))
-    prev_1_out = opj(step_prev_1_dir, "CONTCAR")
+    if step_idx == 0:
+        prev_1_out = opj(work_dir, "POSCAR")
+    else:
+        prev_1_out = opj(step_prev_1_dir, "CONTCAR")
     atoms = read(prev_1_out, format="vasp")
     prev_2_out = opj(step_prev_2_dir, "CONTCAR")
     print_str = f"Prepared structure for step {step_idx} with"
     if len(step_atoms) == 2:
-        print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_size, guess_type, step_dir, log_func=log_func)
-        log_func(print_str)
+        print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_size, guess_type, step_dir, log_func=log_fn)
+        log_fn(print_str)
     else:
         raise ValueError("Non-bond scanning not yet implemented")
 
@@ -550,21 +553,27 @@ if __name__ == '__main__':
     if not skip_to_neb:
         se_log("Entering scan")
         setup_scan_dir(work_dir, scan_dir, restart_at, pbc, log_fn=se_log)
-        prep_input = lambda step, step_dir_var: _prep_input(step, schedule, step_dir_var, scan_dir, log_func=se_log)
+        prep_input = lambda step, step_dir_var: _prep_input(step, schedule, step_dir_var, scan_dir, work_dir, log_fn=se_log)
         for i, step in enumerate(step_list):
             step_dir = opj(scan_dir, str(step))
+            se_log(f"Running step {step} in {step_dir}")
             restart_step = (i == 0) and (not is_done(step_dir, i))
             if (not ope(step_dir)) or (not os.path.isdir(step_dir)):
                 os.mkdir(step_dir)
+                restart_step = False
+            if restart_step:
+                se_log(f"Restarting step")
             if step > 0 and not restart_step:
                 prev_step_dir = opj(scan_dir, str(step-1))
-                copy_state_files(prev_step_dir, step_dir, log_fn=se_log)
-                prep_input(i, step_dir)
-                atoms = get_atoms(step_dir, pbc, restart_bool=restart_step, log_fn=se_log)
-                check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
-                run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE,
-                         fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
-                write_scan_logx(scan_dir, log_fn=se_log)
+            else:
+                prev_step_dir = work_dir
+            copy_best_state_files([prev_step_dir, step_dir], step_dir, log_fn=se_log)
+            prep_input(i, step_dir)
+            atoms = get_atoms(step_dir, pbc, restart_bool=restart_step, log_fn=se_log)
+            check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
+            run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE,
+                     fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
+            write_scan_logx(scan_dir, log_fn=se_log)
     ####################################################################################################################
     se_log("Beginning NEB setup")
     neb_dir = opj(work_dir, "neb")
