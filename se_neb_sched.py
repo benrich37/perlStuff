@@ -102,6 +102,9 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
             jdft_steps = int(val)
         if ("safe" in key) and ("mode" in key):
             safe_mode = "true" in val.lower()
+    atom_pair = None
+    scan_steps = None
+    step_length = None
     if not lookline is None:
         atom_pair = [int(lookline[0]) - 1, int(lookline[1]) - 1] # Convert to 0-based indexing
         scan_steps = int(lookline[2])
