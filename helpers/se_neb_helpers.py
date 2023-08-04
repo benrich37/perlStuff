@@ -235,10 +235,13 @@ def autofill_schedule(step_atoms, scan_steps, step_size, guess_type, j_steps, co
                       relax_start, relax_end, neb_steps, k, neb_method):
     schedule = {}
     for idx in range(scan_steps):
+        use_step = step_size
+        if idx == 0:
+            use_step = 0.0
         if ((idx == 0) and relax_start) or ((idx == scan_steps) and relax_end):
-            write_step_to_schedule_dict(schedule, idx, step_atoms, step_size, guess_type, j_steps, [])
+            write_step_to_schedule_dict(schedule, idx, step_atoms, use_step, guess_type, j_steps, [])
         else:
-            write_step_to_schedule_dict(schedule, idx, step_atoms, step_size, guess_type, j_steps, constraint_tuples)
+            write_step_to_schedule_dict(schedule, idx, step_atoms, use_step, guess_type, j_steps, constraint_tuples)
     write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, list(range(scan_steps)))
     return schedule
 
