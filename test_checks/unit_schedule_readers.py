@@ -25,25 +25,28 @@ class TestScheduleReaders(unittest.TestCase):
         self.neb_steps = 100
         self.custom_schedule = {
             "0": {
-                "step_atoms": [2, 3],
-                "step_size": 0.1,
-                "guess_type": 1,
-                "jdftx_steps": 100,
-                "freeze_list": [[2, 3], [2, 3, 4]]
+                se.step_atoms_key: [2, 3],
+                se.step_size_key: 0.1,
+                se.target_bool_key: False,
+                se.guess_type_key: 1,
+                se.j_steps_key: 100,
+                se.freeze_list_key: [[2, 3], [2, 3, 4]]
             },
             "1": {
-                "step_atoms": [5, 3],
-                "step_size": 0.3,
-                "guess_type": 0,
-                "jdftx_steps": 0,
-                "freeze_list": [[5, 3], [2, 3, 4], [1, 2, 3]]
+                se.step_atoms_key: [5, 3],
+                se.step_size_key: 0.3,
+                se.target_bool_key: False,
+                se.guess_type_key: 0,
+                se.j_steps_key: 0,
+                se.freeze_list_key: [[5, 3], [2, 3, 4], [1, 2, 3]]
             },
             "2": {
-                "step_atoms": [5, 10],
-                "step_size": 0.3,
-                "guess_type": 0,
-                "jdftx_steps": 0,
-                "freeze_list": [[5, 3], [2, 3, 4], [1, 2, 3]]
+                se.step_atoms_key: [5, 10],
+                se.step_size_key: 0.3,
+                se.target_bool_key: False,
+                se.guess_type_key: 0,
+                se.j_steps_key: 0,
+                se.freeze_list_key: [[5, 3], [2, 3, 4], [1, 2, 3]]
             }
         }
 

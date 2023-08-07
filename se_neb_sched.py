@@ -102,13 +102,11 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
             jdft_steps = int(val)
         if ("safe" in key) and ("mode" in key):
             safe_mode = "true" in val.lower()
-    atom_pair = None
+    atom_idcs = None
     scan_steps = None
     step_length = None
     if not lookline is None:
-        atom_pair = [int(lookline[0]) - 1, int(lookline[1]) - 1] # Convert to 0-based indexing
-        scan_steps = int(lookline[2])
-        step_length = float(lookline[3])
+        atom_idcs, scan_steps, step_length = parse_lookline(lookline)
     if restart_neb:
         restart_at = scan_steps + 1
     if neb_max_steps is None:
@@ -116,9 +114,16 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     work_dir = fix_work_dir(work_dir)
     if schedule:
         scan_steps = count_scan_steps(work_dir)
-    return atom_pair, scan_steps, step_length, restart_at, work_dir, max_steps, fmax, neb_method,\
+    return atom_idcs, scan_steps, step_length, restart_at, work_dir, max_steps, fmax, neb_method,\
         k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule
 
+def parse_lookline(lookline):
+    step_length = float(lookline[-1])
+    scan_steps = float(lookline[-2])
+    atom_idcs = []
+    for idx in lookline[:-2]:
+        atom_idcs.append(int(idx - 1))
+    return atom_idcs, scan_steps, step_length
 
 def count_scan_steps(work_dir):
     scan_ints = []
@@ -454,7 +459,7 @@ def setup_img_dirs(neb_path, scan_path, scan_steps_int, restart_bool=False, log_
     img_dirs = []
     scan_steps_list = list(range(scan_steps_int))
     if safe_mode:
-        scan_steps_list = safe_mode_check(scan_path, scan_steps_int, atom_pair, log_fn=log_def)
+        scan_steps_list = safe_mode_check(scan_path, scan_steps_int, atom_idcs, log_fn=log_def)
     for j, scan_idx in enumerate(scan_steps_list):
         step_dir_str = opj(scan_path, str(scan_idx))
         img_dir_str = opj(neb_path, str(j))
@@ -547,12 +552,12 @@ def get_step_list(schedule, restart_at):
 
 
 if __name__ == '__main__':
-    atom_pair, scan_steps, step_length, restart_at, work_dir, max_steps, fmax, neb_method, \
+    atom_idcs, scan_steps, step_length, restart_at, work_dir, max_steps, fmax, neb_method, \
         k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule = read_se_neb_inputs()
     gpu = True # Make this an input argument eventually
     os.chdir(work_dir)
     if not schedule:
-        write_auto_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, [atom_pair], relax_start, relax_end,
+        write_auto_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start, relax_end,
                             neb_steps, k, neb_method, work_dir)
     schedule = read_schedule_file(work_dir)
     scan_dir = opj(work_dir, "scan")

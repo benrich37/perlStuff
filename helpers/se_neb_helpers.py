@@ -104,6 +104,7 @@ def read_schedule_line_helper(val):
                 scan_pair = [int(int(info[0]) - 1), int(int(info[1]) - 1)]
                 step_val = info[2]
                 target_bool = not (("+" in step_val) or ("-" in step_val))
+                step_val = float(step_val)
                 guess_type = int(info[3])
             elif "j" in command:
                 j_steps = int(info[0])
