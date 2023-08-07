@@ -1,7 +1,9 @@
 import os
 from ase.io import read, write
 import numpy as np
-from helpers.generic_helpers import log_generic, atom_str, step_bond_with_momentum
+from helpers.generic_helpers import log_generic, atom_str
+from helpers.geom_helpers import step_bond_with_momentum
+
 
 def _scan_log(log_str, work, print_bool=False):
     log_generic(log_str, work, "bond_scan", print_bool)
