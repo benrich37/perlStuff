@@ -1,7 +1,7 @@
 import os
 from os.path import join as opj
 
-from helpers.generic_helpers import out_to_logx_str
+from helpers.logx_helpers import out_to_logx_str
 
 import argparse
 

@@ -3,7 +3,7 @@ from ase.io.trajectory import TrajectoryReader
 from os.path import join as opj
 import argparse
 
-from helpers.generic_helpers import traj_to_log_str
+from helpers.logx_helpers import traj_to_log_str
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
