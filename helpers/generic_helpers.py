@@ -9,6 +9,7 @@ from os.path import join as opj
 from os.path import exists as ope
 from ase.io import read, write
 from ase.units import Bohr
+from scipy.spatial.transform import Rotation as R
 
 from pathlib import Path
 import subprocess
@@ -775,10 +776,10 @@ def check_structure(structure, work, log_fn=log_def):
     return structure
 
 
-def get_bond_length(atoms, atom_pair):
-    dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
-    bond_length = np.linalg.norm(dir_vec)
-    return bond_length
+# def get_bond_length(atoms, atom_pair):
+#     dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
+#     bond_length = np.linalg.norm(dir_vec)
+#     return bond_length
 
 
 def get_atoms_list_from_out(outfile):
@@ -1087,3 +1088,48 @@ def get_scan_logx_str(scan_dir, e_conv=(1/27.211397)):
         dump_str += opt_spacer(i, len(atoms_list))
     dump_str += " Normal termination of Gaussian 16"
     return dump_str
+
+def get_angle(p1, p2, p3):
+    v1 = p1 - p2
+    v2 = p3 - p2
+    theta = np.arccos(np.dot(v1, v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
+    return theta*(180/np.pi)
+
+
+def rotate_points(p1, p2, p3, target_angle):
+    # Convert the target angle from degrees to radians
+    target_angle_rad = np.radians(target_angle)
+
+    # Define the vector from p2 to p1 and p2 to p3
+    v21 = p1 - p2
+    v23 = p3 - p2
+
+    # Calculate the current angle between the vectors
+    dot_product = np.dot(v21, v23)
+    magnitude_product = np.linalg.norm(v21) * np.linalg.norm(v23)
+    current_angle_rad = np.arccos(dot_product / magnitude_product)
+
+    # Calculate the rotation axis using cross product
+    rotation_axis = np.cross(v21, v23)
+    rotation_axis = rotation_axis / np.linalg.norm(rotation_axis)  # normalize the vector
+
+    # Calculate the required rotation angle
+    rotation_angle_rad = (target_angle_rad - current_angle_rad)/2.
+
+    # Perform rotation
+    r1 = - rotation_angle_rad * rotation_axis
+    r2 = rotation_angle_rad * rotation_axis
+
+    # Rotate the points
+    rotated_v21 = R.from_rotvec(r1).apply(v21)
+    rotated_v23 = R.from_rotvec(r2).apply(v23)
+
+    # Translate back to the original position
+    rotated_p1 = rotated_v21 + p2
+    rotated_p3 = rotated_v23 + p2
+
+    print(target_angle_rad)
+    print(get_angle(rotated_p1, p2, rotated_p3))
+    print(get_angle(rotated_p1, p2, rotated_p3) * (180/np.pi))
+
+    return rotated_p1, rotated_p3

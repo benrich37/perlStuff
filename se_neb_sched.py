@@ -18,7 +18,7 @@ from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, ch
 from helpers.generic_helpers import get_atoms_from_coords_out, out_to_logx, death_by_nan, reset_atoms_death_by_nan, write_scan_logx
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size, write_auto_schedule, read_schedule_file
-from helpers.se_neb_helpers import step_atoms_key, step_size_key, guess_type_key, j_steps_key, freeze_list_key
+from helpers.se_neb_helpers import step_atoms_key, step_size_key, guess_type_key, j_steps_key, freeze_list_key, target_bool_key
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -152,13 +152,20 @@ def read_instructions_prep_input(instructions):
     step_atoms = instructions[step_atoms_key]
     step_size = instructions[step_size_key]
     guess_type = instructions[guess_type_key]
-    return step_atoms, step_size, guess_type
+    target_bool = instructions[target_bool_key]
+    return step_atoms, step_size, guess_type, target_bool
 
-def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_length, guess_type, step_dir, log_func=log_def):
+def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_type, step_dir,
+                     val_target=False, log_func=log_def):
     print_str = ""
     prev_length = get_bond_length(atoms, atom_pair)
     log_func(f"Atom pair {bond_str(atoms, atom_pair[0], atom_pair[1])} previously at {prev_length}")
-    target_length = prev_length + step_length
+    if val_target:
+        target_length = step_val
+        step_length = target_length - prev_length
+    else:
+        target_length = prev_length + step_val
+        step_length = step_val
     log_func(f"Creating structure with {bond_str(atoms, atom_pair[0], atom_pair[1])} at {target_length}")
     if (step_idx <= 1) and guess_type == 3:
         guess_type = 2
@@ -185,7 +192,7 @@ def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_length, guess_
 
 
 def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def):
-    step_atoms, step_size, guess_type = read_instructions_prep_input(schedule[str(step_idx)])
+    step_atoms, step_val, guess_type, target_bool = read_instructions_prep_input(schedule[str(step_idx)])
     step_prev_1_dir = opj(scan_dir, str(step_idx-1))
     step_prev_2_dir = opj(scan_dir, str(step_idx - 2))
     if step_idx == 0:
@@ -196,7 +203,8 @@ def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def
     prev_2_out = opj(step_prev_2_dir, "CONTCAR")
     print_str = f"Prepared structure for step {step_idx} with"
     if len(step_atoms) == 2:
-        print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_size, guess_type, step_dir, log_func=log_fn)
+        print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_val, guess_type, step_dir,
+                                      log_func=log_fn, val_target=target_bool)
         log_fn(print_str)
     else:
         raise ValueError("Non-bond scanning not yet implemented")

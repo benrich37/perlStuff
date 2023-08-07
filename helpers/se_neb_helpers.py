@@ -102,7 +102,8 @@ def read_schedule_line_helper(val):
             info = section_split[1:]
             if "bs" in command:
                 scan_pair = [int(int(info[0]) - 1), int(int(info[1]) - 1)]
-                dx = float(info[2])
+                step_val = info[2]
+                target_bool = not (("+" in step_val) or ("-" in step_val))
                 guess_type = int(info[3])
             elif "j" in command:
                 j_steps = int(info[0])
@@ -112,7 +113,7 @@ def read_schedule_line_helper(val):
                 for i in range(nAtoms):
                     freeze_tuple.append(int(int(info[i].strip()) - 1))
                 constraint_tuples.append(tuple(freeze_tuple))
-    return scan_pair, dx, guess_type, j_steps, constraint_tuples
+    return scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples
 
 
 def get_schedule_neb_str(schedule_dict_val):
@@ -155,8 +156,8 @@ def read_schedule_step_line(line):
     """
     idx = int(line.split(":")[0])
     val = line.split(":")[1]
-    scan_pair, dx, guess_type, j_steps, constraint_tuples = read_schedule_line_helper(val)
-    return idx, scan_pair, dx, guess_type, j_steps, constraint_tuples
+    scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples = read_schedule_line_helper(val)
+    return idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples
 
 
 step_atoms_key = "step_atoms"
@@ -164,12 +165,14 @@ step_size_key = "step_size"
 guess_type_key = "guess_type"
 j_steps_key = "jdftx_steps"
 freeze_list_key = "freeze_list"
+target_bool_key = "target"
 
 
-def write_step_to_schedule_dict(schedule, idx, scan_pair, dx, guess_type, j_steps, constraint_tuples):
+def write_step_to_schedule_dict(schedule, idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples):
     schedule[str(idx)] = {}
     schedule[str(idx)][step_atoms_key] = scan_pair
-    schedule[str(idx)][step_size_key] = dx
+    schedule[str(idx)][step_size_key] = step_val
+    schedule[str(idx)][target_bool_key] = target_bool
     schedule[str(idx)][guess_type_key] = guess_type
     schedule[str(idx)][j_steps_key] = j_steps
     schedule[str(idx)][freeze_list_key] = constraint_tuples
@@ -202,13 +205,17 @@ def read_schedule_file(root_path):
                         neb_steps, k, neb_method, extract_steps = read_schedule_neb_line(line)
                         write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, extract_steps)
                     else:
-                        idx, scan_pair, dx, guess_type, j_steps, constraint_tuples = read_schedule_step_line(line)
-                        write_step_to_schedule_dict(schedule, idx, scan_pair, dx, guess_type, j_steps, constraint_tuples)
+                        idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples = read_schedule_step_line(line)
+                        write_step_to_schedule_dict(schedule, idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples)
     return schedule
 
 
-def get_schedule_step_str_commands(atom_pair, step_length, guess_type, j_steps, constraint_tuples):
-    dump_str = f"bs, {int(atom_pair[0] + 1)}, {int(atom_pair[1] + 1)}, {float(step_length)}, {int(guess_type)}|"
+def get_schedule_step_str_commands(atom_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples):
+    dump_str = f"bs, {int(atom_pair[0] + 1)}, {int(atom_pair[1] + 1)}, "
+    if not target_bool:
+        if step_val >= 0:
+            dump_str += "+"
+    dump_str += f"{float(step_val)}, {int(guess_type)}|"
     dump_str += f"j, {int(j_steps)}|"
     for c in constraint_tuples:
         dump_str += "f, "
@@ -218,9 +225,9 @@ def get_schedule_step_str_commands(atom_pair, step_length, guess_type, j_steps, 
     return dump_str
 
 
-def get_schedule_step_str(i, atom_pair, step_length, guess_type, j_steps, constraint_tuples):
+def get_schedule_step_str(i, atom_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples):
     dump_str = f"{i}: "
-    dump_str += get_schedule_step_str_commands(atom_pair, step_length, guess_type, j_steps, constraint_tuples)
+    dump_str += get_schedule_step_str_commands(atom_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples)
     dump_str += "\n"
     return dump_str
 
@@ -237,9 +244,9 @@ def autofill_schedule(step_atoms, scan_steps, step_size, guess_type, j_steps, co
         if idx == 0:
             use_step = 0.0
         if ((idx == 0) and relax_start) or ((idx == scan_steps) and relax_end):
-            write_step_to_schedule_dict(schedule, idx, step_atoms, use_step, guess_type, j_steps, [])
+            write_step_to_schedule_dict(schedule, idx, step_atoms, use_step, False, guess_type, j_steps, [])
         else:
-            write_step_to_schedule_dict(schedule, idx, step_atoms, use_step, guess_type, j_steps, constraint_tuples)
+            write_step_to_schedule_dict(schedule, idx, step_atoms, use_step, False, guess_type, j_steps, constraint_tuples)
     write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, list(range(scan_steps)))
     return schedule
 
@@ -256,8 +263,9 @@ def write_auto_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps,
 def write_step_command(schedule_dict_val):
     dump_str = ""
     step_atoms = schedule_dict_val[step_atoms_key]
-    step_size = schedule_dict_val[step_size_key]
+    step_val = schedule_dict_val[step_size_key]
     guess_type = schedule_dict_val[guess_type_key]
+    target_bool = schedule_dict_val[target_bool_key]
     nAtoms = len(step_atoms)
     if nAtoms == 2:
         dump_str += "bs, "
@@ -265,7 +273,12 @@ def write_step_command(schedule_dict_val):
         raise ValueError("Scans for angles not yet implemented")
     for idx in step_atoms:
         dump_str += f"{idx + 1}, "
-    dump_str += f"{step_size}, "
+    if target_bool:
+        dump_str += f"{step_val}, "
+    else:
+        if step_val >= 0:
+            dump_str += "+"
+        dump_str += f"{step_val}, "
     dump_str += f"{guess_type}|"
     return dump_str
 
