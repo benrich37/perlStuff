@@ -688,8 +688,9 @@ def check_structure(structure, work, log_fn=log_def):
                 log_fn(f"Found matching gaussian input ({gauss_struct})")
                 have_gauss = True
         if not have_gauss:
-            log_fn(f"Could not find {structure} - aborting")
-            assert False
+            err_str = f"Could not find {structure} - aborting"
+            log_fn(err_str)
+            raise ValueError(err_str)
         else:
             structure = gauss_struct
             use_fmt = "gaussian-in"
