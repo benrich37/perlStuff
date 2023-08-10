@@ -30,9 +30,9 @@ to a lower level (ie change kpoint-folding to 1 1 1), make sure you delete all t
 """
 
 
-opt_template = ["structure: POSCAR_new # Structure for optimization",
-                "fmax: 0.05 # Max force for convergence criteria",
-                "max_steps: 30 # Max number of steps before exit",
+opt_template = ["structure: POSCAR # Structure for optimization",
+                "fmax: 0.02 # Max force for convergence criteria",
+                "max_steps: 100 # Max number of steps before exit",
                 "gpu: True # Whether or not to use GPU (much faster)",
                 "restart: False # Whether to get structure from lat/opt dirs or from input structure",
                 "pbc: False False False # Periodic boundary conditions for unit cell",
