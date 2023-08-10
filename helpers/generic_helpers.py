@@ -15,8 +15,8 @@ import subprocess
 import copy
 import __main__
 
-# from helpers.logx_helpers import out_to_logx_str, log_charges, log_input_orientation, opt_spacer, scf_str
-from logx_helpers import out_to_logx_str, log_charges, log_input_orientation, opt_spacer, scf_str
+from helpers.logx_helpers import out_to_logx_str, log_charges, log_input_orientation, opt_spacer, scf_str
+# from logx_helpers import out_to_logx_str, log_charges, log_input_orientation, opt_spacer, scf_str
 
 def log_def(s):
     print(s)
