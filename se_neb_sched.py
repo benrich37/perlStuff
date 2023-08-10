@@ -18,7 +18,7 @@ from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, ch
 from helpers.geom_helpers import get_bond_length
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
-from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files
+from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size, write_auto_schedule, read_schedule_file
 from helpers.se_neb_helpers import step_atoms_key, step_size_key, guess_type_key, j_steps_key, freeze_list_key, target_bool_key
 
@@ -214,7 +214,7 @@ def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def
                                       log_func=log_fn, val_target=target_bool)
         log_fn(print_str)
     else:
-        raise ValueError("Non-bond scanning not yet implemented")
+        log_and_abort("Non-bond scanning not yet implemented", log_fn=log_fn)
 
 
 
@@ -241,8 +241,7 @@ def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn
         if ope(outfile):
             atoms_obj = get_atoms_list_from_out(outfile)[-1]
         else:
-            log_fn(f"No output data given - check error file")
-            assert False
+            log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     atoms_obj.pbc = pbc
     structure_path = opj(ion_dir_path, "CONTCAR")
     write(structure_path, atoms_obj, format="vasp")
@@ -257,8 +256,7 @@ def run_ion_opt(atoms_obj, ion_iters_int, ion_dir_path, root_path, cmds_list, _f
     try:
         atoms_obj = run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_fn)
     except Exception as e:
-        log_fn(e)
-        assert check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
+        check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
@@ -346,8 +344,7 @@ def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
         else:
             _abort = True
     if _abort:
-        log_fn(f"Could not find structure from {dir_path} - aborting")
-        assert False
+        log_and_abort(f"Could not find structure from {dir_path} - aborting", log_fn=log_fn)
     atoms_obj.pbc = pbc_bool_list
     log_fn(f"Setting pbc for atoms to {pbc_bool_list}")
     return atoms_obj
@@ -407,8 +404,7 @@ def run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_
     try:
         run_step_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, j_steps, get_jdft_opt_calc_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
     except Exception as e:
-        log_fn(e)
-        assert check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
+        check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
         if death_by_nan(opj(step_path, "out"), log_def):
             atoms_obj = reset_atoms_death_by_nan(step_path, step_path)
             add_freeze_list_constraints(atoms, freeze_list, log_fn=log_fn)
@@ -427,7 +423,7 @@ def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
     try:
         run_opt_runner(atoms_obj, opt_path, opter_ase_fn, fmax=fmax_float, max_steps=max_steps_int, log_fn=log_fn)
     except Exception as e:
-        assert check_for_restart(e, _failed_before_bool, opt_path, log_fn=log_fn)
+        check_for_restart(e, _failed_before_bool, opt_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:

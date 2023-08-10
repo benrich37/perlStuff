@@ -11,7 +11,7 @@ from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, opt
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
-from helpers.generic_helpers import _write_opt_log, check_for_restart, log_def, check_structure
+from helpers.generic_helpers import _write_opt_log, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx
 
 """ HOW TO USE ME:
@@ -143,9 +143,7 @@ def get_restart_structure(structure, restart, opt_dir, lat_dir, use_jdft, log_fn
             restart = False
             log_fn("setting up lattice and opt dir")
         else:
-            err = f"Requested structure {structure} not found"
-            log_fn(err)
-            raise ValueError(err)
+            log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
     return structure, restart
 
 
@@ -157,14 +155,13 @@ def get_structure(structure, restart, opt_dir, lat_dir, lat_iters, use_jdft, log
     if not restart:
         for d in dirs_list:
             if ope(d):
-                opt_log(f"Resetting {d}")
+                log_fn(f"Resetting {d}")
                 remove_dir_recursive(d)
             os.mkdir(d)
         if ope(structure):
-            opt_log(f"Found {structure} for structure")
+            log_fn(f"Found {structure} for structure")
         else:
-            opt_log(f"Requested structure {structure} not found")
-            raise ValueError("Missing input structure")
+            log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
     else:
         structure, restart = get_restart_structure(structure, restart, opt_dir, lat_dir, use_jdft, log_fn=log_fn)
     return structure, restart
@@ -195,8 +192,7 @@ def run_lat_opt(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds, _faile
     try:
         atoms, structure = run_lat_opt_runner(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds)
     except Exception as e:
-        log_fn(e)
-        assert check_for_restart(e, _failed_before, lat_dir, log_fn=log_fn)
+        check_for_restart(e, _failed_before, lat_dir, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
@@ -216,8 +212,7 @@ def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn
         atoms_obj_list = get_atoms_list_from_out(outfile)
         atoms_obj = atoms_obj_list[-1]
     else:
-        log_fn(f"No output data given - check error file")
-        assert False
+        log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     atoms_obj.pbc = pbc
     structure_path = opj(ion_dir_path, "CONTCAR")
     write(structure_path, atoms_obj, format="vasp")
@@ -232,8 +227,7 @@ def run_ion_opt(atoms_obj, ion_iters_int, ion_dir_path, root_path, cmds_list, _f
     try:
         atoms_obj = run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_fn)
     except Exception as e:
-        log_fn(e)
-        assert check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
+        check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
@@ -268,7 +262,7 @@ def run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed
     try:
         run_ase_opt_runner(atoms, opt_dir, opter, cell_bool, log_fn)
     except Exception as e:
-        assert check_for_restart(e, _failed_before, opt_dir, log_fn=log_fn)
+        check_for_restart(e, _failed_before, opt_dir, log_fn=log_fn)
         run_again = True
         pass
     if run_again:

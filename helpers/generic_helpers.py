@@ -650,9 +650,7 @@ def reset_atoms_death_by_nan(cur_dir, recent_dir):
 
 
 
-
-
-def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
+def check_for_restart_helper(e, failed_before, opt_dir, log_fn=log_def):
     log_fn(e)
     out = opj(opt_dir, "out")
     if not failed_before:
@@ -674,6 +672,22 @@ def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
         else:
             log_fn("Recognizing failure by state files when supposedly no files are present - insane")
         return False
+
+
+
+def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
+    log_fn(e)
+    ret_val = check_for_restart_helper(e, failed_before, opt_dir, log_fn=log_fn)
+    if not ret_val:
+        err_str = "Could not run jdftx calculator - check iolog for more details"
+        err_str += "\n \t (if you are running this through command line, you are all set to sbatch submit.sh)"
+        raise ValueError(err_str)
+    return True
+
+def log_and_abort(err_str, log_fn=log_def):
+    log_fn(err_str)
+    raise ValueError(err_str)
+
 
 def check_structure(structure, work, log_fn=log_def):
     use_fmt = "vasp"
