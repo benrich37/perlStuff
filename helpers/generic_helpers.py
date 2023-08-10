@@ -15,7 +15,7 @@ import subprocess
 import copy
 import __main__
 
-from helpers.logx_helpers import out_to_logx_str, log_charges, log_input_orientation, opt_spacer, scf_str
+
 # from logx_helpers import out_to_logx_str, log_charges, log_input_orientation, opt_spacer, scf_str
 
 def log_def(s):
@@ -512,19 +512,6 @@ def read_f(dirr):
                 return float(line.strip().split("=")[1])
 
 
-def _write_logx(atoms, fname, dyn, maxstep, do_cell=True, do_charges=True):
-    if not ope(fname):
-        with open(fname, "w") as f:
-            f.write("\n Entering Link 1 \n \n")
-    step = dyn.nsteps
-    with open(fname, "a") as f:
-        f.write(log_input_orientation(atoms, do_cell=do_cell))
-        f.write(scf_str(atoms))
-        if do_charges:
-            f.write(log_charges(atoms))
-        f.write(opt_spacer(step, maxstep))
-
-
 def _write_opt_log(atoms, dyn, max_steps, log_fn):
     step = dyn.nsteps
     dump_str = f"Step {step}/{max_steps}: "
@@ -537,27 +524,6 @@ def _write_opt_log(atoms, dyn, max_steps, log_fn):
     log_fn(dump_str)
 
 
-def finished_logx(atoms, fname, step, maxstep, do_cell=True):
-    with open(fname, "a") as f:
-        f.write(log_input_orientation(atoms, do_cell=do_cell))
-        f.write(scf_str(atoms))
-        f.write(log_charges(atoms))
-        f.write(opt_spacer(step, maxstep))
-        f.write("\n Normal termination of Gaussian 16 at Fri Jul 21 12:28:14 2023.\n")
-
-
-def sp_logx(atoms, fname, do_cell=True):
-    if ope(fname):
-        os.remove(fname)
-    dump_str = "\n Entering Link 1 \n \n"
-    dump_str += log_input_orientation(atoms, do_cell=do_cell)
-    dump_str += scf_str(atoms)
-    dump_str += log_charges(atoms)
-    dump_str += "\n Normal termination of Gaussian 16 at Fri Jul 21 12:28:14 2023.\n"
-    with open(fname, "w") as f:
-        f.write(dump_str)
-
-
 def get_count_dict(symbols):
     count_dict = {}
     for s in symbols:
@@ -566,17 +532,6 @@ def get_count_dict(symbols):
         else:
             count_dict[s] += 1
     return count_dict
-
-
-def out_to_logx(save_dir, outfile, log_fn=lambda s: print(s)):
-    try:
-        fname = opj(save_dir, "out.logx")
-        with open(fname, "w") as f:
-            f.write(out_to_logx_str(outfile))
-        f.close()
-    except Exception as e:
-        log_fn(e)
-        pass
 
 
 def parse_ionpos(ionpos_fname):

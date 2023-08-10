@@ -9,9 +9,10 @@ from datetime import datetime
 from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
-from helpers.generic_helpers import _write_logx, finished_logx, check_submit, sp_logx, get_atoms_from_coords_out
+from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
-from helpers.generic_helpers import out_to_logx, _write_opt_log, check_for_restart, log_def, check_structure
+from helpers.generic_helpers import _write_opt_log, check_for_restart, log_def, check_structure
+from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx
 
 """ HOW TO USE ME:
 - Be on perlmutter
