@@ -12,7 +12,8 @@ from ase.units import Bohr
 
 from pathlib import Path
 import subprocess
-import copy
+from copy import copy as duplicate
+#import copy
 import __main__
 
 
@@ -571,17 +572,17 @@ def get_atoms_from_coords_out(ionpos_fname, lattice_fname):
 
 
 def has_coords_out_files(dir):
-    return (ope(opj(dir, "ionpos"))) and (ope(opj(dir, "lattice")))
+    return ope(opj(dir, "ionpos")) and ope(opj(dir, "lattice"))
 
 
 def get_lattice_cmds(cmds, lat_iters, pbc):
-    lat_cmds = copy.copy(cmds)
+    lat_cmds = duplicate(cmds)
     lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
     lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
     return lat_cmds
 
 def get_ionic_opt_cmds(cmds, lat_iters):
-    lat_cmds = copy.copy(cmds)
+    lat_cmds = duplicate(cmds)
     lat_cmds["ionic-minimize"] = f"nIterations {lat_iters}"
     return lat_cmds
 
