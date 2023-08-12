@@ -5,6 +5,7 @@ import os
 from helpers import generic_helpers as gen
 from ase import Atoms
 from ase.constraints import FixBondLength
+from helpers.neb_helpers import get_good_idcs_helper
 
 class TestGeomHelpers(unittest.TestCase):
     def test_read_pbc(self):
@@ -124,3 +125,17 @@ class TestIoHelpers(unittest.TestCase):
             self.assertEqual(length, 3)
         gen.remove_dir_recursive(dir1)
 
+
+class TestNebHelper(unittest.TestCase):
+    def test_get_good_idcs(self):
+        test_idcs_1 = [0, 1, 2, 3, 2, 2, 2.5, 1]
+        test_idcs_1_gidcs = [0, 1, 2, 3, 4, 5, 7]
+        test_idcs_2 = [5, 6, 1, 2, 7, 5, 4]
+        test_idcs_2_gidcs = [2, 3, 4, 5, 6]
+        test_ins = [test_idcs_1, test_idcs_2]
+        test_outs = [test_idcs_1_gidcs, test_idcs_2_gidcs]
+        for i in range(len(test_ins)):
+            output = get_good_idcs_helper(test_ins[i])
+            self.assertEqual(len(output), len(test_outs[i]))
+            for j in range(len(output)):
+                self.assertEqual(output[j], test_outs[i][j])

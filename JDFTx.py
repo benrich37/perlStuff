@@ -6,9 +6,10 @@
 
 from __future__ import print_function #For Python2 compatibility
 
-import os, scipy, subprocess, tempfile, re
+import scipy, subprocess, re
 from ase.calculators.interface import Calculator
 from ase.units import Bohr, Hartree
+from os import environ as env_vars_dict
 
 #Run shell command and return output as a string:
 def shell(cmd):
@@ -16,8 +17,8 @@ def shell(cmd):
 
 #Return var, replacing it with environment variable varName if it is None
 def replaceVariable(var, varName):
-        if (var is None) and (varName in os.environ):
-                return os.environ[varName]
+        if (var is None) and (varName in env_vars_dict):
+                return env_vars_dict[varName]
         else:
                 return var
 

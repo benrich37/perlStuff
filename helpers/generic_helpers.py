@@ -5,8 +5,9 @@ from datetime import datetime
 
 from ase import Atoms, Atom
 from ase.constraints import FixBondLength
-from os.path import join as opj
-from os.path import exists as ope
+from os.path import join as opj, exists as ope, isfile as isfile, isdir as isdir, basename as basename
+from os import listdir as listdir, getcwd as getcwd, chdir as chdir, environ as env_vars_dict, listdir as get_sub_dirs
+from os import remove as rm, rmdir as rmdir, walk as walk
 from ase.io import read, write
 from ase.units import Bohr
 
@@ -73,24 +74,24 @@ def copy_file(file, tgt_dir, log_fn=log_def):
 
 
 def copy_files(src_dir, tgt_dir):
-    for filename in os.listdir(src_dir):
+    for filename in listdir(src_dir):
         file_path = opj(src_dir, filename)
-        if os.path.isfile(file_path):
+        if isfile(file_path):
             copy_file(file_path, tgt_dir)
 
 
 def get_int_dirs_indices(int_dirs):
     ints = []
     for dirr in int_dirs:
-        ints.append(int(os.path.basename(dirr)))
+        ints.append(int(basename(dirr)))
     return np.array(ints).argsort()
 
 
 def get_int_dirs(dir_path):
     int_dir_list = []
-    for name in os.listdir(dir_path):
+    for name in get_sub_dirs(dir_path):
         full_path = opj(dir_path, name)
-        if os.path.isdir(full_path):
+        if isdir(full_path):
             try:
                 int(name)
                 int_dir_list.append(full_path)
@@ -118,7 +119,7 @@ def insert_el(filename):
 
 def read_inputs(work_dir, ref_struct=None):
     inpfname = opj(work_dir, "inputs")
-    if os.path.exists("inputs"):
+    if ope("inputs"):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump", "initial-state",
                   "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
@@ -265,7 +266,7 @@ def remove_restart_files(dirr, log_fn=log_def):
     for f in restart_files:
         if ope(opj(dirr, f)):
             log_fn(f"removing {f} from {dirr}")
-            os.remove(opj(dirr, f))
+            rm(opj(dirr, f))
 
 
 def time_to_str(t):
@@ -310,7 +311,7 @@ def get_log_fn(work, calc_type, print_bool, restart=False):
     fname = opj(work, calc_type + ".iolog")
     if not restart:
         if ope(fname):
-            os.remove(fname)
+            rm(fname)
     else:
         if ope(fname):
             log_generic("-------------------------- RESTARTING --------------------------", work, fname, print_bool)
@@ -336,7 +337,7 @@ def log_generic(message, work, fname, print_bool):
 
 
 def get_cmds(work_dir, ref_struct=None):
-    os.chdir(work_dir)
+    chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
         return dup_cmds(opj(work_dir, "in"))
     else:
@@ -356,12 +357,12 @@ def read_line_generic(line):
 
 def remove_dir_recursive(path, log_fn=log_def):
     log_fn(f"Removing directory {path}")
-    for root, dirs, files in os.walk(path, topdown=False):  # topdown=False makes the walk visit subdirectories first
+    for root, dirs, files in walk(path, topdown=False):  # topdown=False makes the walk visit subdirectories first
         for name in files:
-            os.remove(os.path.join(root, name))
+            rm(opj(root, name))
         for name in dirs:
-            os.rmdir(os.path.join(root, name))
-    os.rmdir(path)  # remove the root directory itself
+            rmdir(opj(root, name))
+    rmdir(path)  # remove the root directory itself
 
 
 def add_constraint(atoms, constraint):
@@ -405,8 +406,8 @@ def add_freeze_list_constraints(atoms, freeze_list, log_fn=log_def):
 
 
 def _write_contcar(atoms, root):
-    atoms.write(os.path.join(root, 'CONTCAR'), format="vasp", direct=True)
-    insert_el(os.path.join(root, 'CONTCAR'))
+    atoms.write(opj(root, 'CONTCAR'), format="vasp", direct=True)
+    insert_el(opj(root, 'CONTCAR'))
 
 
 def optimizer(atoms, root, opter, opt_alpha=150):
@@ -436,7 +437,7 @@ def get_inputs_list(fname, auto_lower=True):
 
 def fix_work_dir(work_dir):
     if work_dir is None:
-        work_dir = os.getcwd()
+        work_dir = getcwd()
     if work_dir[-1] != "/":
         work_dir += "/"
     return work_dir
@@ -500,13 +501,13 @@ def get_exe_cmd(gpu, log_fn):
     else:
         _get = 'JDFTx'
     log_fn(f"Using {_get} for JDFTx exe")
-    exe_cmd = 'srun ' + os.environ[_get]
+    exe_cmd = 'srun ' + env_vars_dict[_get]
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
 
 
 def read_f(dirr):
-    with open(os.path.join(dirr, "Ecomponents")) as f:
+    with open(opj(dirr, "Ecomponents")) as f:
         for line in f:
             if "F =" in line:
                 return float(line.strip().split("=")[1])
@@ -931,3 +932,30 @@ def get_scan_atoms_list(scan_dir):
     return atoms_list
 
 
+def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
+    _abort = False
+    POSCAR = opj(dir_path, "POSCAR")
+    CONTCAR = opj(dir_path, "CONTCAR")
+    if restart_bool:
+        if ope(CONTCAR):
+            atoms_obj = read(CONTCAR, format="vasp")
+            log_fn(f"Found CONTCAR in {dir_path}")
+        elif ope(POSCAR):
+            atoms_obj = read(POSCAR, format="vasp")
+            log_fn(f"Could not find CONTCAR in {dir_path} - using POSCAR instead")
+        else:
+            _abort = True
+    else:
+        if ope(POSCAR):
+            atoms_obj = read(POSCAR, format="vasp")
+            log_fn(f"Found CONTCAR in {dir_path}")
+        elif ope(CONTCAR):
+            atoms_obj = read(CONTCAR, format="vasp")
+            log_fn(f"Could not find start POSCAR in {dir_path} - using found CONTCAR instead")
+        else:
+            _abort = True
+    if _abort:
+        log_and_abort(f"Could not find structure from {dir_path} - aborting", log_fn=log_fn)
+    atoms_obj.pbc = pbc_bool_list
+    log_fn(f"Setting pbc for atoms to {pbc_bool_list}")
+    return atoms_obj

@@ -1,17 +1,14 @@
 import os
 from JDFTx import JDFTx
-from ase.io import read, write
+from ase.io import write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
-from os.path import join as opj
-from os.path import exists as ope
-import numpy as np
-import shutil
+from os.path import join as opj, exists as ope, isdir as isdir, basename as basename
+from os import mkdir as mkdir, getcwd as getcwd, chdir as chdir
 from ase.neb import NEB
-import time
-from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices, \
-    get_atoms_list_from_out, get_do_cell
-from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, get_int_dirs_indices, \
+    get_atoms_list_from_out, get_do_cell, get_atoms
+from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.generic_helpers import _write_opt_log, check_for_restart, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
@@ -19,8 +16,9 @@ from helpers.geom_helpers import get_bond_length
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size, write_auto_schedule, read_schedule_file
-from helpers.se_neb_helpers import step_atoms_key, step_size_key, guess_type_key, j_steps_key, freeze_list_key, target_bool_key
+from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, write_auto_schedule, \
+    read_schedule_file, get_step_list, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
+from helpers.se_neb_helpers import j_steps_key, freeze_list_key
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -45,7 +43,7 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
 
 def read_se_neb_inputs(fname="se_neb_inputs"):
     if not ope(fname):
-        dump_template_input(fname, se_neb_template, os.getcwd())
+        dump_template_input(fname, se_neb_template, getcwd())
         raise ValueError(f"No se neb input supplied: dumping template {fname}")
     k = 1.0
     neb_method = "spline"
@@ -109,15 +107,14 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     step_length = None
     if not lookline is None:
         atom_idcs, scan_steps, step_length = parse_lookline(lookline)
-    if restart_neb:
-        restart_at = scan_steps + 1
     if neb_max_steps is None:
         neb_max_steps = int(max_steps / 10.)
     work_dir = fix_work_dir(work_dir)
     if schedule:
         scan_steps = count_scan_steps(work_dir)
-    return atom_idcs, scan_steps, step_length, restart_at, work_dir, max_steps, fmax, neb_method,\
+    return atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method,\
         k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule
+
 
 def parse_lookline(lookline):
     step_length = float(lookline[-1])
@@ -127,103 +124,14 @@ def parse_lookline(lookline):
         atom_idcs.append(int(idx - 1))
     return atom_idcs, scan_steps, step_length
 
-def count_scan_steps(work_dir):
-    scan_ints = []
-    fname = opj(work_dir, "schedule")
-    with open(fname, "r") as f:
-        for line in f:
-            if ":" in line:
-                key = line.split(":")[0]
-                if (not "#" in key) and (not "neb" in key):
-                    scan_ints.append(int(key.strip()))
-    return max(scan_ints)
-
-
-
-
-def get_atoms_prep_follow(atoms, prev_2_out, atom_pair, target_length):
-    atoms_prev = read(prev_2_out, format="vasp")
-    dir_vecs = []
-    for i in range(len(atoms.positions)):
-        dir_vecs.append(atoms.positions[i] - atoms_prev.positions[i])
-    for i in range(len(dir_vecs)):
-        atoms.positions[i] += dir_vecs[i]
-    dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
-    cur_length = np.linalg.norm(dir_vec)
-    should_be_0 = target_length - cur_length
-    if not np.isclose(should_be_0, 0.0):
-        atoms.positions[atom_pair[1]] += dir_vec * (should_be_0) / np.linalg.norm(dir_vec)
-    return atoms
-
-def read_instructions_prep_input(instructions):
-    step_atoms = instructions[step_atoms_key]
-    step_size = instructions[step_size_key]
-    guess_type = instructions[guess_type_key]
-    target_bool = instructions[target_bool_key]
-    return step_atoms, step_size, guess_type, target_bool
-
-def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_type, step_dir,
-                     val_target=False, log_func=log_def):
-    print_str = ""
-    prev_length = get_bond_length(atoms, atom_pair)
-    log_func(f"Atom pair {bond_str(atoms, atom_pair[0], atom_pair[1])} previously at {prev_length}")
-    if val_target:
-        target_length = step_val
-        step_length = target_length - prev_length
-    else:
-        target_length = prev_length + step_val
-        step_length = step_val
-    log_func(f"Creating structure with {bond_str(atoms, atom_pair[0], atom_pair[1])} at {target_length}")
-    if (step_idx <= 1) and guess_type == 3:
-        guess_type = 2
-    if guess_type == 3:
-        print_str += " atom momentum followed"
-        atoms = get_atoms_prep_follow(atoms, prev_2_out, atom_pair, target_length)
-    else:
-        dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
-        dir_vec *= step_length / np.linalg.norm(dir_vec)
-        if guess_type == 0:
-            print_str += f" only {atom_str(atoms, atom_pair[0])} moved"
-            atoms.positions[atom_pair[1]] += dir_vec
-        elif guess_type == 1:
-            print_str += f" only {atom_str(atoms, atom_pair[0])} moved"
-            atoms.positions[atom_pair[0]] += (-1) * dir_vec
-        elif guess_type == 2:
-            print_str += f" only {atom_str(atoms, atom_pair[0])} and {atom_str(atoms, atom_pair[1])} moved equidistantly"
-            dir_vec *= 0.5
-            atoms.positions[atom_pair[1]] += dir_vec
-            atoms.positions[atom_pair[0]] += (-1) * dir_vec
-    write(opj(step_dir, "POSCAR"), atoms, format="vasp")
-    return print_str
-
-
-
-def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def):
-    step_atoms, step_val, guess_type, target_bool = read_instructions_prep_input(schedule[str(step_idx)])
-    step_prev_1_dir = opj(scan_dir, str(step_idx-1))
-    step_prev_2_dir = opj(scan_dir, str(step_idx - 2))
-    if step_idx == 0:
-        prev_1_out = opj(work_dir, "POSCAR")
-    else:
-        prev_1_out = opj(step_prev_1_dir, "CONTCAR")
-    atoms = read(prev_1_out, format="vasp")
-    prev_2_out = opj(step_prev_2_dir, "CONTCAR")
-    print_str = f"Prepared structure for step {step_idx} with"
-    if len(step_atoms) == 2:
-        print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_val, guess_type, step_dir,
-                                      log_func=log_fn, val_target=target_bool)
-        log_fn(print_str)
-    else:
-        log_and_abort("Non-bond scanning not yet implemented", log_fn=log_fn)
-
-
 
 def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
     dir0 = opj(scan_dir, "0")
-    atoms = get_atoms(dir0, [False,False,False], restart_bool=restart, log_fn=log_fn)
+    atoms = get_atoms(dir0, [False, False, False], restart_bool=restart, log_fn=log_fn)
     start_dist = get_bond_length(atoms, atom_pair)
     log_fn(f"Bond {bond_str(atoms, atom_pair[0], atom_pair[1])} starting at {start_dist}")
     return start_dist
+
 
 def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
     ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
@@ -277,8 +185,8 @@ def do_relax_end(scan_steps_int, scan_dir_str, restart_idx, pbc_bool_list, get_c
     end_idx = scan_steps_int
     end_dir = opj(scan_dir_str, str(end_idx))
     prev_dir = opj(scan_dir_str, str(end_idx - 1))
-    if (not ope(opj(end_dir, "POSCAR"))) or (not os.path.isdir(end_dir)):
-        os.mkdir(end_dir)
+    if (not ope(opj(end_dir, "POSCAR"))) or (not isdir(end_dir)):
+        mkdir(end_dir)
         restart_end = False
         copy_state_files(prev_dir, end_dir, log_fn=log_fn)
         prep_input(scan_steps_int, end_dir)
@@ -290,7 +198,7 @@ def do_relax_end(scan_steps_int, scan_dir_str, restart_idx, pbc_bool_list, get_c
 
 
 def finished(dir_path):
-    with open(opj(dir_path, f"finished_{os.path.basename(dir_path)}.txt"), "w") as f:
+    with open(opj(dir_path, f"finished_{basename(dir_path)}.txt"), "w") as f:
         f.write("done")
 
 
@@ -321,34 +229,6 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
             return restart_idx
 
 
-def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
-    _abort = False
-    POSCAR = opj(dir_path, "POSCAR")
-    CONTCAR = opj(dir_path, "CONTCAR")
-    if restart_bool:
-        if ope(CONTCAR):
-            atoms_obj = read(CONTCAR, format="vasp")
-            log_fn(f"Found CONTCAR in {dir_path}")
-        elif ope(POSCAR):
-            atoms_obj = read(POSCAR, format="vasp")
-            log_fn(f"Could not find CONTCAR in {dir_path} - using POSCAR instead")
-        else:
-            _abort = True
-    else:
-        if ope(POSCAR):
-            atoms_obj = read(POSCAR, format="vasp")
-            log_fn(f"Found CONTCAR in {dir_path}")
-        elif ope(CONTCAR):
-            atoms_obj = read(CONTCAR, format="vasp")
-            log_fn(f"Could not find start POSCAR in {dir_path} - using found CONTCAR instead")
-        else:
-            _abort = True
-    if _abort:
-        log_and_abort(f"Could not find structure from {dir_path} - aborting", log_fn=log_fn)
-    atoms_obj.pbc = pbc_bool_list
-    log_fn(f"Setting pbc for atoms to {pbc_bool_list}")
-    return atoms_obj
-
 def run_preopt(atoms_obj, root_path, log_fn=log_def):
     outfile = opj(root_path, "out")
     log_fn("JDFTx pre-optimization starting")
@@ -356,7 +236,7 @@ def run_preopt(atoms_obj, root_path, log_fn=log_def):
     log_fn("JDFTx pre-optimization finished")
     jdft_opt = opj(root_path, "pre_opt")
     if not ope(jdft_opt):
-        os.mkdir(jdft_opt)
+        mkdir(jdft_opt)
     out_to_logx(jdft_opt, outfile, log_fn=log_fn)
     new_atoms = get_atoms_list_from_out(outfile)[-1]
     atoms_obj.set_positions(new_atoms.positions)
@@ -381,6 +261,7 @@ def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max
     sp_logx(atoms_obj, "sp.logx", do_cell=do_cell)
     finished(root_path)
 
+
 def run_step_runner(atoms_obj, step_path, opter, get_calc_fn, j_steps, get_jdft_opt_calc_fn,
                     log_fn = log_def, fmax=0.05, max_steps=100):
     if j_steps > 0:
@@ -390,10 +271,12 @@ def run_step_runner(atoms_obj, step_path, opter, get_calc_fn, j_steps, get_jdft_
     run_opt_runner(atoms_obj, step_path, opter, log_fn=log_fn, fmax=fmax, max_steps=max_steps)
 
 
+
 def read_instructions_run_step(instructions):
     freeze_list = instructions[freeze_list_key]
     j_steps = instructions[j_steps_key]
     return freeze_list, j_steps
+
 
 
 def run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
@@ -429,28 +312,6 @@ def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
     if run_again:
         run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
                       fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
-
-
-def safe_mode_check(scan_path, scan_steps_int, atom_pair_int_list, log_fn=log_def):
-    def bond_length(step_idx):
-        return get_bond_length(get_atoms(opj(scan_path, str(step_idx)), [False, False, False],
-                                         restart_bool=True, log_fn=log_fn),
-                               atom_pair_int_list)
-    dstart = bond_length(0)
-    dend = bond_length(scan_steps_int)
-    dmax = dend - dstart
-    sign = 1
-    if dmax < 0:
-        sign = -1
-    dont_include = []
-    for j in range(scan_steps_int - 1): # -1 so we don't accidentally exclude final optimization
-        if sign*(bond_length(j) - dstart) > dmax:
-            dont_include.append(j)
-    include = []
-    for j in range(scan_steps_int):
-        if not j in dont_include:
-            include.append(j)
-    return include
 
 
 def setup_img_dirs(neb_path, scan_path, scan_steps_int, restart_bool=False, log_fn=log_def, safe_mode=False):
@@ -517,43 +378,20 @@ def setup_neb(scan_steps_int, k_float, neb_method_str, pbc_bool_list, get_calc_f
     return dyn, restart_bool
 
 
-def setup_scan_dir(work_path, scan_path, restart_at_idx, pbc_bool_list, log_fn=log_def):
-    dir0 = opj(scan_path, "0")
-    if not ope(scan_path):
-        log_fn("Creating scan directory")
-        os.mkdir(scan_path)
-    if not ope(dir0):
-        log_fn(f"Setting up directory for step 0 (this is special for step 0 - please congratulate him)")
-        os.mkdir(dir0)
-        copy_state_files(work_path, dir0)
-        atoms_obj = get_atoms(work_path, pbc_bool_list, restart_bool=True, log_fn=log_fn)
-        write(opj(dir0, "POSCAR"), atoms_obj, format="vasp")
-    log_fn("Checking for scan steps to be overwritten")
-    int_dirs = get_int_dirs(work_path)
-    for dir_path in int_dirs:
-        idx = os.path.basename(dir_path)
-        if idx > restart_at_idx:
-            log_fn(f"Step {idx} comes after requested restart index {restart_at_idx}")
-            remove_dir_recursive(dir_path)
+def scan_is_finished(scan_dir, log_fn=log_def):
+    int_dirs = get_int_dirs(scan_dir)
+    idcs = get_int_dirs_indices(int_dirs)
+    last_step_path = int_dirs[idcs[-1]]
+    last_is_finished = is_done(last_step_path, idcs[-1])
+    return last_is_finished
 
-
-def get_step_list(schedule, restart_at):
-    step_list = []
-    for key in schedule.keys():
-        try:
-            step = int(key)
-            if step >= restart_at:
-                step_list.append(step)
-        except:
-            pass
-    return step_list
 
 
 if __name__ == '__main__':
-    atom_idcs, scan_steps, step_length, restart_at, work_dir, max_steps, fmax, neb_method, \
+    atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
         k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule = read_se_neb_inputs()
     gpu = True # Make this an input argument eventually
-    os.chdir(work_dir)
+    chdir(work_dir)
     if not schedule:
         write_auto_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start, relax_end,
                             neb_steps, k, neb_method, work_dir)
@@ -588,8 +426,8 @@ if __name__ == '__main__':
             step_dir = opj(scan_dir, str(step))
             se_log(f"Running step {step} in {step_dir}")
             restart_step = (i == 0) and (not is_done(step_dir, i))
-            if (not ope(step_dir)) or (not os.path.isdir(step_dir)):
-                os.mkdir(step_dir)
+            if (not ope(step_dir)) or (not isdir(step_dir)):
+                mkdir(step_dir)
                 restart_step = False
             if restart_step:
                 se_log(f"Restarting step")
@@ -600,7 +438,7 @@ if __name__ == '__main__':
             copy_best_state_files([prev_step_dir, step_dir], step_dir, log_fn=se_log)
             prep_input(step, step_dir)
             atoms = get_atoms(step_dir, pbc, restart_bool=restart_step, log_fn=se_log)
-            check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
+            check_submit(gpu, getcwd(), "se_neb", log_fn=se_log)
             run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE,
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
             write_scan_logx(scan_dir, log_fn=se_log)
@@ -610,14 +448,14 @@ if __name__ == '__main__':
     if not ope(neb_dir):
         se_log("No NEB dir found - setting restart to False for NEB")
         skip_to_neb = False
-        os.mkdir(neb_dir)
+        mkdir(neb_dir)
     use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES have a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
     dyn_neb, skip_to_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
-                        restart_bool=skip_to_neb, use_ci_bool=use_ci, log_fn=se_log)
+                                     restart_bool=skip_to_neb, use_ci_bool=use_ci, log_fn=se_log)
     if skip_to_neb:
-        check_submit(gpu, os.getcwd(), "se_neb", log_fn=se_log)
+        check_submit(gpu, getcwd(), "se_neb", log_fn=se_log)
     se_log("Running NEB now")
     dyn_neb.run(fmax=fmax, steps=neb_steps)
     se_log(f"finished neb in {dyn_neb.nsteps}/{neb_steps} steps")

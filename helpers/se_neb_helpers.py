@@ -2,18 +2,19 @@ import os
 
 from ase.build import sort
 from ase.io import read, write
-
-from helpers.generic_helpers import get_int_dirs, get_int_dirs_indices, need_sort
-from helpers.generic_helpers import time_to_str, log_generic, need_sort, log_def
-import os
-from os.path import join as opj
-from os.path import exists as ope
+from os import getcwd as getcwd
+from os import mkdir as mkdir
+from os.path import join as opj, exists as ope, basename as basename
 import time
 import numpy as np
 
+from helpers.generic_helpers import get_int_dirs, get_int_dirs_indices, get_atoms, bond_str, atom_str, log_and_abort, \
+    copy_state_files, remove_dir_recursive, time_to_str,  need_sort, log_def
+from helpers.geom_helpers import get_bond_length, get_atoms_prep_follow
+
 
 def get_f(path):
-    with open(os.path.join(path, "Ecomponents")) as f:
+    with open(opj(path, "Ecomponents")) as f:
         for line in f:
             if "F =" in line:
                 return float(line.strip().split("=")[1])
@@ -23,7 +24,7 @@ def get_fs(work):
     indices = get_int_dirs_indices(int_dirs)
     fs = []
     for i in indices:
-        fs.append(get_f(os.path.join(work, int_dirs[i])))
+        fs.append(get_f(opj(work, int_dirs[i])))
     return fs
 
 def has_max(fs):
@@ -319,3 +320,130 @@ def write_schedule_dict(schedule_dict, work_dir):
     with open(fname, "w") as f:
         f.write(get_schedule_dict_str(schedule_dict))
 
+
+def get_step_list(schedule, restart_at):
+    step_list = []
+    for key in schedule.keys():
+        try:
+            step = int(key)
+            if step >= restart_at:
+                step_list.append(step)
+        except:
+            pass
+    return step_list
+
+
+def safe_mode_check(scan_path, scan_steps_int, atom_pair_int_list, log_fn=log_def):
+    def bond_length(step_idx):
+        return get_bond_length(get_atoms(opj(scan_path, str(step_idx)), [False, False, False],
+                                         restart_bool=True, log_fn=log_fn),
+                               atom_pair_int_list)
+    dstart = bond_length(0)
+    dend = bond_length(scan_steps_int)
+    dmax = dend - dstart
+    sign = 1
+    if dmax < 0:
+        sign = -1
+    dont_include = []
+    for j in range(scan_steps_int - 1): # -1 so we don't accidentally exclude final optimization
+        if sign*(bond_length(j) - dstart) > dmax:
+            dont_include.append(j)
+    include = []
+    for j in range(scan_steps_int):
+        if not j in dont_include:
+            include.append(j)
+    return include
+
+
+def count_scan_steps(work_dir):
+    scan_ints = []
+    fname = opj(work_dir, "schedule")
+    with open(fname, "r") as f:
+        for line in f:
+            if ":" in line:
+                key = line.split(":")[0]
+                if (not "#" in key) and (not "neb" in key):
+                    scan_ints.append(int(key.strip()))
+    return max(scan_ints)
+
+
+def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_type, step_dir,
+                     val_target=False, log_func=log_def):
+    print_str = ""
+    prev_length = get_bond_length(atoms, atom_pair)
+    log_func(f"Atom pair {bond_str(atoms, atom_pair[0], atom_pair[1])} previously at {prev_length}")
+    if val_target:
+        target_length = step_val
+        step_length = target_length - prev_length
+    else:
+        target_length = prev_length + step_val
+        step_length = step_val
+    log_func(f"Creating structure with {bond_str(atoms, atom_pair[0], atom_pair[1])} at {target_length}")
+    if (step_idx <= 1) and guess_type == 3:
+        guess_type = 2
+    if guess_type == 3:
+        print_str += " atom momentum followed"
+        atoms = get_atoms_prep_follow(atoms, prev_2_out, atom_pair, target_length)
+    else:
+        dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
+        dir_vec *= step_length / np.linalg.norm(dir_vec)
+        if guess_type == 0:
+            print_str += f" only {atom_str(atoms, atom_pair[0])} moved"
+            atoms.positions[atom_pair[1]] += dir_vec
+        elif guess_type == 1:
+            print_str += f" only {atom_str(atoms, atom_pair[0])} moved"
+            atoms.positions[atom_pair[0]] += (-1) * dir_vec
+        elif guess_type == 2:
+            print_str += f" only {atom_str(atoms, atom_pair[0])} and {atom_str(atoms, atom_pair[1])} moved equidistantly"
+            dir_vec *= 0.5
+            atoms.positions[atom_pair[1]] += dir_vec
+            atoms.positions[atom_pair[0]] += (-1) * dir_vec
+    write(opj(step_dir, "POSCAR"), atoms, format="vasp")
+    return print_str
+
+
+def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def):
+    step_atoms, step_val, guess_type, target_bool = read_instructions_prep_input(schedule[str(step_idx)])
+    step_prev_1_dir = opj(scan_dir, str(step_idx-1))
+    step_prev_2_dir = opj(scan_dir, str(step_idx - 2))
+    if step_idx == 0:
+        prev_1_out = opj(work_dir, "POSCAR")
+    else:
+        prev_1_out = opj(step_prev_1_dir, "CONTCAR")
+    atoms = read(prev_1_out, format="vasp")
+    prev_2_out = opj(step_prev_2_dir, "CONTCAR")
+    print_str = f"Prepared structure for step {step_idx} with"
+    if len(step_atoms) == 2:
+        print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_val, guess_type, step_dir,
+                                      log_func=log_fn, val_target=target_bool)
+        log_fn(print_str)
+    else:
+        log_and_abort("Non-bond scanning not yet implemented", log_fn=log_fn)
+
+
+def setup_scan_dir(work_path, scan_path, restart_at_idx, pbc_bool_list, log_fn=log_def):
+    dir0 = opj(scan_path, "0")
+    if not ope(scan_path):
+        log_fn("Creating scan directory")
+        mkdir(scan_path)
+    if not ope(dir0):
+        log_fn(f"Setting up directory for step 0 (this is special for step 0 - please congratulate him)")
+        mkdir(dir0)
+        copy_state_files(work_path, dir0)
+        atoms_obj = get_atoms(work_path, pbc_bool_list, restart_bool=True, log_fn=log_fn)
+        write(opj(dir0, "POSCAR"), atoms_obj, format="vasp")
+    log_fn("Checking for scan steps to be overwritten")
+    int_dirs = get_int_dirs(work_path)
+    for dir_path in int_dirs:
+        idx = basename(dir_path)
+        if idx > restart_at_idx:
+            log_fn(f"Step {idx} comes after requested restart index {restart_at_idx}")
+            remove_dir_recursive(dir_path)
+
+
+def read_instructions_prep_input(instructions):
+    step_atoms = instructions[step_atoms_key]
+    step_size = instructions[step_size_key]
+    guess_type = instructions[guess_type_key]
+    target_bool = instructions[target_bool_key]
+    return step_atoms, step_size, guess_type, target_bool

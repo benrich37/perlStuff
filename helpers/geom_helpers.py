@@ -1,4 +1,5 @@
 import numpy as np
+from ase.io import read
 from scipy.spatial.transform import Rotation as R
 
 
@@ -63,3 +64,18 @@ def step_bond_with_momentum(atom_pair, step_length, atoms_prev_2, atoms_prev_1):
     if not np.isclose(should_be_0, 0.0):
         atoms_prev_1.positions[atom_pair[1]] += dir_vec * should_be_0 / np.linalg.norm(dir_vec)
     return atoms_prev_1
+
+
+def get_atoms_prep_follow(atoms, prev_2_out, atom_pair, target_length):
+    atoms_prev = read(prev_2_out, format="vasp")
+    dir_vecs = []
+    for i in range(len(atoms.positions)):
+        dir_vecs.append(atoms.positions[i] - atoms_prev.positions[i])
+    for i in range(len(dir_vecs)):
+        atoms.positions[i] += dir_vecs[i]
+    dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
+    cur_length = np.linalg.norm(dir_vec)
+    should_be_0 = target_length - cur_length
+    if not np.isclose(should_be_0, 0.0):
+        atoms.positions[atom_pair[1]] += dir_vec * (should_be_0) / np.linalg.norm(dir_vec)
+    return atoms
