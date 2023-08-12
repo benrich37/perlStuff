@@ -28,9 +28,6 @@ opt_template = ["structure: POSCAR # Structure for optimization",
 
 
 def read_opt_inputs(fname = "opt_input"):
-    """ Example:
-    structure: POSCAR
-    """
     work_dir = None
     structure = None
     if not ope(fname):
