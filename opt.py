@@ -8,7 +8,8 @@ from JDFTx import JDFTx
 from datetime import datetime
 from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell
-from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, get_exe_cmd, _get_calc
+from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
+from helpers.calc_helpers import _get_calc_old, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
 from helpers.generic_helpers import _write_opt_log, check_for_restart, log_def, check_structure, log_and_abort
@@ -169,7 +170,7 @@ def get_structure(structure, restart, opt_dir, lat_dir, lat_iters, use_jdft, log
 
 def run_lat_opt_runner(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds):
     lat_cmds = get_lattice_cmds(cmds, lat_iters, atoms.pbc)
-    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, JDFTx, log_fn=log_fn)
+    get_lat_calc = lambda root: _get_calc_old(exe_cmd, lat_cmds, root, JDFTx, log_fn=log_fn)
     atoms.set_calculator(get_lat_calc(lat_dir))
     log_fn("lattice optimization starting")
     log_fn(f"Fmax: n/a, max_steps: {lat_iters}")
@@ -202,7 +203,7 @@ def run_lat_opt(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds, _faile
 
 def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
     ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
-    atoms_obj.set_calculator(_get_calc(exe_cmd, ion_cmds, ion_dir_path, JDFTx, log_fn=log_fn))
+    atoms_obj.set_calculator(_get_calc_old(exe_cmd, ion_cmds, ion_dir_path, JDFTx, log_fn=log_fn))
     log_fn("ionic optimization starting")
     log_fn(f"Fmax: n/a, max_steps: {ion_iters_int}")
     pbc = atoms_obj.pbc
@@ -256,7 +257,7 @@ def run_ase_opt_runner(atoms, root, opter, do_cell, log_fn):
 
 
 def run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed_before = False):
-    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=log_fn)
+    get_calc = lambda root: _get_calc_old(exe_cmd, cmds, root, JDFTx, log_fn=log_fn)
     atoms.set_calculator(get_calc(opt_dir))
     run_again = False
     try:

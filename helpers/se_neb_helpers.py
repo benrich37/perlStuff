@@ -1,8 +1,6 @@
-import os
 
 from ase.build import sort
 from ase.io import read, write
-from os import getcwd as getcwd
 from os import mkdir as mkdir
 from os.path import join as opj, exists as ope, basename as basename
 import time

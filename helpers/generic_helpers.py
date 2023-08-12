@@ -1,19 +1,18 @@
 from shutil import copy as cp
 import numpy as np
-from datetime import datetime
+from datetime import datetime as now
 
 from ase import Atoms, Atom
 from ase.constraints import FixBondLength
 from os.path import join as opj, exists as ope, isfile as isfile, isdir as isdir, basename as basename
-from os import listdir as listdir, getcwd as getcwd, chdir as chdir, environ as env_vars_dict, listdir as get_sub_dirs
+from os import listdir as listdir, getcwd as getcwd, chdir as chdir, listdir as get_sub_dirs
 from os import remove as rm, rmdir as rmdir, walk as walk
 from ase.io import read, write
 from ase.units import Bohr
 
 from pathlib import Path
-import subprocess
+from subprocess import run as run
 from copy import copy as duplicate
-#import copy
 import __main__
 
 
@@ -320,7 +319,7 @@ def log_generic(message, work, fname, print_bool):
     message = str(message)
     if "\n" not in message:
         message = message + "\n"
-    prefix = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": "
+    prefix = now().strftime("%Y-%m-%d %H:%M:%S") + ": "
     message = prefix + message
     log_fname = opj(work, fname)
     if not ope(log_fname):
@@ -458,14 +457,14 @@ def check_submit(gpu, cwd, jobtype, log_fn=log_def):
         log_fn(f"Dumping template submit.sh and aborting")
         if gpu:
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
-        subprocess.run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
+        run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
         _bar = __main__.__file__
         bar = ""
         for s in _bar:
             if s == "/":
                 bar += "\\"
             bar += s
-        subprocess.run(f"sed -i 's/bar/{bar}/g' {fname}", shell=True, check=True)
+        run(f"sed -i 's/bar/{bar}/g' {fname}", shell=True, check=True)
         exit()
 
 
@@ -476,32 +475,6 @@ def read_pbc_val(val):
     for i in range(3):
         pbc.append("true" in vsplit[i].lower())
     return pbc
-
-
-def _get_calc(exe_cmd, cmds, root, jdftx_fn, debug=False, debug_fn=None, log_fn=log_def):
-    if debug:
-        log_fn("Setting calc to debug calc")
-        return debug_fn()
-    else:
-        log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
-        return jdftx_fn(
-            executable=exe_cmd,
-            pseudoSet="GBRV_v1.5",
-            commands=cmds,
-            outfile=root,
-            ionic_steps=False
-        )
-
-
-def get_exe_cmd(gpu, log_fn):
-    if gpu:
-        _get = 'JDFTx_GPU'
-    else:
-        _get = 'JDFTx'
-    log_fn(f"Using {_get} for JDFTx exe")
-    exe_cmd = 'srun ' + env_vars_dict[_get]
-    log_fn(f"exe_cmd: {exe_cmd}")
-    return exe_cmd
 
 
 def read_f(dirr):

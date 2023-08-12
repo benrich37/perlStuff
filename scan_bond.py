@@ -6,7 +6,8 @@ from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from JDFTx import JDFTx
 from helpers.generic_helpers import copy_state_files, get_cmds, get_inputs_list, fix_work_dir, optimizer, dump_template_input
-from helpers.generic_helpers import add_bond_constraints, read_pbc_val, write_contcar, get_exe_cmd, _get_calc
+from helpers.generic_helpers import add_bond_constraints, read_pbc_val, write_contcar
+from helpers.calc_helpers import _get_calc_old, get_exe_cmd
 from helpers.scan_bond_helpers import _scan_log, _prep_input
 
 
@@ -112,7 +113,7 @@ if __name__ == '__main__':
     scan_log = lambda s: _scan_log(s, work_dir)
     exe_cmd = get_exe_cmd(gpu, scan_log)
     cmds = get_cmds(work_dir)
-    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, log_fn=scan_log)
+    get_calc = lambda root: _get_calc_old(exe_cmd, cmds, root, JDFTx, log_fn=scan_log)
     prep_input = lambda s, a, l: _prep_input(s, a, l, follow, scan_log, work_dir, 1)
     os.chdir(work_dir)
     if (not os.path.exists("./0")) or (not os.path.isdir("./0")):

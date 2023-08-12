@@ -12,7 +12,8 @@ import time
 from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
-from helpers.generic_helpers import dump_template_input, _get_calc, get_exe_cmd, get_log_fn, copy_file, log_def, has_coords_out_files
+from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
+from helpers.calc_helpers import _get_calc_old, get_exe_cmd
 from helpers.generic_helpers import _write_opt_log, check_for_restart, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, copy_best_state_files
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
@@ -81,7 +82,7 @@ if __name__ == '__main__':
     check_poscar(work_dir, dimer_log)
     cmds = get_cmds(work_dir, ref_struct="POSCAR")
     exe_cmd = get_exe_cmd(True, dimer_log)
-    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, debug=False, log_fn=dimer_log)
+    get_calc = lambda root: _get_calc_old(exe_cmd, cmds, root, JDFTx, debug=False, log_fn=dimer_log)
     if restart:
         if ope(opj(dimer_dir, "CONTCAR")):
             dimer_log("Found restart CONTCAR")

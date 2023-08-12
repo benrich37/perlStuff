@@ -10,8 +10,8 @@ import numpy as np
 import shutil
 from helpers.neb_helpers import neb_optimizer, init_images, read_images, prep_neb
 from helpers.generic_helpers import read_line_generic, optimizer, get_int_dirs, get_log_fn, get_int_dirs_indices, add_bond_constraints, write_contcar
-from helpers.generic_helpers import dump_template_input, read_pbc_val, _get_calc, get_exe_cmd, get_cmds
-
+from helpers.generic_helpers import dump_template_input, read_pbc_val, get_cmds
+from helpers.calc_helpers import _get_calc_old, get_exe_cmd
 
 neb_template = ["nImages: 10",
                 "restart: True",
@@ -200,13 +200,13 @@ if __name__ == '__main__':
         from JDFTx import JDFTx
 
         exe_cmd = get_exe_cmd(True, log_stuff)
-        get_calc = lambda root: _get_calc(exe_cmd, cmds, root, JDFTx, debug=debug, log_fn=log_stuff)
+        get_calc = lambda root: _get_calc_old(exe_cmd, cmds, root, JDFTx, debug=debug, log_fn=log_stuff)
     else:
         exe_cmd = " "
         from ase.calculators.emt import EMT as debug_calc
 
-        get_calc = lambda root: _get_calc(exe_cmd, cmds, root, None, debug=debug, debug_fn=debug_calc,
-                                          log_fn=log_stuff)
+        get_calc = lambda root: _get_calc_old(exe_cmd, cmds, root, None, debug=debug, debug_fn=debug_calc,
+                                              log_fn=log_stuff)
     if read_int_dirs:
         _initial, _final, images, images_og_dirs, nImages = read_from_int_dirs(work_dir)
     log_stuff("nImages: " + str(nImages))
