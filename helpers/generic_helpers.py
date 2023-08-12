@@ -491,7 +491,7 @@ def _write_opt_log(atoms, dyn, max_steps, log_fn):
     dump_str += f"\t E = {atoms.get_potential_energy()}"
     try:
         dump_str += f"\t Max Force: {np.max(abs(atoms.get_forces()))}"
-        dump_str += f"\t Sum of Forces: {np.sum(atoms.get_forces())}"
+        dump_str += f"\t Sum of Forces: {np.sum(abs(atoms.get_forces()))}"
     except Exception as e:
         pass
     log_fn(dump_str)
