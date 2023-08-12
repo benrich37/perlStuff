@@ -4,9 +4,9 @@ from datetime import datetime as now
 
 from ase import Atoms, Atom
 from ase.constraints import FixBondLength
-from os.path import join as opj, exists as ope, isfile as isfile, isdir as isdir, basename as basename
-from os import listdir as listdir, getcwd as getcwd, chdir as chdir, listdir as get_sub_dirs
-from os import remove as rm, rmdir as rmdir, walk as walk
+from os.path import join as opj, exists as ope, isfile, isdir, basename
+from os import listdir as listdir, getcwd, chdir, listdir as get_sub_dirs
+from os import remove as rm, rmdir as rmdir, walk
 from ase.io import read, write
 from ase.units import Bohr
 

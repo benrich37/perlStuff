@@ -3,8 +3,8 @@ from JDFTx import JDFTx
 from ase.io import write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
-from os.path import join as opj, exists as ope, isdir as isdir, basename as basename
-from os import mkdir as mkdir, getcwd as getcwd, chdir as chdir
+from os.path import join as opj, exists as ope, isdir,  basename
+from os import mkdir, getcwd,  chdir
 from ase.neb import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms

@@ -2,8 +2,8 @@
 from ase.build import sort
 from ase.io import read, write
 from os import mkdir as mkdir
-from os.path import join as opj, exists as ope, basename as basename
-import time
+from os.path import join as opj, exists as ope, basename
+from time import time
 import numpy as np
 
 from helpers.generic_helpers import get_int_dirs, get_int_dirs_indices, get_atoms, bond_str, atom_str, log_and_abort, \
@@ -33,7 +33,7 @@ def has_max(fs):
     return False
 
 def total_elapsed_str(start1, neb_time, scan_time):
-    total_time = time.time() - start1
+    total_time = time() - start1
     print_str = f"Total time: " + time_to_str(total_time) + "\n"
     print_str += f"Scan opt time: {time_to_str(scan_time)} ({(scan_time / total_time):.{2}g}%)\n"
     print_str += f"NEB opt time: {time_to_str(neb_time)} ({(neb_time / total_time):.{2}g}%)\n"
