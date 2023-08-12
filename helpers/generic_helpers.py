@@ -830,7 +830,7 @@ def get_atoms_from_outfile_data(names, posns, R, charges=None, E=0):
     return atoms
 
 
-def get_input_coord_vars_from_outfile(outfname):
+def get_input_coord_vars_from_outfile(outfname, log_fn=log_def):
     start_line = get_start_line(outfname)
     names = []
     posns = []
@@ -855,9 +855,12 @@ def get_input_coord_vars_from_outfile(outfname):
                             active_lattice = False
                     elif "Initializing the Grid" in line:
                         break
-    assert len(names) > 0
-    assert len(names) == len(posns)
-    assert np.sum(R) > 0
+    if not len(names) > 0:
+        log_and_abort("No ion names found", log_fn=log_fn)
+    if len(names) != len(posns):
+        log_and_abort("Unequal ion positions/names found", log_fn=log_fn)
+    if np.sum(R) == 0:
+        log_and_abort("No lattice matrix found", log_fn=log_fn)
     return names, posns, R
 
 
