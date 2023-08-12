@@ -1,7 +1,6 @@
 from shutil import copy as cp
 import numpy as np
 from datetime import datetime as now
-
 from ase import Atoms, Atom
 from ase.constraints import FixBondLength
 from os.path import join as opj, exists as ope, isfile, isdir, basename
@@ -9,7 +8,6 @@ from os import listdir as listdir, getcwd, chdir, listdir as get_sub_dirs
 from os import remove as rm, rmdir as rmdir, walk
 from ase.io import read, write
 from ase.units import Bohr
-
 from pathlib import Path
 from subprocess import run as run
 from copy import copy as duplicate
@@ -210,10 +208,10 @@ def copy_state_files(src, dest, log_fn=log_def):
             cp(opj(src, f), dest)
 
 
-def has_state_files(dirr):
+def has_state_files(path):
     has = True
     for f in state_files:
-        has = has and ope(opj(dirr, f))
+        has = has and ope(opj(path, f))
     return has
 
 
@@ -258,12 +256,12 @@ def copy_best_state_files(dir_list, target, log_fn):
         pass
 
 
-def remove_restart_files(dirr, log_fn=log_def):
+def remove_restart_files(path, log_fn=log_def):
     restart_files = ["wfns", "eigenvals", "fillings", "fluidState", "force", "hessian.pckl"]
     for f in restart_files:
-        if ope(opj(dirr, f)):
-            log_fn(f"removing {f} from {dirr}")
-            rm(opj(dirr, f))
+        if ope(opj(path, f)):
+            log_fn(f"removing {f} from {path}")
+            rm(opj(path, f))
 
 
 def time_to_str(t):
@@ -477,8 +475,11 @@ def read_pbc_val(val):
     return pbc
 
 
-def read_f(dirr):
-    with open(opj(dirr, "Ecomponents")) as f:
+def read_f(path):
+    base_f = "Ecomponents"
+    if basename(path) != base_f:
+        path = opj(path, base_f)
+    with open(path, "r") as f:
         for line in f:
             if "F =" in line:
                 return float(line.strip().split("=")[1])
