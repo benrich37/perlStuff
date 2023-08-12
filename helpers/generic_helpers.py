@@ -634,17 +634,17 @@ def reset_atoms_death_by_nan_helper(file):
             return False
     return False
 
-def reset_atoms_death_by_nan(cur_dir, recent_dir):
+def reset_atoms_death_by_nan(cur_dir, recent_dir, log_fn=log_def):
     if reset_atoms_death_by_nan_helper(opj(cur_dir, "CONTCAR")):
         return read(opj(cur_dir, "CONTCAR"), format="vasp")
     elif reset_atoms_death_by_nan_helper(opj(cur_dir, "POSCAR")):
-        return read(opj(cur_dir, "CONTCAR"), format="vasp")
+        return read(opj(cur_dir, "POSCAR"), format="vasp")
     elif reset_atoms_death_by_nan_helper(opj(recent_dir, "CONTCAR")):
         return read(opj(cur_dir, "CONTCAR"), format="vasp")
     elif reset_atoms_death_by_nan_helper(opj(recent_dir, "POSCAR")):
-        return read(opj(cur_dir, "CONTCAR"), format="vasp")
+        return read(opj(cur_dir, "POSCAR"), format="vasp")
     else:
-        assert False
+        log_and_abort("Could not find structure or all observed structures have NaN")
 
 
 
@@ -723,11 +723,6 @@ def check_structure(structure, work, log_fn=log_def):
     write(structure, atoms_obj, format="vasp")
     return structure
 
-
-# def get_bond_length(atoms, atom_pair):
-#     dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
-#     bond_length = np.linalg.norm(dir_vec)
-#     return bond_length
 
 
 def get_atoms_list_from_out(outfile):
@@ -886,7 +881,7 @@ def get_atoms_list_from_out_reset_vars(nAtoms=100, _def=100):
         new_posn, log_vars, E, charges
 
 
-def get_charges(atoms):
+def get_charges(atoms, log_fn=log_def):
     es = []
     charges = None
     try:
@@ -905,8 +900,7 @@ def get_charges(atoms):
             charges = atoms.arrays["initial_charges"]
         except Exception as e:
             es.append(e)
-            print(es)
-            assert False
+            log_and_abort(es, log_fn=log_fn)
     return charges
 
 
