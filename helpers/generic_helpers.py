@@ -1,5 +1,4 @@
-import os
-import shutil
+from shutil import copy as cp
 import numpy as np
 from datetime import datetime
 
@@ -16,8 +15,6 @@ import subprocess
 import copy
 import __main__
 
-
-# from logx_helpers import out_to_logx_str, log_charges, log_input_orientation, opt_spacer, scf_str
 
 def log_def(s):
     print(s)
@@ -69,7 +66,7 @@ submit_gpu_perl_ref = [
 
 
 def copy_file(file, tgt_dir, log_fn=log_def):
-    shutil.copy(file, tgt_dir)
+    cp(file, tgt_dir)
     log_fn(f"Copying {file} to {tgt_dir}")
 
 
@@ -210,7 +207,7 @@ def copy_state_files(src, dest, log_fn=log_def):
     for f in state_files:
         if ope(opj(src, f)):
             log_fn(f"copying {f} from {src} to {dest}")
-            shutil.copy(opj(src, f), dest)
+            cp(opj(src, f), dest)
 
 
 def has_state_files(dirr):
