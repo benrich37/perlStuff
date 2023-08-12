@@ -1,6 +1,5 @@
 import os
-from os.path import join as opj
-from os.path import exists as ope
+from os.path import exists as ope, join as opj
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
@@ -14,21 +13,6 @@ from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
 from helpers.generic_helpers import _write_opt_log, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx
-
-""" HOW TO USE ME:
-- Be on perlmutter
-- Go to the directory of the optimized geometry you want to perform a bond scan on
-- Create a file called "scan_input" in that directory (see the read_scan_inputs function below for how to make that)
-- Copied below is an example submit.sh to run it
-- Make sure JDFTx.py's "constructInput" function is edited so that the "if" statement (around line 234) is given an
-else statement that sets "vc = v + "\n""
-- This script will read "CONTCAR" in the directory, and SAVES ANY ATOM FREEZING INFO (if you don't want this, make sure
-either there is no "F F F" after each atom position in your CONTCAR or make sure there is only "T T T" after each atom
-position (pro tip: sed -i 's/F F F/T T T/g' CONTCAR)
-- This script checks first for your "inputs" file for info on how to run this calculation - if you want to change this
-to a lower level (ie change kpoint-folding to 1 1 1), make sure you delete all the State output files from the directory
-(wfns, fillings, etc)
-"""
 
 
 opt_template = ["structure: POSCAR # Structure for optimization",
