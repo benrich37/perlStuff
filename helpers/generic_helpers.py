@@ -92,7 +92,11 @@ def get_int_dirs(dir_path):
                 int_dir_list.append(full_path)
             except ValueError:
                 continue
-    return int_dir_list
+    idcs = get_int_dirs_indices(int_dir_list)
+    int_dirs_sorted = []
+    for idx in idcs:
+        int_dirs_sorted.append(int_dir_list[idx])
+    return int_dirs_sorted
 
 
 def insert_el(filename):

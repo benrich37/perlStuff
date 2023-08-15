@@ -1,6 +1,5 @@
 import unittest
-from os.path import exists as ope
-from os.path import join as opj
+from os.path import exists as ope, join as opj, basename as basename
 import os
 from helpers import generic_helpers as gen
 from ase import Atoms
@@ -88,11 +87,14 @@ class TestIoHelpers(unittest.TestCase):
         self.assertEqual(len(int_dirs), nIntDirs)
         for d in int_dirs:
             self.assertEqual(int_dirs.count(d), 1)
-        splitters = ["/", "\\", "\\\\"]
+        last_int = None
         for d in int_dirs:
-            for s in splitters:
-                if s in d:
-                    self.assertIs(int(d.split(s)[-1]).__class__, int)
+            int_name = int(basename(d))
+            self.assertIs(int_name.__class__, int)
+            if last_int is None:
+                last_int = int_name
+            else:
+                self.assertTrue(int_name > last_int)
         gen.remove_dir_recursive(dir1)
 
     def test_log_generic(self):
