@@ -1,6 +1,6 @@
 from shutil import copy as cp
 import numpy as np
-from datetime import datetime as now
+from datetime import datetime as dt
 from ase import Atoms, Atom
 from ase.constraints import FixBondLength
 from os.path import join as opj, exists as ope, isfile, isdir, basename
@@ -317,7 +317,7 @@ def log_generic(message, work, fname, print_bool):
     message = str(message)
     if "\n" not in message:
         message = message + "\n"
-    prefix = now().strftime("%Y-%m-%d %H:%M:%S") + ": "
+    prefix = dt.now().strftime("%Y-%m-%d %H:%M:%S") + ": "
     message = prefix + message
     log_fname = opj(work, fname)
     if not ope(log_fname):
