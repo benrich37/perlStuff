@@ -19,10 +19,9 @@ def get_f(path):
 
 def get_fs(work):
     int_dirs = get_int_dirs(work)
-    indices = get_int_dirs_indices(int_dirs)
     fs = []
-    for i in indices:
-        fs.append(get_f(opj(work, int_dirs[i])))
+    for path in int_dirs:
+        fs.append(get_f(path))
     return fs
 
 def has_max(fs):

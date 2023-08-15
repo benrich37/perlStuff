@@ -388,6 +388,9 @@ def scan_is_finished(scan_dir, log_fn=log_def):
 
 
 
+
+
+
 if __name__ == '__main__':
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
         k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule = read_se_neb_inputs()

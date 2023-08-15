@@ -1,25 +1,27 @@
 import os
 from JDFTx import JDFTx
-from ase.io import write
+from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from os.path import join as opj, exists as ope, isdir,  basename
 from os import mkdir, getcwd,  chdir
+from shutil import copy as cp
 from ase.neb import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
-from helpers.calc_helpers import _get_calc_old, get_exe_cmd
+from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort
+from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.generic_helpers import _write_opt_log, check_for_restart, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
+from helpers.calc_helpers import _get_calc_old, get_exe_cmd
 from helpers.geom_helpers import get_bond_length
-from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
-from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, write_auto_schedule, \
     read_schedule_file, get_step_list, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
-from helpers.se_neb_helpers import j_steps_key, freeze_list_key
+from helpers.se_neb_helpers import j_steps_key, freeze_list_key, neb_key, extract_steps_key
+from helpers.neb_helpers import check_for_broken_path
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -342,7 +344,7 @@ def setup_img_dirs(neb_path, scan_path, scan_steps_int, restart_bool=False, log_
 
 def setup_neb_imgs(img_path_list, pbc_bool_list, get_calc_fn, log_fn=log_def, restart_bool=False):
     imgs = []
-    for i in range(len(img_path_list)):
+    for i, path in enumerate(img_path_list):
         img_dir = img_path_list[i]
         log_fn(f"Looking for structure for image {i} in {img_dir}")
         img = get_atoms(img_dir, pbc_bool_list, restart_bool=restart_bool, log_fn=log_fn)
@@ -352,31 +354,37 @@ def setup_neb_imgs(img_path_list, pbc_bool_list, get_calc_fn, log_fn=log_def, re
 
 
 
-def setup_neb(scan_steps_int, k_float, neb_method_str, pbc_bool_list, get_calc_fn, neb_path, scan_path,
-              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def, safe_mode=False):
-    if restart_bool:
-        if not ope(opj(neb_path,"hessian.pckl")):
-            log_fn(f"Restart NEB requested but no hessian pckl found - ignoring restart request")
-            restart_bool = False
-    log_fn(f"Setting up image directories in {neb_path}")
-    img_dirs, restart_bool = setup_img_dirs(neb_path, scan_path, scan_steps_int,
-                                            restart_bool=restart_bool, log_fn=log_fn, safe_mode=safe_mode)
+def can_restart(neb_dir, log_fn=log_def):
+    restart = ope(opj(neb_dir, "hessian.pckl"))
+    if restart:
+        log_fn(f"Found hessian pickle in {neb_dir}")
+        img_dirs = get_int_dirs(neb_dir)
+        for path in img_dirs:
+            restart = restart and ope(opj(path, "CONTCAR"))
+    return restart
+
+
+def setup_neb(neb_dir, k_float, neb_method_str, pbc_bool_list, get_calc_fn, opter_ase_fn=FIRE, log_fn=log_def):
+    log_fn(f"Checking if restart possible (if find hessian.pckl and CONTCARs)")
+    restart = can_restart(neb_dir, log_fn=log_fn)
+    use_ci = has_max(get_fs(neb_dir))
+    img_dirs = get_int_dirs(neb_dir)
     log_fn(f"Creating image objects")
-    imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
+    imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart, log_fn=log_fn)
     log_fn(f"Creating NEB object")
-    neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
+    neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci, k=k_float, method=neb_method_str)
     log_fn(f"Creating optimizer object")
-    dyn = neb_optimizer(neb, neb_path, opter=opter_ase_fn)
+    dyn = neb_optimizer(neb, neb_dir, opter=opter_ase_fn)
     log_fn(f"Attaching log functions to optimizer object")
-    traj = Trajectory(opj(neb_path, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
+    traj = Trajectory(opj(neb_dir, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)
     log_fn(f"Attaching log functions to each image")
-    for i in range(scan_steps_int):
-        dyn.attach(Trajectory(opj(img_dirs[i], 'opt-' + str(i) + '.traj'), 'w', imgs_atoms_list[i],
+    for i, img in enumerate(imgs_atoms_list):
+        dyn.attach(Trajectory(opj(img_dirs[i], 'opt-' + str(i) + '.traj'), 'w', img,
                               properties=['energy', 'forces']))
         dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
-    return dyn, restart_bool
+    return dyn, restart
 
 
 def scan_is_finished(scan_dir, log_fn=log_def):
@@ -385,6 +393,31 @@ def scan_is_finished(scan_dir, log_fn=log_def):
     last_step_path = int_dirs[idcs[-1]]
     last_is_finished = is_done(last_step_path, idcs[-1])
     return last_is_finished
+
+def full_init_neb_dirs(neb_dir, scan_dir, target_scan_steps, log_fn=log_def):
+    for i, idx in enumerate(target_scan_steps):
+        img_dir = opj(neb_dir, str(i))
+        source_dir = opj(scan_dir, str(idx))
+        mkdir(img_dir)
+        copy_state_files(source_dir, img_dir, log_fn=log_fn)
+        cp(opj(source_dir, "Ecomponents"), img_dir)
+        atoms = read(opj(source_dir, "CONTCAR"), format="vasp")
+        write(opj(img_dir, "POSCAR"), atoms, format="vasp")
+
+
+def full_init_neb(neb_dir, scan_dir, schedule, log_fn=log_def):
+    mkdir(neb_dir)
+    target_scan_steps = schedule[neb_key][extract_steps_key]
+    full_init_neb_dirs(neb_dir, scan_dir, target_scan_steps, log_fn=log_def)
+
+
+def init_neb(work_dir, scan_dir, schedule, log_fn=log_def):
+    neb_dir = opj(work_dir, "neb")
+    if not ope(neb_dir):
+        full_init_neb(neb_dir, scan_dir, schedule, log_fn=log_fn)
+    changed = check_for_broken_path(neb_dir, log_fn=log_fn)
+    return neb_dir
+
 
 
 
@@ -448,16 +481,11 @@ if __name__ == '__main__':
             write_scan_logx(scan_dir, log_fn=se_log)
     ####################################################################################################################
     se_log("Beginning NEB setup")
-    neb_dir = opj(work_dir, "neb")
-    if not ope(neb_dir):
-        se_log("No NEB dir found - setting restart to False for NEB")
-        skip_to_neb = False
-        mkdir(neb_dir)
-    use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES have a local maximum
+    neb_dir = init_neb(work_dir, scan_dir, schedule, log_fn=se_log)
+    use_ci = has_max(get_fs(neb_dir)) # Use climbing image if PES have a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
-    dyn_neb, skip_to_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
-                                     restart_bool=skip_to_neb, use_ci_bool=use_ci, log_fn=se_log)
+    dyn_neb, skip_to_neb = setup_neb(neb_dir, k, neb_method, pbc, get_calc, opter_ase_fn=FIRE, log_fn=se_log)
     if skip_to_neb:
         check_submit(gpu, getcwd(), "se_neb", log_fn=se_log)
     se_log("Running NEB now")

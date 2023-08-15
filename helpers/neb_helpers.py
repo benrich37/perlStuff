@@ -112,17 +112,18 @@ def reinit_neb_from_broken_path(neb_dir, bpsdir, log_fn=log_def):
 
 def check_for_broken_path(neb_dir, log_fn=log_def):
     bpsdir = opj(neb_dir, "broken_paths")
-    if is_broken_path(neb_dir, log_fn=log_fn):
+    changing = is_broken_path(neb_dir, log_fn=log_fn)
+    if changing:
         log_fn(f"Removing outlier images from {neb_dir}")
         save_broken_path(neb_dir, bpsdir, log_fn=log_fn)
+    return changing
 
 
 def get_good_idcs(neb_dir):
     int_dirs = get_int_dirs(neb_dir)
-    int_dirs_idcs = get_int_dirs_indices(int_dirs)
     fs = []
-    for idx in int_dirs_idcs:
-        en = read_f(int_dirs[idx])
+    for int_dir in int_dirs:
+        en = read_f(int_dir)
         fs.append(en)
     gidcs = get_good_idcs_helper(fs)
     return gidcs
