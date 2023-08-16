@@ -3,8 +3,10 @@
 This library holds functions meant for JDFTx calculations on perlMutter. These are meant to be a more hands on "step 2" from gc-manager calculations, so make sure that is set up before 
 running these.
 
+NOTE: This repo is under heavy constructions, so pull updates often! (go to your repo clone directory and run `git pull origin`)
+
 The main python scripts for this library (ie opt.py, scan_bond.py, se_neb.py, etc). In order to run these in the way intended, follow these instructions
-1. Clone this repo onto your perlMutter home directory.
+1. Clone this repo onto your perlMutter home directory. (go to your home directory and run `git clone (ssh url for this repo)`)
 2. Give the path to the perlStuff directory an environmental variable alias (ie for me, I have the line "export pstuff=$HOME/perlStuff" in my .bashrc, so that I can call
    opt.py for example as $pstuff/opt.py
 3. Go to the directory created by gc-manager which contains the system you want to use one of these scripts on, and directly run the script through command line
