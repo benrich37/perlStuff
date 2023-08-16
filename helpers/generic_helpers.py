@@ -449,14 +449,14 @@ def dump_template_input(fname, template, cwd):
     with open(opj(cwd, fname), "w") as f:
         f.write(dump_str)
 
+submit_fname = "psubmit.sh"
+
 
 def check_submit(gpu, cwd, jobtype, log_fn=log_def):
-    fname = opj(cwd, "submit.sh")
+    fname = opj(cwd, submit_fname)
     if not ope(fname):
-        log_def(f"No submit.sh found in work dir - assuming we're in a dry run")
-        log_def(f"Dumping template submit.sh and aborting")
-        log_fn(f"No submit.sh found in work dir - assuming we're in a dry run")
-        log_fn(f"Dumping template submit.sh and aborting")
+        log_fn(f"No {submit_fname} found in work dir - assuming we're in a dry run")
+        log_fn(f"Dumping template {submit_fname} and aborting")
         if gpu:
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
         run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
@@ -657,7 +657,7 @@ def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
     ret_val = check_for_restart_helper(e, failed_before, opt_dir, log_fn=log_fn)
     if not ret_val:
         err_str = "Could not run jdftx calculator - check iolog for more details"
-        err_str += "\n \t (if you are running this through command line, you are all set to sbatch submit.sh)"
+        err_str += f"\n \t (if you are running this through command line, you are all set to sbatch {submit_fname})"
         raise ValueError(err_str)
     return True
 
