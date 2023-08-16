@@ -1,7 +1,6 @@
 # perlStuff
 
-This library holds functions meant for JDFTx calculations on perlMutter. These are meant to be a more hands on "step 2" from gc-manager calculations, so make sure that is set up before 
-running these.
+This library holds functions meant for JDFTx calculations on perlMutter. These are meant to be a more hands on "step 2" from gc-manager calculations, so make sure that is running properly before running these. Additionally, make sure your python executable is at least v3.0, and has the ASE package installed.
 
 NOTE: This repo is under heavy constructions, so pull updates often! (go to your repo clone directory and run `git pull origin`)
 
