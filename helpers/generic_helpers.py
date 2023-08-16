@@ -457,6 +457,8 @@ def check_submit(gpu, cwd, jobtype, log_fn=log_def):
     if not ope(fname):
         log_fn(f"No {submit_fname} found in work dir - assuming we're in a dry run")
         log_fn(f"Dumping template {submit_fname} and aborting")
+        print(f"No {submit_fname} found in work dir - assuming we're in a dry run")
+        print(f"Dumping template {submit_fname} and aborting")
         if gpu:
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
         run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
