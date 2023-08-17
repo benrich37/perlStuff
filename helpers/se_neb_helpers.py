@@ -250,8 +250,8 @@ def autofill_schedule(step_atoms, scan_steps, step_size, guess_type, j_steps, co
     return schedule
 
 
-def write_auto_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples, relax_start,
-                        relax_end, neb_steps, k, neb_method, work_dir):
+def write_autofill_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples, relax_start,
+                            relax_end, neb_steps, k, neb_method, work_dir):
     fname = opj(work_dir, "schedule")
     schedule = autofill_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples,
                                  relax_start, relax_end, neb_steps, k, neb_method)

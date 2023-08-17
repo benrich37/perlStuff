@@ -55,9 +55,9 @@ class TestScheduleReaders(unittest.TestCase):
             gen.remove_dir_recursive(self.work_dir)
 
     def test_self_consistency(self):
-        se.write_auto_schedule(self.step_atoms, self.scan_steps, self.step_size, self.guess_type, self.j_steps,
-                               self.freeze_list, self.relax_start, self.relax_end, self.neb_steps, self.k,
-                               self.neb_method, self.work_dir)
+        se.write_autofill_schedule(self.step_atoms, self.scan_steps, self.step_size, self.guess_type, self.j_steps,
+                                   self.freeze_list, self.relax_start, self.relax_end, self.neb_steps, self.k,
+                                   self.neb_method, self.work_dir)
         schedule = se.read_schedule_file(self.work_dir)
         nSteps = len(schedule) - 1
         self.assertEqual(nSteps,self.scan_steps)
@@ -93,9 +93,9 @@ class TestScheduleReaders(unittest.TestCase):
                             self.assertEqual(idx, self.custom_schedule[key1][key2][i][j])
 
     def test_key_ordering(self):
-        se.write_auto_schedule(self.step_atoms, self.scan_steps, self.step_size, self.guess_type, self.j_steps,
-                               self.freeze_list, self.relax_start, self.relax_end, self.neb_steps, self.k,
-                               self.neb_method, self.work_dir)
+        se.write_autofill_schedule(self.step_atoms, self.scan_steps, self.step_size, self.guess_type, self.j_steps,
+                                   self.freeze_list, self.relax_start, self.relax_end, self.neb_steps, self.k,
+                                   self.neb_method, self.work_dir)
         schedule = se.read_schedule_file(self.work_dir)
         prev = None
         for key in schedule.keys():

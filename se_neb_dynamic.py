@@ -19,7 +19,7 @@ from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, ch
 from helpers.calc_helpers import _get_calc_old, get_exe_cmd
 from helpers.geom_helpers import get_bond_length
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx, traj_to_logx_appendable, terminate_logx
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, write_auto_schedule, \
+from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, write_autofill_schedule, \
     read_schedule_file, get_step_list, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
 from helpers.se_neb_helpers import j_steps_key, freeze_list_key, neb_key, extract_steps_key
 from helpers.neb_helpers import check_for_broken_path
@@ -456,8 +456,8 @@ if __name__ == '__main__':
     gpu = True # Make this an input argument eventually
     chdir(work_dir)
     if not schedule:
-        write_auto_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start, relax_end,
-                            neb_steps, k, neb_method, work_dir)
+        write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start, relax_end,
+                                neb_steps, k, neb_method, work_dir)
     schedule = read_schedule_file(work_dir)
     scan_dir = opj(work_dir, "scan")
     restart_at = get_restart_idx(restart_at, scan_dir) # If was none, finds most recently converged step
