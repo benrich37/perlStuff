@@ -20,8 +20,7 @@ The main python scripts for this library (ie opt.py, scan_bond.py, se_neb.py, et
    indicating that your caclulation is ready for submitting.
 7. Check the .iolog file (ie opt.iolog) for info on how the dry run performed the calculation setup to make sure everything went according to your liking.
 8. Submit the slurm script (`sbatch psubmit.sh`)
-9. Check the .iolog file for progress updates. This file contains a verbose log of what the script is doing along with timestamps. Unfortunately, failed calculations
-   within these scripts will appear as "COMPLETED" instead of "FAILED", so manual results inspection is necessary.
+9. Check the .iolog file for progress updates. This file contains a verbose log of what the script is doing along with timestamps. Now calculations will say failed if they failed!
 
 This library makes heavy use of ".logx" files for showing optimizations to the user. These can be opened in gaussview. These will occasionally also store the Lowdin charges
 (called mulliken charges so that gaussview can parse them), but otherwise these contain the same information as the .traj files we usually look at. 
