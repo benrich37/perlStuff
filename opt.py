@@ -13,10 +13,11 @@ from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
 from helpers.generic_helpers import _write_opt_log, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx
+from sys import exit, stderr
 
 
 opt_template = ["structure: POSCAR # Structure for optimization",
-                "fmax: 0.02 # Max force for convergence criteria",
+                "fmax: 0.04 # Max force for convergence criteria",
                 "max_steps: 100 # Max number of steps before exit",
                 "gpu: True # Whether or not to use GPU (much faster)",
                 "restart: False # Whether to get structure from lat/opt dirs or from input structure",
@@ -250,8 +251,7 @@ def run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed
     if run_again:
         run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed_before=True)
 
-
-if __name__ == '__main__':
+def main():
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft = read_opt_inputs()
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
@@ -267,7 +267,7 @@ if __name__ == '__main__':
     do_cell = get_do_cell(pbc)
     atoms.pbc = pbc
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
-    if (lat_iters > 0) and (not ope(opj(lat_dir,"finished.txt"))):
+    if (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt"))):
         atoms, structure = run_lat_opt(atoms, structure, lat_iters, lat_dir, work_dir, opt_log, cmds)
     opt_log(f"Finding/copying any state files to {opt_dir}")
     copy_best_state_files([work_dir, lat_dir], opt_dir, log_fn=opt_log)
@@ -277,3 +277,13 @@ if __name__ == '__main__':
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
         run_ase_opt(atoms, opt_dir, FIRE, do_cell, opt_log, exe_cmd, cmds)
+
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as e:
+        print(f"Error: {e}", file=stderr)
+        exit(1)
+

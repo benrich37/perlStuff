@@ -52,14 +52,11 @@ submit_gpu_perl_ref = [
     "#SBATCH --gpus-per-task=1",
     "#SBATCH --gpu-bind=none",
     "#SBATCH -A m4025_g\n",
-    "#module use --append /global/cfs/cdirs/m4025/Software/Perlmutter/modules",
-    "#module load jdftx/gpu\n",
     "export JDFTx_NUM_PROCS=1",
     "export SLURM_CPU_BIND=\"cores\"",
     "export JDFTX_MEMPOOL_SIZE=36000",
     "export MPICH_GPU_SUPPORT_ENABLED=1\n",
     "python bar > foo.out",
-    "exit 0"
 ]
 
 
@@ -481,14 +478,22 @@ def read_pbc_val(val):
     return pbc
 
 
-def read_f(path):
+def read_nrg(path):
+    G = None
+    F = None
     base_f = "Ecomponents"
     if basename(path) != base_f:
         path = opj(path, base_f)
     with open(path, "r") as f:
         for line in f:
             if "F =" in line:
-                return float(line.strip().split("=")[1])
+                F = float(line.strip().split("=")[1])
+            elif "G =" in line:
+                G = float(line.strip().split("=")[1])
+    if not G is None:
+        return G
+    else:
+        return F
 
 
 def _write_opt_log(atoms, dyn, max_steps, log_fn):

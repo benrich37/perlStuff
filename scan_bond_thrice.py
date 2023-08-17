@@ -10,7 +10,7 @@ import shutil
 from helpers.generic_helpers import optimizer, read_pbc_val, get_inputs_list, add_bond_constraints, get_log_fn, \
     get_cmds, write_contcar
 from helpers.calc_helpers import _get_calc_old, get_exe_cmd
-from helpers.generic_helpers import dump_template_input, read_f
+from helpers.generic_helpers import dump_template_input, read_nrg
 
 """ HOW TO USE ME:
 - Be on perlmutter
@@ -187,6 +187,6 @@ if __name__ == '__main__':
             prep_input(i, atom_pair, step_length, j, start_length)
             if not debug:
                 run_step(f'{str(i)}/{str(j)}/', atom_pair, pbc, thrice_log, fmax=0.1, max_steps=50)
-            fs_cur.append(read_f(f"./{str(i)}/{str(j)}/"))
+            fs_cur.append(read_nrg(f"./{str(i)}/{str(j)}/"))
         best_j = fs_cur.index(np.min(fs_cur))
         copy_files(f"./{str(i)}/{best_j}", f"./{str(i)}")

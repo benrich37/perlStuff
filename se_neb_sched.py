@@ -40,7 +40,7 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
                    "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
                    "# optimizes final structure without frozen bond",
-                   "# safe mode: True # (Not implemented yet) If end is relaxed and bond length becomes",]
+                   "# safe mode: True # (Not implemented yet) If end is relaxed, scan images with bond lengths exceeding/smaller than this length",]
 
 def read_se_neb_inputs(fname="se_neb_inputs"):
     if not ope(fname):
