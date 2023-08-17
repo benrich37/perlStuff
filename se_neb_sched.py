@@ -40,6 +40,7 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
                    "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
                    "# optimizes final structure without frozen bond",
+                   "gpu: False"
                    "# safe mode: True # (Not implemented yet) If end is relaxed, scan images with bond lengths exceeding/smaller than this length",]
 
 def read_se_neb_inputs(fname="se_neb_inputs"):
@@ -64,8 +65,11 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     safe_mode = False
     jdft_steps = 5
     schedule = False
+    gpu = False
     for input in inputs:
         key, val = input[0], input[1]
+        if "gpu" in key:
+            gpu = "true" in val.lower()
         if "scan" in key:
             if "schedule" in val:
                 schedule = True
@@ -114,7 +118,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if schedule:
         scan_steps = count_scan_steps(work_dir)
     return atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method,\
-        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule
+        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu
 
 
 def parse_lookline(lookline):
@@ -393,8 +397,7 @@ def scan_is_finished(scan_dir, log_fn=log_def):
 
 if __name__ == '__main__':
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
-        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule = read_se_neb_inputs()
-    gpu = True # Make this an input argument eventually
+        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu = read_se_neb_inputs()
     chdir(work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start, relax_end,
