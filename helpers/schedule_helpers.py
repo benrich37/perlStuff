@@ -315,6 +315,7 @@ def append_comments_to_contents(schedule, contents):
 
 
 def append_results_as_comments(schedule, work_dir):
+    write_schedule_dict(schedule, work_dir)
     fname = opj(work_dir, "schedule")
     with open(fname, "r") as f:
         contents = f.readlines()
