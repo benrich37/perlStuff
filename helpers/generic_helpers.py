@@ -66,15 +66,14 @@ submit_cpu_perl_ref = [
     "#SBATCH --time=1:00:00",
     "#SBATCH -o foo.out",
     "#SBATCH -e foo.err",
-    "#SBATCH -q regular_ss11",
+    "#SBATCH -q regular",
     "#SBATCH -N 1",
-    "#SBATCH -c 64",
     "#SBATCH --ntasks-per-node=4",
     "#SBATCH -C cpu",
     "#SBATCH -A m4025",
-    "#SBATCH --hint=nomultithread",
+    "#SBATCH --hint=nomultithread\n",
     "# module use /global/cfs/cdirs/m4025/Software/Perlmutter/modules",
-    "# module load jdftx/cpu"
+    "# module load jdftx/cpu\n"
     "export SLURM_CPU_BIND=\"cores\"",
     "python bar > foo.out",
 ]
