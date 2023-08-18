@@ -145,7 +145,7 @@ def log_input_orientation(atoms, do_cell=False):
 
 def opt_spacer(i, nSteps):
     dump_str = "\n GradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGrad\n"
-    dump_str += f"\n Step number   {i+1}\n"
+    dump_str += f"\n Step number   {i}\n"
     if i == nSteps:
         dump_str += " Optimization completed.\n"
         dump_str += "    -- Stationary point found.\n"
