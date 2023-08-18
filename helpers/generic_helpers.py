@@ -71,7 +71,8 @@ submit_cpu_perl_ref = [
     "#SBATCH -c 64",
     "#SBATCH --ntasks-per-node=4",
     "#SBATCH -C cpu",
-    "#SBATCH -A m4025_g\n",
+    "#SBATCH -A m4025",
+    "#SBATCH --hint=nomultithread",
     "# module use /global/cfs/cdirs/m4025/Software/Perlmutter/modules",
     "# module load jdftx/cpu"
     "export SLURM_CPU_BIND=\"cores\"",
