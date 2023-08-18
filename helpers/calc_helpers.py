@@ -4,6 +4,7 @@ from helpers.generic_helpers import log_def
 
 
 def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
+    print("Ben - stop using this one it's redundant")
     if debug:
         return debug_calc()
     else:
