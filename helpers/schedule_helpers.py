@@ -271,7 +271,7 @@ def get_prop_comment_str(prop):
     for i in range(nMems):
         if i > 0:
             prop_str += ", "
-        prop_str += f"{prop[i] + 1}"
+        prop_str += f"{prop[i]}" # This should be an atom string (ie C(4))
     prop_str += f"] = {prop[-1]:.5f}"
     return prop_str
 
