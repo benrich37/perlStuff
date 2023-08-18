@@ -294,7 +294,7 @@ def get_step_results_insert_index(i, contents):
     for idx, line in enumerate(contents):
         if ":" in line:
             if str(i) == line.split(":")[0].strip():
-                return idx
+                return idx + 1
     raise ValueError(f"Could not find appropriate insert index for step {i}")
 
 
