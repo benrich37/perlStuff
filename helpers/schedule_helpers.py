@@ -276,7 +276,7 @@ def get_prop_comment_str(prop):
 
 def get_props_comment_str(schedule, i):
     return_str = ""
-    props = schedule[i][properties_key]
+    props = schedule[str(i)][properties_key]
     for prop in props:
         return_str += get_prop_comment_str(prop)
     return return_str
