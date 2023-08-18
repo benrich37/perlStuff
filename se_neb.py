@@ -13,7 +13,7 @@ from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, ge
     get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
-from helpers.calc_helpers import _get_calc_old, get_exe_cmd
+from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_log, check_for_restart, bond_str, log_and_abort
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
@@ -187,7 +187,7 @@ def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
 
 def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
     ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
-    atoms_obj.set_calculator(_get_calc_old(exe_cmd, ion_cmds, ion_dir_path, JDFTx, log_fn=log_fn))
+    atoms_obj.set_calculator(_get_calc(exe_cmd, ion_cmds, ion_dir_path, log_fn=log_fn))
     log_fn("lattice optimization starting")
     log_fn(f"Fmax: n/a, max_steps: {ion_iters_int}")
     pbc = atoms_obj.pbc
@@ -517,9 +517,9 @@ if __name__ == '__main__':
         lat_opt_cmds = get_lattice_cmds(cmds, max_steps, pbc=pbc)
     else:
         lat_opt_cmds = get_ionic_opt_cmds(cmds, max_steps)
-    get_calc = lambda root: _get_calc_old(exe_cmd, cmds, root, JDFTx, debug=False, log_fn=se_log)
-    get_ionopt_calc = lambda root: _get_calc_old(exe_cmd, ion_opt_cmds, root, JDFTx, debug=False, log_fn=se_log)
-    get_latopt_calc = lambda root: _get_calc_old(exe_cmd, lat_opt_cmds, root, JDFTx, debug=False, log_fn=se_log)
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
+    get_ionopt_calc = lambda root: _get_calc(exe_cmd, ion_opt_cmds, root, debug=False, log_fn=se_log)
+    get_latopt_calc = lambda root: _get_calc(exe_cmd, lat_opt_cmds, root, debug=False, log_fn=se_log)
     ####################################################################################################################
     if not skip_to_neb:
         se_log("Entering scan")

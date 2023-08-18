@@ -165,6 +165,8 @@ guess_type_key = "guess_type"
 j_steps_key = "jdftx_steps"
 freeze_list_key = "freeze_list"
 target_bool_key = "target"
+energy_key = "nrg"
+properties_key = "props"
 
 
 def write_step_to_schedule_dict(schedule, idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples):
@@ -175,6 +177,84 @@ def write_step_to_schedule_dict(schedule, idx, scan_pair, step_val, target_bool,
     schedule[str(idx)][guess_type_key] = guess_type
     schedule[str(idx)][j_steps_key] = j_steps
     schedule[str(idx)][freeze_list_key] = constraint_tuples
+    schedule[str(idx)][energy_key] = None
+    schedule[str(idx)][properties_key] = None
+
+
+def count_scan_steps_from_schedule(schedule):
+    scan_steps = []
+    for key in schedule.keys():
+        try:
+            scan_int = int(key)
+            scan_steps.append(scan_int)
+        except:
+            pass
+    return max(scan_steps) + 1
+
+
+def get_nrg_comment_str(schedule, i):
+    nrg = schedule[i][energy_key]
+    return f"{nrg}"
+
+def get_prop_comment_str(prop):
+    prop_str = ""
+    nMems = len(prop) - 1
+    for i in range(nMems):
+        if i > 0:
+            prop_str += ", "
+        prop_str += f"{prop[i]}"
+    prop_str += f" = {prop[-1]}"
+    return prop_str
+
+
+def get_props_comment_str(schedule, i):
+    return_str = ""
+    props = schedule[i][properties_key]
+    for prop in props:
+        return_str += get_prop_comment_str(prop)
+    return return_str
+
+
+def get_step_results_comment_str(schedule, i):
+    comment_str = f"# {i}:"
+    comment_str += get_nrg_comment_str(schedule, i)
+    comment_str += get_props_comment_str(schedule, i)
+    comment_str += "\n"
+    return comment_str
+
+def get_step_results_insert_index(i, contents):
+    for idx, line in enumerate(contents):
+        if ":" in line:
+            if str(i) == line.split(":")[0].strip():
+                return idx
+    raise ValueError(f"Could not find appropriate insert index for step {i}")
+
+
+
+def append_step_results_to_contents(schedule, i, contents):
+    comment_str = get_step_results_comment_str(schedule, i)
+    idx = get_step_results_insert_index(i, contents)
+    contents.insert(idx, comment_str)
+    return contents
+
+
+
+def append_comments_to_contents(schedule, contents):
+    nSteps = count_scan_steps_from_schedule(schedule)
+    for i in range(nSteps):
+        nrg = schedule[str(i)][energy_key]
+        if not nrg is None:
+            contents = append_step_results_to_contents(schedule, i, contents)
+
+def append_results_as_comments(schedule, work_dir):
+    fname = opj(work_dir, "schedule")
+    with open(fname, "r") as f:
+        contents = f.readlines()
+    append_comments_to_contents(schedule, contents)
+    with open(fname, "w") as f:
+        contents = "".join(contents)
+        f.write(contents)
+
 
 
 neb_key = "neb"
@@ -182,6 +262,7 @@ neb_steps_key = "neb_steps"
 neb_k_key = "k"
 neb_method_key = "neb_method"
 extract_steps_key = "from"
+
 
 
 def write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, extract_step_idcs):

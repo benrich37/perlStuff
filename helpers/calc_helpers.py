@@ -3,7 +3,7 @@ from JDFTx import JDFTx
 from helpers.generic_helpers import log_def
 
 
-def set_calc(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
+def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
     if debug:
         return debug_calc()
     else:
@@ -17,14 +17,13 @@ def set_calc(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
     )
 
 
-def _get_calc_old(exe_cmd, cmds, root, jdftx_fn, debug=False, debug_fn=None, log_fn=log_def):
-    print("Ben - use set_calc instead")
+def _get_calc(exe_cmd, cmds, root, debug=False, debug_fn=None, log_fn=log_def):
     if debug:
         log_fn("Setting calc to debug calc")
         return debug_fn()
     else:
         log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
-        return jdftx_fn(
+        return JDFTx(
             executable=exe_cmd,
             pseudoSet="GBRV_v1.5",
             commands=cmds,

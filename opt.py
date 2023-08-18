@@ -8,7 +8,7 @@ from datetime import datetime
 from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
-from helpers.calc_helpers import _get_calc_old, get_exe_cmd
+from helpers.calc_helpers import _get_calc, get_exe_cmd, set_calc_old
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
 from helpers.generic_helpers import _write_opt_log, check_for_restart, log_def, check_structure, log_and_abort
@@ -152,7 +152,7 @@ def get_structure(structure, restart, opt_dir, lat_dir, lat_iters, use_jdft, log
 
 def run_lat_opt_runner(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds):
     lat_cmds = get_lattice_cmds(cmds, lat_iters, atoms.pbc)
-    get_lat_calc = lambda root: _get_calc_old(exe_cmd, lat_cmds, root, JDFTx, log_fn=log_fn)
+    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, log_fn=log_fn)
     atoms.set_calculator(get_lat_calc(lat_dir))
     log_fn("lattice optimization starting")
     log_fn(f"Fmax: n/a, max_steps: {lat_iters}")
@@ -185,7 +185,7 @@ def run_lat_opt(atoms, structure, lat_iters, lat_dir, root, log_fn, cmds, _faile
 
 def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
     ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
-    atoms_obj.set_calculator(_get_calc_old(exe_cmd, ion_cmds, ion_dir_path, JDFTx, log_fn=log_fn))
+    atoms_obj.set_calculator(_get_calc(exe_cmd, ion_cmds, ion_dir_path, log_fn=log_fn))
     log_fn("ionic optimization starting")
     log_fn(f"Fmax: n/a, max_steps: {ion_iters_int}")
     pbc = atoms_obj.pbc
@@ -199,7 +199,7 @@ def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn
     atoms_obj.pbc = pbc
     structure_path = opj(ion_dir_path, "CONTCAR")
     write(structure_path, atoms_obj, format="vasp")
-    opt_log(f"Finished ionic optimization in {len(atoms_obj_list) - 1}/{ion_iters_int}")
+    log_fn(f"Finished ionic optimization in {len(atoms_obj_list) - 1}/{ion_iters_int}")
     finished(ion_dir_path)
     out_to_logx(ion_dir_path, opj(ion_dir_path, 'out'), log_fn=log_fn)
     return atoms_obj
@@ -218,7 +218,7 @@ def run_ion_opt(atoms_obj, ion_iters_int, ion_dir_path, root_path, cmds_list, _f
     return atoms_obj
 
 
-def run_ase_opt_runner(atoms, root, opter, do_cell, log_fn):
+def run_ase_opt_runner(atoms, root, opter, do_cell, fmax, max_steps, log_fn=log_def):
     dyn = optimizer(atoms, root, opter)
     traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
     logx = opj(root, "opt.logx")
@@ -238,18 +238,18 @@ def run_ase_opt_runner(atoms, root, opter, do_cell, log_fn):
     finished(root)
 
 
-def run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed_before = False):
-    get_calc = lambda root: _get_calc_old(exe_cmd, cmds, root, JDFTx, log_fn=log_fn)
+def run_ase_opt(atoms, opt_dir, opter, cell_bool, exe_cmd, cmds, fmax, max_steps, log_fn=log_def, _failed_before=False):
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, log_fn=log_fn)
     atoms.set_calculator(get_calc(opt_dir))
     run_again = False
     try:
-        run_ase_opt_runner(atoms, opt_dir, opter, cell_bool, log_fn)
+        run_ase_opt_runner(atoms, opt_dir, opter, cell_bool, fmax, max_steps, log_fn=log_fn)
     except Exception as e:
         check_for_restart(e, _failed_before, opt_dir, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
-        run_ase_opt(atoms, opt_dir, opter, cell_bool, log_fn, exe_cmd, cmds, _failed_before=True)
+        run_ase_opt(atoms, opt_dir, opter, cell_bool, exe_cmd, cmds, fmax, max_steps, log_fn=log_fn, _failed_before=True)
 
 def main():
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft = read_opt_inputs()
@@ -276,7 +276,7 @@ def main():
         run_ion_opt(atoms, max_steps, opt_dir, work_dir, cmds, log_fn=opt_log)
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
-        run_ase_opt(atoms, opt_dir, FIRE, do_cell, opt_log, exe_cmd, cmds)
+        run_ase_opt(atoms, opt_dir, FIRE, do_cell, exe_cmd, cmds, fmax, max_steps, log_fn=log_def)
 
 
 

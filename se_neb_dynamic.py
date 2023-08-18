@@ -16,7 +16,7 @@ from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.generic_helpers import _write_opt_log, check_for_restart, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
-from helpers.calc_helpers import _get_calc_old, get_exe_cmd
+from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.geom_helpers import get_bond_length
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx, traj_to_logx_appendable, terminate_logx
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, write_autofill_schedule, \
@@ -139,7 +139,7 @@ def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
 
 def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
     ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
-    atoms_obj.set_calculator(_get_calc_old(exe_cmd, ion_cmds, ion_dir_path, JDFTx, log_fn=log_fn))
+    atoms_obj.set_calculator(_get_calc(exe_cmd, ion_cmds, ion_dir_path, log_fn=log_fn))
     log_fn("lattice optimization starting")
     log_fn(f"Fmax: n/a, max_steps: {ion_iters_int}")
     pbc = atoms_obj.pbc
@@ -477,9 +477,11 @@ if __name__ == '__main__':
     cmds = get_cmds(work_dir, ref_struct="POSCAR")
     exe_cmd = get_exe_cmd(True, se_log)
     ion_opt_cmds = get_ionic_opt_cmds(cmds, j_steps)
-    get_calc = lambda root: _get_calc_old(exe_cmd, cmds, root, JDFTx, debug=False, log_fn=se_log)
-    get_ionopt_calc = lambda root, nMax: _get_calc_old(exe_cmd, get_ionic_opt_cmds(cmds, nMax), root, JDFTx, debug=False, log_fn=se_log)
-    get_latopt_calc = lambda root, nMax: _get_calc_old(exe_cmd, get_lattice_cmds(cmds, nMax, pbc=pbc), root, JDFTx, debug=False, log_fn=se_log)
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
+    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds(cmds, nMax), root, debug=False,
+                                                   log_fn=se_log)
+    get_latopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_lattice_cmds(cmds, nMax, pbc=pbc), root, debug=False,
+                                                   log_fn=se_log)
     ####################################################################################################################
     if not skip_to_neb:
         se_log("Entering scan")

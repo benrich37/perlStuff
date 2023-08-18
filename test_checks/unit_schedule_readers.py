@@ -30,7 +30,9 @@ class TestScheduleReaders(unittest.TestCase):
                 se.target_bool_key: False,
                 se.guess_type_key: 1,
                 se.j_steps_key: 100,
-                se.freeze_list_key: [[2, 3], [2, 3, 4]]
+                se.freeze_list_key: [[2, 3], [2, 3, 4]],
+                se.energy_key: None,
+                se.properties_key: None,
             },
             "1": {
                 se.step_atoms_key: [5, 3],
@@ -38,7 +40,9 @@ class TestScheduleReaders(unittest.TestCase):
                 se.target_bool_key: False,
                 se.guess_type_key: 0,
                 se.j_steps_key: 0,
-                se.freeze_list_key: [[5, 3], [2, 3, 4], [1, 2, 3]]
+                se.freeze_list_key: [[5, 3], [2, 3, 4], [1, 2, 3]],
+                se.energy_key: None,
+                se.properties_key: None,
             },
             "2": {
                 se.step_atoms_key: [5, 10],
@@ -46,7 +50,9 @@ class TestScheduleReaders(unittest.TestCase):
                 se.target_bool_key: False,
                 se.guess_type_key: 0,
                 se.j_steps_key: 0,
-                se.freeze_list_key: [[5, 3], [2, 3, 4], [1, 2, 3]]
+                se.freeze_list_key: [[5, 3], [2, 3, 4], [1, 2, 3]],
+                se.energy_key: None,
+                se.properties_key: None,
             }
         }
 
@@ -104,6 +110,11 @@ class TestScheduleReaders(unittest.TestCase):
             else:
                 if not key == se.neb_key:
                     self.assertTrue(int(key) > prev)
+
+    def test_count_steps(self):
+        expected = 3
+        found = se.count_scan_steps_from_schedule(self.custom_schedule)
+        self.assertEqual(expected, found)
 
 
 

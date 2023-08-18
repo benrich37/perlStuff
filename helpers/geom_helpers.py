@@ -44,11 +44,32 @@ def get_angle(p1, p2, p3):
     theta = np.arccos(np.dot(v1, v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)))
     return theta*(180/np.pi)
 
+def get_bond_angle(atoms, indices):
+    p1 = atoms.positions[indices[0]]
+    p2 = atoms.positions[indices[1]]
+    p3 = atoms.positions[indices[2]]
+    angle = get_angle(p1, p2, p3)
+    return angle
+
 
 def get_bond_length(atoms, indices):
     posn1 = atoms.positions[indices[0]]
     posn2 = atoms.positions[indices[1]]
     return np.linalg.norm(posn2 - posn1)
+
+def get_property(atoms, indices):
+    property = None
+    if len(indices) <= 1:
+        raise ValueError("A property must include at least two atoms")
+    elif len(indices) == 2:
+        property = get_bond_length(atoms, indices)
+    elif len(indices) == 3:
+        property = get_bond_angle(atoms, indices)
+    elif len(indices) == 4:
+        raise ValueError("Dihedral angles not yet supported")
+    elif len(indices) > 4:
+        raise ValueError("A property may not include more than 4 atoms")
+    return property
 
 
 def step_bond_with_momentum(atom_pair, step_length, atoms_prev_2, atoms_prev_1):
