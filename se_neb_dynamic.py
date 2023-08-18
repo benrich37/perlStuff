@@ -18,9 +18,9 @@ from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, ch
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.geom_helpers import get_bond_length
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx, traj_to_logx_appendable, terminate_logx
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, write_autofill_schedule, \
-    read_schedule_file, get_step_list, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
-from helpers.se_neb_helpers import j_steps_key, freeze_list_key, neb_key, extract_steps_key
+from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
+from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freeze_list_key, neb_key, extract_steps_key, \
+    read_schedule_file, get_step_list
 from helpers.neb_helpers import check_for_broken_path
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",

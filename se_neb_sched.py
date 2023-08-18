@@ -17,9 +17,9 @@ from helpers.geom_helpers import get_bond_length
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, write_autofill_schedule, \
-    read_schedule_file, get_step_list, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
-from helpers.se_neb_helpers import j_steps_key, freeze_list_key
+from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
+from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freeze_list_key, read_schedule_file, \
+    get_step_list
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
