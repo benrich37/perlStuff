@@ -172,6 +172,8 @@ def get_schedule_neb_str(schedule_dict_val):
 
 
 def read_schedule_neb_line(line):
+    if "#" in line:
+        line = line.split("#")[0]
     groups = line.split(":")[1].rstrip("\n").strip().split("|")
     g1 = groups[0].split(",")
     g2 = groups[1].split(",")
@@ -283,7 +285,8 @@ def get_props_comment_str(schedule, i):
 
 
 def get_step_results_comment_str(schedule, i):
-    comment_str = f"# {i}: "
+    # comment_str = f"# {i}: "
+    comment_str = f"Results: "
     comment_str += get_nrg_comment_str(schedule, i)
     comment_str += "\t"
     comment_str += get_props_comment_str(schedule, i)
@@ -295,14 +298,15 @@ def get_step_results_insert_index(i, contents):
     for idx, line in enumerate(contents):
         if ":" in line:
             if str(i) == line.split(":")[0].strip():
-                return idx + 1
+                return idx
     raise ValueError(f"Could not find appropriate insert index for step {i}")
 
 
 def append_step_results_to_contents(schedule, i, contents):
     comment_str = get_step_results_comment_str(schedule, i)
     idx = get_step_results_insert_index(i, contents)
-    contents.insert(idx, comment_str)
+    contents[idx] = contents[idx] + comment_str
+    # contents.insert(idx, comment_str)
     return contents
 
 
