@@ -392,7 +392,7 @@ def scan_is_finished(scan_dir, log_fn=log_def):
 
 
 def get_properties_for_step(schedule, idx, step_dir):
-    atoms = get_atoms(step_dir, [False, False, False], restart_bool=True)
+    atoms = get_atoms(step_dir, [False, False, False], restart_bool=True, log_fn=lambda s: None)
     prop_idcs_list = get_prop_idcs_list(schedule, idx)
     tmp = []
     for idcs in prop_idcs_list:
