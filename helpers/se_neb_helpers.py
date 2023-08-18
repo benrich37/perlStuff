@@ -7,22 +7,16 @@ from time import time
 import numpy as np
 
 from helpers.generic_helpers import get_int_dirs, get_atoms, bond_str, atom_str, log_and_abort, \
-    copy_state_files, remove_dir_recursive, time_to_str,  need_sort, log_def
+    copy_state_files, remove_dir_recursive, time_to_str,  need_sort, log_def, get_nrg
 from helpers.geom_helpers import get_bond_length, get_atoms_prep_follow
 from helpers.schedule_helpers import read_instructions_prep_input
 
-
-def get_f(path):
-    with open(opj(path, "Ecomponents")) as f:
-        for line in f:
-            if "F =" in line:
-                return float(line.strip().split("=")[1])
 
 def get_fs(work):
     int_dirs = get_int_dirs(work)
     fs = []
     for path in int_dirs:
-        fs.append(get_f(path))
+        fs.append(get_nrg(path))
     return fs
 
 def has_max(fs):

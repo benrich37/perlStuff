@@ -5,7 +5,7 @@ from os import mkdir as mkdir
 import shutil
 from ase.build.tools import sort
 from ase.io import read, write
-from helpers.generic_helpers import log_def, get_int_dirs, get_int_dirs_indices, read_nrg
+from helpers.generic_helpers import log_def, get_int_dirs, get_int_dirs_indices, get_nrg
 import numpy as np
 
 
@@ -123,7 +123,7 @@ def get_good_idcs(neb_dir):
     int_dirs = get_int_dirs(neb_dir)
     fs = []
     for int_dir in int_dirs:
-        en = read_nrg(int_dir)
+        en = get_nrg(int_dir)
         fs.append(en)
     gidcs = get_good_idcs_helper(fs)
     return gidcs

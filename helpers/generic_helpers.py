@@ -502,7 +502,7 @@ def read_pbc_val(val):
     return pbc
 
 
-def read_nrg(path):
+def get_nrg(path):
     G = None
     F = None
     base_f = "Ecomponents"
