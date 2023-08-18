@@ -216,7 +216,7 @@ def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, log_fn=log_def):
     dyn = optimizer(atoms, root, opter)
     traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
     logx = opj(root, "opt.logx")
-    write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
+    write_logx = lambda: _write_logx(atoms, logx, do_cell=do_cell)
     write_contcar = lambda: _write_contcar(atoms, root)
     write_opt_log = lambda: _write_opt_iolog(atoms, dyn, max_steps, log_fn)
     dyn.attach(traj.write, interval=1)

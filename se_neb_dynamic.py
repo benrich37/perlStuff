@@ -254,7 +254,7 @@ def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max
     do_cell = get_do_cell(atoms_obj.pbc)
     dyn.attach(traj.write, interval=1)
     dyn.attach(lambda: _write_contcar(atoms_obj, root_path), interval=1)
-    dyn.attach(lambda: _write_logx(atoms_obj, logx, dyn, max_steps, do_cell=do_cell), interval=1)
+    dyn.attach(lambda: _write_logx(atoms_obj, logx, do_cell=do_cell), interval=1)
     dyn.attach(lambda: _write_opt_iolog(atoms_obj, dyn, max_steps, log_fn), interval=1)
     log_fn("Optimization starting")
     log_fn(f"Fmax: {fmax}, max_steps: {max_steps}")

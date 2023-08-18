@@ -168,17 +168,18 @@ def out_to_logx(save_dir, outfile, log_fn=lambda s: print(s)):
         pass
 
 
-def _write_logx(atoms, fname, dyn, maxstep, do_cell=True, do_charges=True):
+def _write_logx(atoms, fname, do_cell=True, do_charges=True):
     if not ope(fname):
         with open(fname, "w") as f:
             f.write(logx_init_str)
-    step = dyn.nsteps
+    nLast = get_last_step(fname)
+    step = nLast + 1
     with open(fname, "a") as f:
         f.write(log_input_orientation(atoms, do_cell=do_cell))
         f.write(scf_str(atoms))
         if do_charges:
             f.write(log_charges(atoms))
-        f.write(opt_spacer(step, maxstep))
+        f.write(opt_spacer(step, 100000))
 
 
 def finished_logx(atoms, fname, step, maxstep, do_cell=True):
