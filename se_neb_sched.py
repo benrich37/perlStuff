@@ -400,7 +400,6 @@ def get_properties_for_step(schedule, idx, step_dir):
         prop_proper = []
         for idx in idcs:
             prop_proper.append(get_atom_str(atoms, idx))
-        prop_proper = copy(idcs)
         prop_proper.append(prop)
         tmp.append(prop_proper)
     return tmp
