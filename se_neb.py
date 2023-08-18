@@ -14,7 +14,7 @@ from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, ge
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import _write_opt_log, check_for_restart, bond_str, log_and_abort
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, bond_str, log_and_abort
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
@@ -332,7 +332,7 @@ def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max
     dyn.attach(traj.write, interval=1)
     dyn.attach(lambda: _write_contcar(atoms_obj, root_path), interval=1)
     dyn.attach(lambda: _write_logx(atoms_obj, logx, dyn, max_steps, do_cell=do_cell), interval=1)
-    dyn.attach(lambda: _write_opt_log(atoms_obj, dyn, max_steps, log_fn), interval=1)
+    dyn.attach(lambda: _write_opt_iolog(atoms_obj, dyn, max_steps, log_fn), interval=1)
     log_fn("Optimization starting")
     log_fn(f"Fmax: {fmax}, max_steps: {max_steps}")
     dyn.run(fmax=fmax, steps=max_steps)

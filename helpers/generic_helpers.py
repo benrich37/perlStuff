@@ -517,13 +517,12 @@ def read_nrg(path):
         return F
 
 
-def _write_opt_log(atoms, dyn, max_steps, log_fn):
+def _write_opt_iolog(atoms, dyn, max_steps, log_fn):
     step = dyn.nsteps
     dump_str = f"Step {step}/{max_steps}: "
-    dump_str += f"\t E = {atoms.get_potential_energy()}"
+    dump_str += f"\t E = {atoms.get_potential_energy():.5f}"
     try:
-        dump_str += f"\t Max Force: {np.max(abs(atoms.get_forces()))}"
-        dump_str += f"\t Sum of Forces: {np.sum(abs(atoms.get_forces()))}"
+        dump_str += f"\t Max Force: {np.max(abs(atoms.get_forces())):.5f}"
     except Exception as e:
         pass
     log_fn(dump_str)

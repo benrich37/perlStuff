@@ -1,5 +1,4 @@
 import os
-from JDFTx import JDFTx
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
@@ -7,14 +6,14 @@ from os.path import join as opj, exists as ope, isdir,  basename
 from os import mkdir, getcwd,  chdir
 from shutil import copy as cp
 from ase.neb import NEB
-from os import remove as rm, rmdir as rmdir
+from os import remove as rm
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
-from helpers.generic_helpers import _write_opt_log, check_for_restart, bond_str
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.geom_helpers import get_bond_length
@@ -256,7 +255,7 @@ def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max
     dyn.attach(traj.write, interval=1)
     dyn.attach(lambda: _write_contcar(atoms_obj, root_path), interval=1)
     dyn.attach(lambda: _write_logx(atoms_obj, logx, dyn, max_steps, do_cell=do_cell), interval=1)
-    dyn.attach(lambda: _write_opt_log(atoms_obj, dyn, max_steps, log_fn), interval=1)
+    dyn.attach(lambda: _write_opt_iolog(atoms_obj, dyn, max_steps, log_fn), interval=1)
     log_fn("Optimization starting")
     log_fn(f"Fmax: {fmax}, max_steps: {max_steps}")
     dyn.run(fmax=fmax, steps=max_steps)

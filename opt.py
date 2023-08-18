@@ -10,7 +10,7 @@ from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_in
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
-from helpers.generic_helpers import _write_opt_log, check_for_restart, log_def, check_structure, log_and_abort
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx
 from sys import exit, stderr
 
@@ -218,7 +218,7 @@ def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, log_fn=log_def):
     logx = opj(root, "opt.logx")
     write_logx = lambda: _write_logx(atoms, logx, dyn, max_steps, do_cell=do_cell)
     write_contcar = lambda: _write_contcar(atoms, root)
-    write_opt_log = lambda: _write_opt_log(atoms, dyn, max_steps, log_fn)
+    write_opt_log = lambda: _write_opt_iolog(atoms, dyn, max_steps, log_fn)
     dyn.attach(traj.write, interval=1)
     dyn.attach(write_contcar, interval=1)
     dyn.attach(write_logx, interval=1)

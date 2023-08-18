@@ -11,7 +11,7 @@ from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, ge
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import _write_opt_log, check_for_restart, bond_str
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
 from helpers.geom_helpers import get_bond_length
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
@@ -257,7 +257,7 @@ def run_opt_runner(atoms_obj, root_path, opter, log_fn = log_def, fmax=0.05, max
     dyn.attach(traj.write, interval=1)
     dyn.attach(lambda: _write_contcar(atoms_obj, root_path), interval=1)
     dyn.attach(lambda: _write_logx(atoms_obj, logx, dyn, max_steps, do_cell=do_cell), interval=1)
-    dyn.attach(lambda: _write_opt_log(atoms_obj, dyn, max_steps, log_fn), interval=1)
+    dyn.attach(lambda: _write_opt_iolog(atoms_obj, dyn, max_steps, log_fn), interval=1)
     log_fn("Optimization starting")
     log_fn(f"Fmax: {fmax}, max_steps: {max_steps}")
     dyn.run(fmax=fmax, steps=max_steps)
@@ -458,7 +458,7 @@ if __name__ == '__main__':
         se_log("No NEB dir found - setting restart to False for NEB")
         skip_to_neb = False
         mkdir(neb_dir)
-    use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES have a local maximum
+    use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES has a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
     dyn_neb, skip_to_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
