@@ -410,7 +410,7 @@ def update_results_to_schedule(schedule, scan_dir, log_fn=log_def):
     for step_dir in step_dirs:
         idx = int(basename(step_dir))
         if is_done(step_dir, idx):
-            schedule[str(idx)][energy_key] = get_nrg(step_dirs)
+            schedule[str(idx)][energy_key] = get_nrg(step_dir)
             schedule[str(idx)][properties_key] = get_properties_for_step(schedule, idx, step_dir)
     return schedule
 
