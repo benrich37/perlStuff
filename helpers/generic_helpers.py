@@ -951,7 +951,7 @@ def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
     else:
         if ope(POSCAR):
             atoms_obj = read(POSCAR, format="vasp")
-            log_fn(f"Found CONTCAR in {dir_path}")
+            log_fn(f"Found POSCAR in {dir_path}")
         elif ope(CONTCAR):
             atoms_obj = read(CONTCAR, format="vasp")
             log_fn(f"Could not find start POSCAR in {dir_path} - using found CONTCAR instead")
