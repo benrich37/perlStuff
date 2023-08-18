@@ -477,6 +477,8 @@ def check_submit(gpu, cwd, jobtype, log_fn=log_def):
         print(f"Dumping template {submit_fname} and aborting")
         if gpu:
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
+        else:
+            dump_template_input(fname, submit_cpu_perl_ref, cwd)
         run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
         _bar = __main__.__file__
         bar = ""
