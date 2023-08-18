@@ -3,7 +3,6 @@ from os.path import exists as ope, join as opj
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
-from JDFTx import JDFTx
 from datetime import datetime
 from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell

@@ -18,7 +18,7 @@ def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
     )
 
 
-def _get_calc(exe_cmd, cmds, root, debug=False, debug_fn=None, log_fn=log_def):
+def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV_v1.5", debug=False, debug_fn=None, log_fn=log_def):
     if debug:
         log_fn("Setting calc to debug calc")
         return debug_fn()
@@ -26,7 +26,7 @@ def _get_calc(exe_cmd, cmds, root, debug=False, debug_fn=None, log_fn=log_def):
         log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
         return JDFTx(
             executable=exe_cmd,
-            pseudoSet="GBRV_v1.5",
+            pseudoSet=pseudoSet,
             commands=cmds,
             outfile=root,
             ionic_steps=False
