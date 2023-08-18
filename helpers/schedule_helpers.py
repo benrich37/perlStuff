@@ -252,9 +252,9 @@ def get_prop_idcs_list(schedule, i):
     prop_idcs_list = []
     instructions = schedule[str(i)]
     scan_pair = instructions[step_atoms_key]
-    constraint_tuples = instructions[freeze_list_key]
+    constraint_tuples = remove_redundant_idcs_lists(scan_pair, instructions[freeze_list_key])
     prop_idcs_list.append(list(scan_pair))
-    prop_idcs_list.append(remove_redundant_idcs_lists(scan_pair, constraint_tuples))
+    prop_idcs_list += constraint_tuples
     print(f"prop idcs list {prop_idcs_list}")
     return prop_idcs_list
 
