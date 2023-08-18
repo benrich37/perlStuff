@@ -60,6 +60,25 @@ submit_gpu_perl_ref = [
 ]
 
 
+submit_cpu_perl_ref = [
+    "#!/bin/bash",
+    "#SBATCH -J foo",
+    "#SBATCH --time=1:00:00",
+    "#SBATCH -o foo.out",
+    "#SBATCH -e foo.err",
+    "#SBATCH -q regular_ss11",
+    "#SBATCH -N 1",
+    "#SBATCH -c 64",
+    "#SBATCH --ntasks-per-node=4",
+    "#SBATCH -C cpu",
+    "#SBATCH -A m4025_g\n",
+    "# module use /global/cfs/cdirs/m4025/Software/Perlmutter/modules",
+    "# module load jdftx/cpu"
+    "export SLURM_CPU_BIND=\"cores\"",
+    "python bar > foo.out",
+]
+
+
 def copy_file(file, tgt_dir, log_fn=log_def):
     cp(file, tgt_dir)
     log_fn(f"Copying {file} to {tgt_dir}")
