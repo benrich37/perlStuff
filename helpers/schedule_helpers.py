@@ -286,7 +286,7 @@ def get_props_comment_str(schedule, i):
 
 def get_step_results_comment_str(schedule, i):
     # comment_str = f"# {i}: "
-    comment_str = f"Results: "
+    comment_str = f" ### \t Results: "
     comment_str += get_nrg_comment_str(schedule, i)
     comment_str += "\t"
     comment_str += get_props_comment_str(schedule, i)
