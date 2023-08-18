@@ -123,14 +123,14 @@ def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_typ
                      val_target=False, log_func=log_def):
     print_str = ""
     prev_length = get_bond_length(atoms, atom_pair)
-    log_func(f"Atom pair {get_bond_str(atoms, atom_pair[0], atom_pair[1])} previously at {prev_length}")
+    log_func(f"Atom pair {get_bond_str(atoms, atom_pair[0], atom_pair[1])} previously at {prev_length:.5f}")
     if val_target:
         target_length = step_val
         step_length = target_length - prev_length
     else:
         target_length = prev_length + step_val
         step_length = step_val
-    log_func(f"Creating structure with {get_bond_str(atoms, atom_pair[0], atom_pair[1])} at {target_length}")
+    log_func(f"Creating structure with {get_bond_str(atoms, atom_pair[0], atom_pair[1])} at {target_length:.5f}")
     if (step_idx <= 1) and guess_type == 3:
         guess_type = 2
     if guess_type == 3:
@@ -168,7 +168,7 @@ def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def
     if len(step_atoms) == 2:
         print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_val, guess_type, step_dir,
                                       log_func=log_fn, val_target=target_bool)
-        print_str += f" to {opj(step_dir, 'POSCAR')}\n"
+        print_str += f" written to {opj(step_dir, 'POSCAR')}\n"
         print_str += "\t If you are restarting this step, the CONTCAR will be read, so the previous step does nothing \n"
         log_fn(print_str)
     else:
