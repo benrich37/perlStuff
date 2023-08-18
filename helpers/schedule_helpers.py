@@ -1,5 +1,20 @@
 from os.path import join as opj
 
+step_atoms_key = "step_atoms"
+step_size_key = "step_size"
+guess_type_key = "guess_type"
+j_steps_key = "jdftx_steps"
+freeze_list_key = "freeze_list"
+target_bool_key = "target"
+energy_key = "nrg"
+properties_key = "props"
+
+neb_key = "neb"
+neb_steps_key = "neb_steps"
+neb_k_key = "k"
+neb_method_key = "neb_method"
+extract_steps_key = "from"
+
 
 def read_instructions_prep_input(instructions):
     step_atoms = instructions[step_atoms_key]
@@ -186,14 +201,7 @@ def read_schedule_step_line(line):
     return idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples
 
 
-step_atoms_key = "step_atoms"
-step_size_key = "step_size"
-guess_type_key = "guess_type"
-j_steps_key = "jdftx_steps"
-freeze_list_key = "freeze_list"
-target_bool_key = "target"
-energy_key = "nrg"
-properties_key = "props"
+
 
 
 def write_step_to_schedule_dict(schedule, idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples):
@@ -219,19 +227,50 @@ def count_scan_steps_from_schedule(schedule):
     return max(scan_steps) + 1
 
 
+def remove_redundant_idcs_lists(scan_idcs, constraint_idcs_list):
+    i0 = scan_idcs[0]
+    nidcs = len(scan_idcs)
+    return_list = []
+    for c_idcs in constraint_idcs_list:
+        if (nidcs == len(c_idcs)) and (i0 in c_idcs):
+            sidx = c_idcs.index(i0)
+            same = True
+            for i in range(sidx):
+                idx = (i + sidx) % nidcs
+                same = same and (scan_idcs[i] == c_idcs[idx])
+            if not same:
+                return_list.append(c_idcs)
+        else:
+            return_list.append(constraint_idcs_list)
+    return return_list
+
+
+
+
+
+def get_prop_idcs_list(schedule, i):
+    prop_idcs_list = []
+    instructions = schedule[str(i)]
+    scan_pair = instructions[step_atoms_key]
+    constraint_tuples = instructions[freeze_list_key]
+    prop_idcs_list.append(list(scan_pair))
+    prop_idcs_list.append(remove_redundant_idcs_lists(scan_pair, constraint_tuples))
+    return prop_idcs_list
+
+
 def get_nrg_comment_str(schedule, i):
     nrg = schedule[i][energy_key]
     return f"{nrg}"
 
 
 def get_prop_comment_str(prop):
-    prop_str = ""
+    prop_str = "("
     nMems = len(prop) - 1
     for i in range(nMems):
         if i > 0:
             prop_str += ", "
         prop_str += f"{prop[i]}"
-    prop_str += f" = {prop[-1]}"
+    prop_str += f") = {prop[-1]:.5f}"
     return prop_str
 
 
@@ -284,11 +323,7 @@ def append_results_as_comments(schedule, work_dir):
         f.write(contents)
 
 
-neb_key = "neb"
-neb_steps_key = "neb_steps"
-neb_k_key = "k"
-neb_method_key = "neb_method"
-extract_steps_key = "from"
+
 
 
 def write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, extract_step_idcs):
