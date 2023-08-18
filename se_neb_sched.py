@@ -19,7 +19,7 @@ from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, fini
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
 from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freeze_list_key, read_schedule_file, \
-    get_step_list, energy_key, properties_key, get_prop_idcs_list
+    get_step_list, energy_key, properties_key, get_prop_idcs_list, append_results_as_comments
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -404,7 +404,7 @@ def get_properties_for_step(schedule, idx, step_dir):
 
 
 
-def update_results_to_schedule(schedule, scan_dir, log_fn=log_def):
+def update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=log_def):
     step_dirs = get_int_dirs(scan_dir)
     log_fn(f"Adding current results as comments to schedule")
     for step_dir in step_dirs:
@@ -412,7 +412,7 @@ def update_results_to_schedule(schedule, scan_dir, log_fn=log_def):
         if is_done(step_dir, idx):
             schedule[str(idx)][energy_key] = get_nrg(step_dir)
             schedule[str(idx)][properties_key] = get_properties_for_step(schedule, idx, step_dir)
-    return schedule
+    append_results_as_comments(schedule, work_dir)
 
 
 
@@ -436,7 +436,7 @@ if __name__ == '__main__':
     restart = restart_at > 0
     skip_to_neb = (restart_at > scan_steps)
     se_log = get_log_fn(work_dir, "se_neb", False, restart=restart)
-    update_results_to_schedule(schedule, scan_dir, log_fn=se_log)
+    update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=se_log)
     if skip_to_neb:
         se_log("Will restart at NEB")
     else:
@@ -480,7 +480,7 @@ if __name__ == '__main__':
             run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE,
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
             write_scan_logx(scan_dir, log_fn=se_log)
-            update_results_to_schedule(schedule, scan_dir, log_fn=se_log)
+            update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=se_log)
     ####################################################################################################################
     se_log("Beginning NEB setup")
     neb_dir = opj(work_dir, "neb")

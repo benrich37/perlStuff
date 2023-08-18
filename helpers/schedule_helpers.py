@@ -255,7 +255,6 @@ def get_prop_idcs_list(schedule, i):
     constraint_tuples = remove_redundant_idcs_lists(scan_pair, instructions[freeze_list_key])
     prop_idcs_list.append(list(scan_pair))
     prop_idcs_list += constraint_tuples
-    print(f"prop idcs list {prop_idcs_list}")
     return prop_idcs_list
 
 
