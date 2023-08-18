@@ -1,5 +1,4 @@
 import os
-from copy import copy
 from ase.io import write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
@@ -9,15 +8,15 @@ from ase.neb import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
-from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
+from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_bond_str, get_nrg
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit
 from helpers.geom_helpers import get_bond_length, get_property
-from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
+from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
-from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort, get_atom_str
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
+from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, get_atom_str
+from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, count_scan_steps, _prep_input, setup_scan_dir
 from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freeze_list_key, read_schedule_file, \
     get_step_list, energy_key, properties_key, get_prop_idcs_list, append_results_as_comments
 
@@ -130,77 +129,6 @@ def parse_lookline(lookline):
     return atom_idcs, scan_steps, step_length
 
 
-def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
-    dir0 = opj(scan_dir, "0")
-    atoms = get_atoms(dir0, [False, False, False], restart_bool=restart, log_fn=log_fn)
-    start_dist = get_bond_length(atoms, atom_pair)
-    log_fn(f"Bond {get_bond_str(atoms, atom_pair[0], atom_pair[1])} starting at {start_dist}")
-    return start_dist
-
-
-def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
-    ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
-    atoms_obj.set_calculator(_get_calc(exe_cmd, ion_cmds, ion_dir_path, log_fn=log_fn))
-    log_fn("lattice optimization starting")
-    log_fn(f"Fmax: n/a, max_steps: {ion_iters_int}")
-    pbc = atoms_obj.pbc
-    atoms_obj.get_forces()
-    if has_coords_out_files(ion_dir_path):
-        ionpos = opj(ion_dir_path, "ionpos")
-        lattice = opj(ion_dir_path, "lattice")
-        atoms_obj = get_atoms_from_coords_out(ionpos, lattice)
-    else:
-        outfile = opj(ion_dir_path, "out")
-        if ope(outfile):
-            atoms_obj = get_atoms_list_from_out(outfile)[-1]
-        else:
-            log_and_abort(f"No output data given - check error file", log_fn=log_fn)
-    atoms_obj.pbc = pbc
-    structure_path = opj(ion_dir_path, "CONTCAR")
-    write(structure_path, atoms_obj, format="vasp")
-    log_fn(f"Finished lattice optimization")
-    finished(ion_dir_path)
-    out_to_logx(ion_dir_path, opj(ion_dir_path, 'out'), log_fn=log_fn)
-    return atoms_obj
-
-
-def run_ion_opt(atoms_obj, ion_iters_int, ion_dir_path, root_path, cmds_list, _failed_before=False, log_fn=log_def):
-    run_again = False
-    try:
-        atoms_obj = run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_fn)
-    except Exception as e:
-        check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
-        run_again = True
-        pass
-    if run_again:
-        atoms_obj = run_ion_opt(atoms_obj, ion_iters_int, ion_dir_path, root_path, cmds_list, _failed_before=True, log_fn=log_fn)
-    return atoms_obj
-
-
-def do_relax_start(relax_start_bool, scan_path, get_calc_fn, log_fn=log_def, fmax_float=0.05, max_steps_int=100):
-    if relax_start_bool:
-        dir0 = opj(scan_path, "0")
-        se_log(f"Relaxing initial geometry in {dir0}")
-        atoms = get_atoms(dir0, pbc, restart_bool=True, log_fn=log_fn)
-        run_relax_opt(atoms, dir0, FIRE, get_calc_fn, fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn)
-
-
-def do_relax_end(scan_steps_int, scan_dir_str, restart_idx, pbc_bool_list, get_calc_fn, log_fn=log_def,
-                 fmax_float=0.05, max_steps_int=100):
-    end_idx = scan_steps_int
-    end_dir = opj(scan_dir_str, str(end_idx))
-    prev_dir = opj(scan_dir_str, str(end_idx - 1))
-    if (not ope(opj(end_dir, "POSCAR"))) or (not isdir(end_dir)):
-        mkdir(end_dir)
-        restart_end = False
-        copy_state_files(prev_dir, end_dir, log_fn=log_fn)
-        prep_input(scan_steps_int, end_dir)
-    else:
-        restart_end = (end_idx == restart_idx) and (not is_done(end_dir, end_idx))
-    atoms = get_atoms(end_dir, pbc_bool_list, restart_bool=restart_end, log_fn=log_fn)
-    run_relax_opt(atoms, end_dir, FIRE, get_calc_fn, fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn)
-
-
 
 def finished(dir_path):
     with open(opj(dir_path, f"finished_{basename(dir_path)}.txt"), "w") as f:
@@ -288,14 +216,14 @@ def run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_
              fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False):
     freeze_list, j_steps = read_instructions_run_step(instructions)
     run_again = False
-    add_freeze_list_constraints(atoms, freeze_list, log_fn=log_fn)
+    add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
     try:
         run_step_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, j_steps, get_jdft_opt_calc_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
     except Exception as e:
         check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
         if death_by_nan(opj(step_path, "out"), log_def):
             atoms_obj = reset_atoms_death_by_nan(step_path, step_path)
-            add_freeze_list_constraints(atoms, freeze_list, log_fn=log_fn)
+            add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
@@ -319,11 +247,9 @@ def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
                       fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 
-def setup_img_dirs(neb_path, scan_path, scan_steps_int, restart_bool=False, log_fn=log_def, safe_mode=False):
+def setup_img_dirs(neb_path, scan_path, scan_steps_int, restart_bool=False, log_fn=log_def):
     img_dirs = []
     scan_steps_list = list(range(scan_steps_int))
-    if safe_mode:
-        scan_steps_list = safe_mode_check(scan_path, scan_steps_int, atom_idcs, log_fn=log_def)
     for j, scan_idx in enumerate(scan_steps_list):
         step_dir_str = opj(scan_path, str(scan_idx))
         img_dir_str = opj(neb_path, str(j))
@@ -364,7 +290,7 @@ def setup_neb(scan_steps_int, k_float, neb_method_str, pbc_bool_list, get_calc_f
             restart_bool = False
     log_fn(f"Setting up image directories in {neb_path}")
     img_dirs, restart_bool = setup_img_dirs(neb_path, scan_path, scan_steps_int,
-                                            restart_bool=restart_bool, log_fn=log_fn, safe_mode=safe_mode)
+                                            restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating image objects")
     imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating NEB object")
@@ -405,7 +331,6 @@ def get_properties_for_step(schedule, idx, step_dir):
     return tmp
 
 
-
 def update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=log_def):
     step_dirs = get_int_dirs(scan_dir)
     log_fn(f"Adding current results as comments to schedule")
@@ -418,23 +343,17 @@ def update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=log_def):
 
 
 
-
-
-
-
-
-
-
-if __name__ == '__main__':
+def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
         k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu = read_se_neb_inputs()
     chdir(work_dir)
     if not schedule:
-        write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start, relax_end,
+        write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
+                                relax_end,
                                 neb_steps, k, neb_method, work_dir)
     schedule = read_schedule_file(work_dir)
     scan_dir = opj(work_dir, "scan")
-    restart_at = get_restart_idx(restart_at, scan_dir) # If was none, finds most recently converged step
+    restart_at = get_restart_idx(restart_at, scan_dir)  # If was none, finds most recently converged step
     restart = restart_at > 0
     skip_to_neb = (restart_at > scan_steps)
     se_log = get_log_fn(work_dir, "se_neb", False, restart=restart)
@@ -451,17 +370,15 @@ if __name__ == '__main__':
     se_log(f"Reading JDFTx commands")
     cmds = get_cmds(work_dir, ref_struct="POSCAR")
     exe_cmd = get_exe_cmd(gpu, se_log)
-    ion_opt_cmds = get_ionic_opt_cmds(cmds, j_steps)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
     get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds(cmds, nMax), root, debug=False,
-                                                   log_fn=se_log)
-    get_latopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_lattice_cmds(cmds, nMax, pbc=pbc), root, debug=False,
                                                    log_fn=se_log)
     ####################################################################################################################
     if not skip_to_neb:
         se_log("Entering scan")
         setup_scan_dir(work_dir, scan_dir, restart_at, pbc, log_fn=se_log)
-        prep_input = lambda step, step_dir_var: _prep_input(step, schedule, step_dir_var, scan_dir, work_dir, log_fn=se_log)
+        prep_input = lambda step, step_dir_var: _prep_input(step, schedule, step_dir_var, scan_dir, work_dir,
+                                                            log_fn=se_log)
         for i, step in enumerate(step_list):
             step_dir = opj(scan_dir, str(step))
             se_log(f"Running step {step} in {step_dir}")
@@ -472,7 +389,7 @@ if __name__ == '__main__':
             if restart_step:
                 se_log(f"Restarting step")
             if step > 0 and not restart_step:
-                prev_step_dir = opj(scan_dir, str(step-1))
+                prev_step_dir = opj(scan_dir, str(step - 1))
             else:
                 prev_step_dir = work_dir
             copy_best_state_files([prev_step_dir, step_dir], step_dir, log_fn=se_log)
@@ -490,7 +407,7 @@ if __name__ == '__main__':
         se_log("No NEB dir found - setting restart to False for NEB")
         skip_to_neb = False
         mkdir(neb_dir)
-    use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES has a local maximum
+    use_ci = has_max(get_fs(scan_dir))  # Use climbing image if PES has a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
     dyn_neb, skip_to_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
@@ -500,3 +417,13 @@ if __name__ == '__main__':
     se_log("Running NEB now")
     dyn_neb.run(fmax=fmax, steps=neb_steps)
     se_log(f"finished neb in {dyn_neb.nsteps}/{neb_steps} steps")
+
+
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as e:
+        print(e)
+
