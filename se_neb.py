@@ -9,12 +9,12 @@ import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from helpers.generic_helpers import get_int_dirs, copy_state_files, atom_str, get_cmds, get_int_dirs_indices, \
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_atom_str, get_cmds, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, bond_str, log_and_abort
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_bond_str, log_and_abort
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
@@ -163,13 +163,13 @@ def _prep_input(step_idx, atom_pair, step_length, start_length, follow, step_dir
         dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
         dir_vec *= step_length / np.linalg.norm(dir_vec)
         if guess_type == 0:
-            print_str += f" only {atom_str(atoms, atom_pair[0])} moved"
+            print_str += f" only {get_atom_str(atoms, atom_pair[0])} moved"
             atoms.positions[atom_pair[1]] += dir_vec
         elif guess_type == 1:
-            print_str += f" only {atom_str(atoms, atom_pair[0])} moved"
+            print_str += f" only {get_atom_str(atoms, atom_pair[0])} moved"
             atoms.positions[atom_pair[0]] += (-1) * dir_vec
         elif guess_type == 2:
-            print_str += f" only {atom_str(atoms, atom_pair[0])} and {atom_str(atoms, atom_pair[1])} moved equidistantly"
+            print_str += f" only {get_atom_str(atoms, atom_pair[0])} and {get_atom_str(atoms, atom_pair[1])} moved equidistantly"
             dir_vec *= 0.5
             atoms.positions[atom_pair[1]] += dir_vec
             atoms.positions[atom_pair[0]] += (-1) * dir_vec
@@ -182,7 +182,7 @@ def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
     dir0 = opj(scan_dir, "0")
     atoms = get_atoms(dir0, [False,False,False], restart_bool=restart, log_fn=log_fn)
     start_dist = get_bond_length(atoms, atom_pair)
-    log_fn(f"Bond {bond_str(atoms, atom_pair[0], atom_pair[1])} starting at {start_dist}")
+    log_fn(f"Bond {get_bond_str(atoms, atom_pair[0], atom_pair[1])} starting at {start_dist}")
     return start_dist
 
 def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):

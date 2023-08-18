@@ -266,13 +266,13 @@ def get_nrg_comment_str(schedule, i):
 
 
 def get_prop_comment_str(prop):
-    prop_str = "("
+    prop_str = "["
     nMems = len(prop) - 1
     for i in range(nMems):
         if i > 0:
             prop_str += ", "
-        prop_str += f"{prop[i]}"
-    prop_str += f") = {prop[-1]:.5f}"
+        prop_str += f"{prop[i] + 1}"
+    prop_str += f"] = {prop[-1]:.5f}"
     return prop_str
 
 

@@ -1,7 +1,7 @@
 import os
 from ase.io import read, write
 import numpy as np
-from helpers.generic_helpers import log_generic, atom_str
+from helpers.generic_helpers import log_generic, get_atom_str
 from helpers.geom_helpers import step_bond_with_momentum
 
 
@@ -25,15 +25,15 @@ def _prep_input(step_idx, atom_pair, step_length, follow, log_func, work_dir, st
         dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
         dir_vec *= step_length / np.linalg.norm(dir_vec)
         if step_type == 0:
-            print_str += f" only {atom_str(atoms, atom_pair[1])} moved"
+            print_str += f" only {get_atom_str(atoms, atom_pair[1])} moved"
             atoms.positions[atom_pair[1]] += dir_vec
         elif step_type == 1:
-            print_str += f" only {atom_str(atoms, atom_pair[0])} and {atom_str(atoms, atom_pair[1])} moved equidistantly"
+            print_str += f" only {get_atom_str(atoms, atom_pair[0])} and {get_atom_str(atoms, atom_pair[1])} moved equidistantly"
             dir_vec *= 0.5
             atoms.positions[atom_pair[1]] += dir_vec
             atoms.positions[atom_pair[0]] += (-1) * dir_vec
         elif step_type == 2:
-            print_str += f" only {atom_str(atoms, atom_pair[0])} moved"
+            print_str += f" only {get_atom_str(atoms, atom_pair[0])} moved"
             atoms.positions[atom_pair[0]] += (-1) * dir_vec
     write(str(step_idx) + "/POSCAR", atoms, format="vasp")
     log_func(print_str)

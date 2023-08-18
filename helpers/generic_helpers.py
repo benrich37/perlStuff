@@ -297,11 +297,11 @@ def time_to_str(t):
     return print_str
 
 
-def atom_str(atoms, index):
-    return f"{atoms.get_chemical_symbols()[index]}({index - 1})"
+def get_atom_str(atoms, index):
+    return f"{atoms.get_chemical_symbols()[index]}({index + 1})"
 
-def bond_str(atoms, i1, i2):
-    return atom_str(atoms, i1) + "-" + atom_str(atoms, i2)
+def get_bond_str(atoms, i1, i2):
+    return get_atom_str(atoms, i1) + "-" + get_atom_str(atoms, i2)
 
 
 def get_sort_bool(symbols):
@@ -399,15 +399,15 @@ def add_bond_constraints(atoms, indices, log_fn=log_def):
     for i in range(nPairs):
         add_constraint(atoms, FixBondLength(indices[2 * i], indices[1 + (2 * i)]))
         cur_length = np.linalg.norm(atoms.positions[indices[0]] - atoms.positions[indices[1]])
-        print_str = f"Fixed bond {atom_str(atoms, indices[0])} -"
-        print_str += f" {atom_str(atoms, indices[1])} fixed to {cur_length:.{4}g} A"
+        print_str = f"Fixed bond {get_atom_str(atoms, indices[0])} -"
+        print_str += f" {get_atom_str(atoms, indices[1])} fixed to {cur_length:.{4}g} A"
         log_fn(print_str)
 
 def add_bond_constraint(atoms, i1, i2, log_fn=log_def):
     add_constraint(atoms, FixBondLength(i1, i2))
     cur_length = np.linalg.norm(atoms.positions[i1] - atoms.positions[i2])
-    print_str = f"Fixed bond {atom_str(atoms, i1)} -"
-    print_str += f" {atom_str(atoms, i2)} fixed to {cur_length:.{4}g} A"
+    print_str = f"Fixed bond {get_atom_str(atoms, i1)} -"
+    print_str += f" {get_atom_str(atoms, i2)} fixed to {cur_length:.{4}g} A"
     log_fn(print_str)
 
 

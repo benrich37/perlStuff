@@ -13,7 +13,7 @@ from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list,
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, log_and_abort
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, bond_str
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_bond_str
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.geom_helpers import get_bond_length
@@ -132,7 +132,7 @@ def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
     dir0 = opj(scan_dir, "0")
     atoms = get_atoms(dir0, [False, False, False], restart_bool=restart, log_fn=log_fn)
     start_dist = get_bond_length(atoms, atom_pair)
-    log_fn(f"Bond {bond_str(atoms, atom_pair[0], atom_pair[1])} starting at {start_dist}")
+    log_fn(f"Bond {get_bond_str(atoms, atom_pair[0], atom_pair[1])} starting at {start_dist}")
     return start_dist
 
 
