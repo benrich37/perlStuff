@@ -259,7 +259,7 @@ def get_prop_idcs_list(schedule, i):
 
 
 def get_nrg_comment_str(schedule, i):
-    nrg = schedule[i][energy_key]
+    nrg = schedule[str(i)][energy_key]
     return f"{nrg}"
 
 
