@@ -419,7 +419,7 @@ if __name__ == '__main__':
     ####################################################################################################################
     se_log(f"Reading JDFTx commands")
     cmds = get_cmds(work_dir, ref_struct="POSCAR")
-    exe_cmd = get_exe_cmd(True, se_log)
+    exe_cmd = get_exe_cmd(gpu, se_log)
     ion_opt_cmds = get_ionic_opt_cmds(cmds, j_steps)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
     get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds(cmds, nMax), root, debug=False,
