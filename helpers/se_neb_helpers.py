@@ -494,6 +494,8 @@ def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def
     if len(step_atoms) == 2:
         print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_val, guess_type, step_dir,
                                       log_func=log_fn, val_target=target_bool)
+        print_str += f" to {opj(step_dir, 'POSCAR')}\n"
+        print_str += "If you are restarting this step, the CONTCAR will be read, so the previous step does nothing"
         log_fn(print_str)
     else:
         log_and_abort("Non-bond scanning not yet implemented", log_fn=log_fn)

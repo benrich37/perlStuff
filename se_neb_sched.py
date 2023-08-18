@@ -442,10 +442,10 @@ if __name__ == '__main__':
                 se_log(f"Restarting step")
             if step > 0 and not restart_step:
                 prev_step_dir = opj(scan_dir, str(step-1))
-                copy_best_state_files([prev_step_dir, step_dir], step_dir, log_fn=se_log)
-                prep_input(step, step_dir)
             else:
                 prev_step_dir = work_dir
+            copy_best_state_files([prev_step_dir, step_dir], step_dir, log_fn=se_log)
+            prep_input(step, step_dir)
             atoms = get_atoms(step_dir, pbc, restart_bool=restart_step, log_fn=se_log)
             check_submit(gpu, getcwd(), "se_neb", log_fn=se_log)
             run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE,
