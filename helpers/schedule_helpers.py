@@ -290,7 +290,7 @@ def get_step_results_comment_str(schedule, i):
     comment_str += get_nrg_comment_str(schedule, i)
     comment_str += "\t"
     comment_str += get_props_comment_str(schedule, i)
-    comment_str += "\n"
+    # comment_str += "\n"
     return comment_str
 
 
@@ -305,7 +305,7 @@ def get_step_results_insert_index(i, contents):
 def append_step_results_to_contents(schedule, i, contents):
     comment_str = get_step_results_comment_str(schedule, i)
     idx = get_step_results_insert_index(i, contents)
-    contents[idx] = contents[idx] + comment_str
+    contents[idx] = contents[idx].rstrip("\n") + comment_str + "\n"
     # contents.insert(idx, comment_str)
     return contents
 
