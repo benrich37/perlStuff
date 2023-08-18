@@ -260,7 +260,7 @@ def get_prop_idcs_list(schedule, i):
 
 def get_nrg_comment_str(schedule, i):
     nrg = schedule[str(i)][energy_key]
-    return f"{nrg}"
+    return f"{nrg:.5f}"
 
 
 def get_prop_comment_str(prop):
@@ -283,8 +283,9 @@ def get_props_comment_str(schedule, i):
 
 
 def get_step_results_comment_str(schedule, i):
-    comment_str = f"# {i}:"
+    comment_str = f"# {i}: "
     comment_str += get_nrg_comment_str(schedule, i)
+    comment_str += "\t"
     comment_str += get_props_comment_str(schedule, i)
     comment_str += "\n"
     return comment_str
