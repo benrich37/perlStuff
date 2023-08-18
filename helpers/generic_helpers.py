@@ -38,12 +38,15 @@ valence_electrons = {
     'au': 1, 'hg': 2, 'tl': 3, 'pb': 4, 'bi': 5, 'po': 6, 'at': 7, 'rn': 8,
 }
 
+foo_str = "fooooooooooooo"
+bar_str = "barrrrrrrrrrrr"
+
 submit_gpu_perl_ref = [
     "#!/bin/bash",
-    "#SBATCH -J foo",
+    f"#SBATCH -J {foo_str}",
     "#SBATCH --time=1:00:00",
-    "#SBATCH -o foo.out",
-    "#SBATCH -e foo.err",
+    f"#SBATCH -o {foo_str}.out",
+    f"#SBATCH -e {foo_str}.err",
     "#SBATCH -q regular_ss11",
     "#SBATCH -N 1",
     "#SBATCH -c 32",
@@ -56,16 +59,16 @@ submit_gpu_perl_ref = [
     "export SLURM_CPU_BIND=\"cores\"",
     "export JDFTX_MEMPOOL_SIZE=36000",
     "export MPICH_GPU_SUPPORT_ENABLED=1\n",
-    "python bar > foo.out",
+    f"python {bar_str} > {foo_str}.out",
 ]
 
 
 submit_cpu_perl_ref = [
     "#!/bin/bash",
-    "#SBATCH -J foo",
+    f"#SBATCH -J {foo_str}",
     "#SBATCH --time=1:00:00",
-    "#SBATCH -o foo.out",
-    "#SBATCH -e foo.err",
+    f"#SBATCH -o {foo_str}.out",
+    f"#SBATCH -e {foo_str}.err",
     "#SBATCH -q regular",
     "#SBATCH -N 1",
     "#SBATCH --ntasks-per-node=4",
@@ -75,7 +78,7 @@ submit_cpu_perl_ref = [
     "# module use /global/cfs/cdirs/m4025/Software/Perlmutter/modules",
     "# module load jdftx/cpu\n"
     "export SLURM_CPU_BIND=\"cores\"",
-    "python bar > foo.out",
+    f"python {bar_str} > {foo_str}.out",
 ]
 
 
@@ -479,14 +482,14 @@ def check_submit(gpu, cwd, jobtype, log_fn=log_def):
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
         else:
             dump_template_input(fname, submit_cpu_perl_ref, cwd)
-        run(f"sed -i 's/foo/{jobtype}/g' {fname}", shell=True, check=True)
+        run(f"sed -i 's/{foo_str}/{jobtype}/g' {fname}", shell=True, check=True)
         _bar = __main__.__file__
         bar = ""
         for s in _bar:
             if s == "/":
                 bar += "\\"
             bar += s
-        run(f"sed -i 's/bar/{bar}/g' {fname}", shell=True, check=True)
+        run(f"sed -i 's/{bar_str}/{bar}/g' {fname}", shell=True, check=True)
         exit()
 
 
