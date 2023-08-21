@@ -336,7 +336,7 @@ def write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, extract_step_
     schedule[neb_key] = {}
     schedule[neb_key][neb_steps_key] = neb_steps
     schedule[neb_key][neb_k_key] = k
-    schedule[neb_key][neb_method_key] = neb_method
+    schedule[neb_key][neb_method_key] = neb_method.strip()
     schedule[neb_key][extract_steps_key] = extract_step_idcs
 
 
