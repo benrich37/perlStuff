@@ -531,6 +531,12 @@ def _write_opt_iolog(atoms, dyn, max_steps, log_fn):
     log_fn(dump_str)
 
 
+def _write_img_opt_iolog(img, img_dir, log_fn):
+    idx = basename(img_dir)
+    dump_str = f"Image {idx} updated (E = {img.get_potential_energy():.5f})"
+    log_fn(dump_str)
+
+
 def get_count_dict(symbols):
     count_dict = {}
     for s in symbols:

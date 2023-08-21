@@ -10,7 +10,7 @@ from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, ge
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def
 from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit
 from helpers.geom_helpers import get_property
 from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan
@@ -308,9 +308,11 @@ def setup_neb(schedule, pbc_bool_list, get_calc_fn, neb_path, scan_path,
     dyn.attach(traj)
     log_fn(f"Attaching log functions to each image")
     for i, path in enumerate(img_dirs):
-        dyn.attach(Trajectory(opj(path, 'opt-' + str(i) + '.traj'), 'w', imgs_atoms_list[i],
+        dyn.attach(Trajectory(opj(path, f'opt-{i}.traj'), 'w', imgs_atoms_list[i],
                               properties=['energy', 'forces']))
         dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
+                   interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
+        dyn.attach(lambda img, img_dir: _write_img_opt_iolog(img, img_dir, log_fn),
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
     return dyn, restart_bool
 
