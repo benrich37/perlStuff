@@ -295,7 +295,7 @@ def setup_neb(schedule, pbc_bool_list, get_calc_fn, neb_path, scan_path,
             restart_bool = False
     log_fn(f"Setting up image directories in {neb_path}")
     img_dirs, restart_bool = setup_img_dirs(neb_path, scan_path, schedule,
-                                            restart_bool=True, log_fn=log_fn)
+                                            restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating image objects")
     imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating NEB object")
