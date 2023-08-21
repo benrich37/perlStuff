@@ -366,3 +366,18 @@ def get_step_list(schedule, restart_at):
         except:
             pass
     return step_list
+
+def get_scan_steps_list_for_neb(schedule):
+    try:
+        return schedule[neb_key][extract_steps_key]
+    except:
+        raise ValueError("No NEB instructions in schedule")
+
+def get_neb_options(schedule):
+    try:
+        k = schedule[neb_key][neb_k_key]
+        method = schedule[neb_key][neb_method_key]
+        return k, method
+    except:
+        raise ValueError("Unable to find NEB options in schedule")
+

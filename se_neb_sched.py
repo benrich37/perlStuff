@@ -18,7 +18,7 @@ from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, fini
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, get_atom_str
 from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, count_scan_steps, _prep_input, setup_scan_dir
 from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freeze_list_key, read_schedule_file, \
-    get_step_list, energy_key, properties_key, get_prop_idcs_list, append_results_as_comments
+    get_step_list, energy_key, properties_key, get_prop_idcs_list, append_results_as_comments, get_scan_steps_list_for_neb, get_neb_options
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -247,9 +247,9 @@ def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
                       fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 
-def setup_img_dirs(neb_path, scan_path, scan_steps_int, restart_bool=False, log_fn=log_def):
+def setup_img_dirs(neb_path, scan_path, schedule, restart_bool=False, log_fn=log_def):
     img_dirs = []
-    scan_steps_list = list(range(scan_steps_int))
+    scan_steps_list = get_scan_steps_list_for_neb(schedule)
     for j, scan_idx in enumerate(scan_steps_list):
         step_dir_str = opj(scan_path, str(scan_idx))
         img_dir_str = opj(neb_path, str(j))
@@ -282,18 +282,19 @@ def setup_neb_imgs(img_path_list, pbc_bool_list, get_calc_fn, log_fn=log_def, re
 
 
 
-def setup_neb(scan_steps_int, k_float, neb_method_str, pbc_bool_list, get_calc_fn, neb_path, scan_path,
-              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def, safe_mode=False):
+def setup_neb(schedule, pbc_bool_list, get_calc_fn, neb_path, scan_path,
+              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def):
     if restart_bool:
         if not ope(opj(neb_path,"hessian.pckl")):
             log_fn(f"Restart NEB requested but no hessian pckl found - ignoring restart request")
             restart_bool = False
     log_fn(f"Setting up image directories in {neb_path}")
-    img_dirs, restart_bool = setup_img_dirs(neb_path, scan_path, scan_steps_int,
+    img_dirs, restart_bool = setup_img_dirs(neb_path, scan_path, schedule,
                                             restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating image objects")
     imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating NEB object")
+    k_float, neb_method_str = get_neb_options(schedule)
     neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
     log_fn(f"Creating optimizer object")
     dyn = neb_optimizer(neb, neb_path, opter=opter_ase_fn)
@@ -301,8 +302,8 @@ def setup_neb(scan_steps_int, k_float, neb_method_str, pbc_bool_list, get_calc_f
     traj = Trajectory(opj(neb_path, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj)
     log_fn(f"Attaching log functions to each image")
-    for i in range(scan_steps_int):
-        dyn.attach(Trajectory(opj(img_dirs[i], 'opt-' + str(i) + '.traj'), 'w', imgs_atoms_list[i],
+    for i, path in enumerate(img_dirs):
+        dyn.attach(Trajectory(opj(path, 'opt-' + str(i) + '.traj'), 'w', imgs_atoms_list[i],
                               properties=['energy', 'forces']))
         dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
@@ -410,7 +411,7 @@ def main():
     use_ci = has_max(get_fs(scan_dir))  # Use climbing image if PES has a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
-    dyn_neb, skip_to_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,
+    dyn_neb, skip_to_neb = setup_neb(schedule, pbc, get_calc, neb_dir, scan_dir,
                                      restart_bool=skip_to_neb, use_ci_bool=use_ci, log_fn=se_log)
     if skip_to_neb:
         check_submit(gpu, getcwd(), "se_neb", log_fn=se_log)
