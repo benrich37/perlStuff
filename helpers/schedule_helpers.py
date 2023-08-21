@@ -373,10 +373,12 @@ def get_scan_steps_list_for_neb(schedule):
     except:
         raise ValueError("No NEB instructions in schedule")
 
-def get_neb_options(schedule):
+def get_neb_options(schedule, log_fn=lambda s: print(s)):
     try:
         k = schedule[neb_key][neb_k_key]
+        log_fn(f"k = {k}")
         method = schedule[neb_key][neb_method_key]
+        log_fn(f"neb method: {method}")
         return k, method
     except:
         raise ValueError("Unable to find NEB options in schedule")

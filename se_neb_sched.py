@@ -10,9 +10,9 @@ from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, ge
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def
 from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_bond_str, get_nrg
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit
-from helpers.geom_helpers import get_bond_length, get_property
+from helpers.geom_helpers import get_property
 from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, get_atom_str
@@ -43,6 +43,10 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "# safe mode: True # (Not implemented yet) If end is relaxed, scan images with bond lengths exceeding/smaller than this length",]
 
 def read_se_neb_inputs(fname="se_neb_inputs"):
+    """ Reads
+    :param fname:
+    :return:
+    """
     if not ope(fname):
         dump_template_input(fname, se_neb_template, getcwd())
         raise ValueError(f"No se neb input supplied: dumping template {fname}")
@@ -135,7 +139,8 @@ def finished(dir_path):
         f.write("done")
 
 
-def is_done(dir_path, idx):
+def is_done(dir_path):
+    idx = int(basename(dir_path))
     return ope(opj(dir_path, f"finished_{idx}.txt"))
 
 
@@ -153,7 +158,7 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
             for i in range(len(int_dirs)):
                 look_dir = int_dirs[int_dirs_indices[i]]
                 if ope(look_dir):
-                    if is_done(look_dir, i):
+                    if is_done(look_dir):
                         restart_idx = i
                     else:
                         return i
@@ -162,12 +167,12 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
             return restart_idx
 
 
-def run_preopt(atoms_obj, root_path, log_fn=log_def):
+def run_jdftx_opt(atoms_obj, root_path, log_fn=log_def):
     outfile = opj(root_path, "out")
     log_fn("JDFTx pre-optimization starting")
     atoms_obj.get_forces()
     log_fn("JDFTx pre-optimization finished")
-    jdft_opt = opj(root_path, "pre_opt")
+    jdft_opt = opj(root_path, "jdftx_opt")
     if not ope(jdft_opt):
         mkdir(jdft_opt)
     out_to_logx(jdft_opt, outfile, log_fn=log_fn)
@@ -199,7 +204,7 @@ def run_step_runner(atoms_obj, step_path, opter, get_calc_fn, j_steps, get_jdft_
                     log_fn = log_def, fmax=0.05, max_steps=100):
     if j_steps > 0:
         atoms_obj.set_calculator(get_jdft_opt_calc_fn(step_path, j_steps))
-        atoms_obj = run_preopt(atoms_obj, step_path, log_fn=log_fn)
+        atoms_obj = run_jdftx_opt(atoms_obj, step_path, log_fn=log_fn)
     atoms_obj.set_calculator(get_calc_fn(step_path))
     run_opt_runner(atoms_obj, step_path, opter, log_fn=log_fn, fmax=fmax, max_steps=max_steps)
 
@@ -294,7 +299,7 @@ def setup_neb(schedule, pbc_bool_list, get_calc_fn, neb_path, scan_path,
     log_fn(f"Creating image objects")
     imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating NEB object")
-    k_float, neb_method_str = get_neb_options(schedule)
+    k_float, neb_method_str = get_neb_options(schedule, log_fn=log_fn)
     neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
     log_fn(f"Creating optimizer object")
     dyn = neb_optimizer(neb, neb_path, opter=opter_ase_fn)
@@ -309,13 +314,6 @@ def setup_neb(schedule, pbc_bool_list, get_calc_fn, neb_path, scan_path,
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
     return dyn, restart_bool
 
-
-def scan_is_finished(scan_dir, log_fn=log_def):
-    int_dirs = get_int_dirs(scan_dir)
-    idcs = get_int_dirs_indices(int_dirs)
-    last_step_path = int_dirs[idcs[-1]]
-    last_is_finished = is_done(last_step_path, idcs[-1])
-    return last_is_finished
 
 
 def get_properties_for_step(schedule, idx, step_dir):
@@ -337,7 +335,7 @@ def update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=log_def):
     log_fn(f"Adding current results as comments to schedule")
     for step_dir in step_dirs:
         idx = int(basename(step_dir))
-        if is_done(step_dir, idx):
+        if is_done(step_dir):
             schedule[str(idx)][energy_key] = get_nrg(step_dir)
             schedule[str(idx)][properties_key] = get_properties_for_step(schedule, idx, step_dir)
     append_results_as_comments(schedule, work_dir)
@@ -383,7 +381,7 @@ def main():
         for i, step in enumerate(step_list):
             step_dir = opj(scan_dir, str(step))
             se_log(f"Running step {step} in {step_dir}")
-            restart_step = (i == 0) and (not is_done(step_dir, i))
+            restart_step = (i == 0) and (not is_done(step_dir))
             if (not ope(step_dir)) or (not isdir(step_dir)):
                 mkdir(step_dir)
                 restart_step = False
