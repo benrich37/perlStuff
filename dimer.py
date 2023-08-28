@@ -98,8 +98,6 @@ if __name__ == '__main__':
         copy_best_state_files([work_dir, work_dir], dimer_dir, log_fn=dimer_log)
     else:
         copy_best_state_files([work_dir, dimer_dir], dimer_dir, log_fn=dimer_log)
-    dimer_log("attaching calculator")
-    atoms.set_calculator(get_calc(dimer_dir))
     atoms.pbc = pbc
     dimer_log("Creating starting displacement vector")
     d_vector = get_d_vector(atoms, atom_pair)
@@ -119,4 +117,7 @@ if __name__ == '__main__':
     dim_rlx.attach(lambda: _write_contcar(atoms, dimer_dir), interval=1)
     check_submit(gpu, os.getcwd(), "dimer", log_fn=dimer_log)
     dimer_log("Running dimer")
+    check_submit(gpu, os.getcwd(), "dimer", log_fn=dimer_log)
+    dimer_log("attaching calculator")
+    atoms.set_calculator(get_calc(dimer_dir))
     dim_rlx.run(fmax=fmax)
