@@ -129,7 +129,7 @@ def parse_lookline(lookline):
     scan_steps = float(lookline[-2])
     atom_idcs = []
     for idx in lookline[:-2]:
-        atom_idcs.append(int(idx - 1))
+        atom_idcs.append(int(idx) - 1)
     return atom_idcs, scan_steps, step_length
 
 
