@@ -151,6 +151,7 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
     else:
         restart_idx = 0
         if not ope(scan_path):
+            mkdir(scan_path)
             return restart_idx
         else:
             int_dirs = get_int_dirs(scan_path)
