@@ -126,7 +126,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
 
 def parse_lookline(lookline):
     step_length = float(lookline[-1])
-    scan_steps = float(lookline[-2])
+    scan_steps = int(lookline[-2])
     atom_idcs = []
     for idx in lookline[:-2]:
         atom_idcs.append(int(idx) - 1)
