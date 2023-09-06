@@ -234,7 +234,7 @@ def insert_finer_steps(schedule, step, n = 10):
             new_schedule[str(iStep)] = schedule[str(iStep)]
         elif iStep == step:
             new_schedule = insert_finer_steps_helper(schedule, step, finer_instruction, n)
-        else:
+        elif iStep > step:
             new_schedule[str(iStep + n)] = schedule[str(iStep)]
     return new_schedule
 

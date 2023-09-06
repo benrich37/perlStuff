@@ -344,11 +344,14 @@ def update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=log_def):
             schedule[str(idx)][properties_key] = get_properties_for_step(schedule, idx, step_dir)
     append_results_as_comments(schedule, work_dir)
 
-def just_passed_max(step, scan_dir):
+def just_passed_max(step, scan_dir, log_fn=log_def):
     # Returns True if the step is lower in energy than previous step, and the previous step was greater in energy than 2 steps ago
     # Returns True/False
     nrgs = get_nrgs(scan_dir)
-    return is_max(nrgs, step - 1)
+    just_passed = is_max(nrgs, step - 1)
+    if just_passed:
+        log_fn(f"Step {step} detected to be a local maximum")
+    return just_passed
 
 
 
@@ -358,8 +361,7 @@ def main():
     chdir(work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
-                                relax_end,
-                                neb_steps, k, neb_method, work_dir)
+                                relax_end, neb_steps, k, neb_method, work_dir)
     schedule = read_schedule_file(work_dir)
     scan_dir = opj(work_dir, "scan")
     restart_at = get_restart_idx(restart_at, scan_dir)  # If was none, finds most recently converged step
@@ -390,14 +392,16 @@ def main():
 
 
     def step_list_looper(schedule, restart_at, nflex=10, scan_dir=scan_dir, work_dir=work_dir, pbc=pbc, gpu=gpu, fmax=fmax, max_steps=max_steps, se_log=se_log):
-        step_list = get_step_list(schedule, restart_at)
         se_log("Entering scan")
+        step_list = get_step_list(schedule, restart_at)
+        se_log(f"Using the following as step list: \n {step_list}")
         setup_scan_dir(work_dir, scan_dir, restart_at, pbc, log_fn=se_log)
         prep_input = lambda step, step_dir_var: _prep_input(step, schedule, step_dir_var, scan_dir, work_dir,
                                                             log_fn=se_log)
         for i, step in enumerate(step_list):
             step_dir = opj(scan_dir, str(step))
             se_log(f"Running step {step} in {step_dir}")
+            se_log(f"Reading the following instructions: {schedule[str(step)]}")
             restart_step = (i == 0) and (not is_done(step_dir))
             if (not ope(step_dir)) or (not isdir(step_dir)):
                 mkdir(step_dir)
@@ -416,7 +420,8 @@ def main():
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
             write_scan_logx(scan_dir, log_fn=se_log)
             update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=se_log)
-            if just_passed_max(step, scan_dir):
+            if just_passed_max(step, scan_dir, log_fn=se_log):
+                se_log(f"Will break and restart at step {step} with finer step size")
                 schedule = insert_finer_steps(schedule, step, n=nflex)
                 write_schedule_to_text(schedule, work_dir)
                 return schedule, step
