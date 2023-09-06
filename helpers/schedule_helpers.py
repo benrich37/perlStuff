@@ -1,4 +1,5 @@
 from os.path import join as opj
+from copy import copy
 
 step_atoms_key = "step_atoms"
 step_size_key = "step_size"
@@ -81,15 +82,20 @@ def autofill_schedule(step_atoms, scan_steps, step_size, guess_type, j_steps, co
     write_neb_to_schedule_dict(schedule, neb_steps, k, neb_method, list(range(scan_steps)))
     return schedule
 
-
-def write_autofill_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples, relax_start,
-                            relax_end, neb_steps, k, neb_method, work_dir):
+def write_schedule_to_text(schedule, work_dir):
     fname = opj(work_dir, "schedule")
-    schedule = autofill_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples,
-                                 relax_start, relax_end, neb_steps, k, neb_method)
     dump_str = get_schedule_dict_str(schedule)
     with open(fname, "w") as f:
         f.write(dump_str)
+
+
+
+def write_autofill_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples, relax_start,
+                            relax_end, neb_steps, k, neb_method, work_dir):
+    schedule = autofill_schedule(atom_pair, scan_steps, step_length, guess_type, j_steps, constraint_tuples,
+                                 relax_start, relax_end, neb_steps, k, neb_method)
+    write_schedule_to_text(schedule, work_dir)
+
 
 
 def write_step_command(schedule_dict_val):
@@ -203,7 +209,34 @@ def read_schedule_step_line(line):
     return idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples
 
 
+def insert_finer_steps_helper(schedule, step, finer_instruction, n):
+    for i in range(n):
+        schedule[str(step + i + 1)] = copy(finer_instruction)
+    return schedule
 
+
+def get_finer_step_instruction(schedule, step, n = 10):
+    instructions = schedule[str(step)]
+    finer = copy(instructions)
+    finer[step_size_key] = instructions[step_size_key] / float(n)
+    finer[j_steps_key] = 0
+    return finer
+
+
+def insert_finer_steps(schedule, step, n = 10):
+    # Inserts n new steps (scanning same coordinate scanned in specified step but of 1/n the size)
+    # Returns updated schedule
+    finer_instruction = get_finer_step_instruction(schedule, step, n = n)
+    step_list = get_step_list(schedule, 0)
+    new_schedule = {}
+    for iStep in step_list:
+        if iStep < step:
+            new_schedule[str(iStep)] = schedule[str(iStep)]
+        elif iStep == step:
+            new_schedule = insert_finer_steps_helper(schedule, step, finer_instruction, n)
+        else:
+            new_schedule[str(iStep + n)] = schedule[str(iStep)]
+    return new_schedule
 
 
 def write_step_to_schedule_dict(schedule, idx, scan_pair, step_val, target_bool, guess_type, j_steps, constraint_tuples):

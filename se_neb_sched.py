@@ -16,7 +16,7 @@ from helpers.geom_helpers import get_property
 from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
 from helpers.generic_helpers import add_freeze_list_constraints, copy_best_state_files, get_atom_str
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, count_scan_steps, _prep_input, setup_scan_dir
+from helpers.se_neb_helpers import get_nrgs, has_max, check_poscar, neb_optimizer, count_scan_steps, _prep_input, setup_scan_dir
 from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freeze_list_key, read_schedule_file, \
     get_step_list, energy_key, properties_key, get_prop_idcs_list, append_results_as_comments, get_scan_steps_list_for_neb, get_neb_options
 
@@ -409,7 +409,7 @@ def main():
         se_log("No NEB dir found - setting restart to False for NEB")
         skip_to_neb = False
         mkdir(neb_dir)
-    use_ci = has_max(get_fs(scan_dir))  # Use climbing image if PES has a local maximum
+    use_ci = has_max(get_nrgs(scan_dir))  # Use climbing image if PES has a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
     dyn_neb, skip_to_neb = setup_neb(schedule, pbc, get_calc, neb_dir, scan_dir,

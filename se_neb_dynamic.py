@@ -18,7 +18,7 @@ from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, ch
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.geom_helpers import get_bond_length
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx, traj_to_logx_appendable, terminate_logx
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
+from helpers.se_neb_helpers import get_nrgs, has_max, check_poscar, neb_optimizer, safe_mode_check, count_scan_steps, _prep_input, setup_scan_dir
 from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freeze_list_key, neb_key, extract_steps_key, \
     read_schedule_file, get_step_list
 from helpers.neb_helpers import check_for_broken_path
@@ -367,7 +367,7 @@ def can_restart(neb_dir, log_fn=log_def):
 def setup_neb(neb_dir, k_float, neb_method_str, pbc_bool_list, get_calc_fn, changed_bool, opter_ase_fn=FIRE, log_fn=log_def):
     log_fn(f"Checking if restart possible (if find hessian.pckl and CONTCARs)")
     restart = (not changed_bool) and can_restart(neb_dir, log_fn=log_fn)
-    use_ci = has_max(get_fs(neb_dir))
+    use_ci = has_max(get_nrgs(neb_dir))
     img_dirs = get_int_dirs(neb_dir)
     log_fn(f"Creating image objects")
     imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart, log_fn=log_fn)

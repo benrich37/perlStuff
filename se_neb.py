@@ -18,7 +18,7 @@ from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_bon
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
+from helpers.se_neb_helpers import get_nrgs, has_max, check_poscar, neb_optimizer, fix_step_size
 from helpers.geom_helpers import get_bond_length
 
 se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
@@ -561,7 +561,7 @@ if __name__ == '__main__':
         se_log("No NEB dir found - setting restart to False for NEB")
         skip_to_neb = False
         os.mkdir(neb_dir)
-    use_ci = has_max(get_fs(scan_dir)) # Use climbing image if PES have a local maximum
+    use_ci = has_max(get_nrgs(scan_dir)) # Use climbing image if PES have a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
     dyn_neb, skip_to_neb = setup_neb(scan_steps + relax_end, k, neb_method, pbc, get_calc, neb_dir, scan_dir,

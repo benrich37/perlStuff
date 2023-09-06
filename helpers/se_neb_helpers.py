@@ -12,18 +12,21 @@ from helpers.geom_helpers import get_bond_length, get_atoms_prep_follow
 from helpers.schedule_helpers import read_instructions_prep_input
 
 
-def get_fs(work):
+def get_nrgs(work):
     int_dirs = get_int_dirs(work)
     fs = []
     for path in int_dirs:
         fs.append(get_nrg(path))
     return fs
 
-def has_max(fs):
-    for i in range(len(fs) - 2):
-        if fs[i + 2] > fs[i + 1]:
-            if fs[i] < fs[i + 1]:
-                return True
+def is_max(nrgs, i):
+    return (nrgs[i + 1] > nrgs[i]) and (nrgs[i - 1] < nrgs[i])
+
+
+def has_max(nrgs):
+    for i in range(len(nrgs) - 2):
+        if is_max(nrgs, i + 1):
+            return True
     return False
 
 def total_elapsed_str(start1, neb_time, scan_time):

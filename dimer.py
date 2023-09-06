@@ -18,7 +18,7 @@ from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_bon
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, copy_best_state_files
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
-from helpers.se_neb_helpers import get_fs, has_max, check_poscar, neb_optimizer, fix_step_size
+from helpers.se_neb_helpers import get_nrgs, has_max, check_poscar, neb_optimizer, fix_step_size
 from ase.dimer import DimerControl, MinModeAtoms, MinModeTranslate
 
 dimer_template = [ "bond: 1, 5 # (1st atom index (counting from 1 (1-based indexing)), 2nd atom index, number of steps, step size)",
