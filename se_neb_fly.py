@@ -394,7 +394,7 @@ def main():
     def step_list_looper(schedule, restart_at, nflex=10, scan_dir=scan_dir, work_dir=work_dir, pbc=pbc, gpu=gpu, fmax=fmax, max_steps=max_steps, se_log=se_log):
         se_log("Entering scan")
         step_list = get_step_list(schedule, restart_at)
-        se_log(f"Using the following as step list: \n {step_list}")
+        se_log(f"Using the following as step list: \n {step_list} \n")
         setup_scan_dir(work_dir, scan_dir, restart_at, pbc, log_fn=se_log)
         prep_input = lambda step, step_dir_var: _prep_input(step, schedule, step_dir_var, scan_dir, work_dir,
                                                             log_fn=se_log)
