@@ -20,7 +20,7 @@ def get_nrgs(work):
     return fs
 
 def is_max(nrgs, i):
-    return (nrgs[i + 1] > nrgs[i]) and (nrgs[i - 1] < nrgs[i])
+    return (nrgs[i + 1] < nrgs[i]) and (nrgs[i - 1] < nrgs[i])
 
 
 def has_max(nrgs):
