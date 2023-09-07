@@ -704,7 +704,7 @@ def log_and_abort(err_str, log_fn=log_def):
 
 def check_structure(structure, work, log_fn=log_def):
     use_fmt = "vasp"
-    fname_out = "_POSCAR"
+    fname_out = "POSCAR"
     suffixes = ["com", "gjf"]
     have_gauss = False
     if not ope(opj(work, structure)):
