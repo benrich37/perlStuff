@@ -13,6 +13,7 @@ from helpers.generic_helpers import copy_best_state_files, has_coords_out_files,
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx
 from sys import exit, stderr
+from shutil import copy as cp
 
 
 opt_template = ["structure: POSCAR # Structure for optimization",
@@ -244,6 +245,14 @@ def run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, log_fn=log_def,
     if run_again:
         run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, log_fn=log_fn, _failed_before=True)
 
+def copy_result_files(opt_dir, work_dir):
+    result_files = ["CONTCAR", "Ecomponents", "out"]
+    for file in result_files:
+        full = opj(opt_dir, file)
+        if ope(full):
+            cp(full, work_dir)
+
+
 def main():
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft = read_opt_inputs()
     os.chdir(work_dir)
@@ -273,6 +282,7 @@ def main():
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
         run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, log_fn=log_def)
+    copy_result_files(opt_dir, work_dir)
 
 
 
