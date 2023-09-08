@@ -281,7 +281,7 @@ def main():
         run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, log_fn=opt_log)
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
-        run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, log_fn=log_def)
+        run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, log_fn=opt_log)
     copy_result_files(opt_dir, work_dir)
 
 
