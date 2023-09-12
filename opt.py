@@ -11,7 +11,7 @@ from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
-from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx
+from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
 from sys import exit, stderr
 from shutil import copy as cp
 
@@ -274,11 +274,16 @@ def main():
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
     if (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt"))):
         atoms, structure = run_lat_opt(atoms, structure, lat_dir, work_dir, get_lat_calc, log_fn=opt_log)
+        opt_dot_log_faker(opj(lat_dir, "out"), lat_dir)
+        cp(opj(lat_dir, "opt.log"), work_dir)
     opt_log(f"Finding/copying any state files to {opt_dir}")
     copy_best_state_files([work_dir, lat_dir], opt_dir, log_fn=opt_log)
     if use_jdft:
         opt_log(f"Running ion optimization with JDFTx optimizer")
         run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, log_fn=opt_log)
+        opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
+        if not (lat_iters > 0):
+            cp(opj(opt_dir, "opt.log"), work_dir)
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
         run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, log_fn=opt_log)
