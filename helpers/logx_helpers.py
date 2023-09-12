@@ -5,7 +5,7 @@ from ase.io.trajectory import TrajectoryReader
 import numpy as np
 
 from helpers.generic_helpers import get_scan_atoms_list, log_def, \
-    get_atoms_list_from_out, get_do_cell, is_done, get_charges
+    get_atoms_list_from_out, get_do_cell, is_done, get_charges, get_atoms_list_from_out_wforce
 
 
 logx_init_str = "\n Entering Link 1 \n \n"
@@ -201,3 +201,24 @@ def sp_logx(atoms, fname, do_cell=True):
     dump_str += logx_finish_str
     with open(fname, "w") as f:
         f.write(dump_str)
+
+def get_opt_dot_log_faker_str(atoms_list):
+    dump_str = "\n Running Convergence Step: 1 \n"
+    dump_str += "      Step     Time          Energy         fmax \n"
+    dump_str += "*Force-consistent energies used in optimization.\n"
+    for i, atoms in enumerate(atoms_list):
+        forces = []
+        for force in atoms.get_momenta():
+            forces.append(np.linalg.norm(force))
+        dump_str += f"JDFT:   {i} 00:00:00   {atoms.E:.6f}*       {max(forces):.4f}\n"
+    dump_str += "\n"
+    return dump_str
+
+def opt_dot_log_faker(outfile, save_dir):
+    atoms_list = get_atoms_list_from_out_wforce(outfile)
+    dump_str = get_opt_dot_log_faker_str(atoms_list)
+    optdotlog = opj(save_dir, "opt.log")
+    with open(optdotlog, "w") as f:
+        f.write(dump_str)
+        f.close()
+
