@@ -5,7 +5,7 @@ from ase.io.trajectory import TrajectoryReader
 import numpy as np
 
 from helpers.generic_helpers import get_scan_atoms_list, log_def, \
-    get_atoms_list_from_out, get_do_cell, is_done, get_charges, get_atoms_list_from_out_wforce
+    get_atoms_list_from_out, get_do_cell, is_done, get_charges
 
 
 logx_init_str = "\n Entering Link 1 \n \n"
@@ -32,14 +32,46 @@ def write_scan_logx(scan_dir, log_fn=log_def):
         f.close()
 
 
-def out_to_logx_str(outfile, e_conv=(1/27.211397)):
+
+def log_forces(atoms):
+    dump_str = ""
+    # dump_str += " Calling FoFJK, ICntrl=      2527 FMM=F ISym2X=1 I1Cent= 0 IOpClX= 0 NMat=1 NMatS=1 NMatT=0.\n"
+    # dump_str += " ***** Axes restored to original set *****\n"
+    dump_str += "-------------------------------------------------------------------\n"
+    dump_str += " Center     Atomic                   Forces (Hartrees/Bohr)\n"
+    dump_str += " Number     Number              X              Y              Z\n"
+    dump_str += " -------------------------------------------------------------------\n"
+    forces = []
+    try:
+        momenta = atoms.get_momenta()
+    except Exception as e:
+        print(e)
+        momenta = np.zeros([len(atoms.get_atomic_numbers()), 3])
+    for i, number in enumerate(atoms.get_atomic_numbers()):
+        add_str = f" {i+1} {number}"
+        force = momenta[i]
+        forces.append(np.linalg.norm(force))
+        for j in range(3):
+            add_str += f"\t{force[j]:.9f}"
+        add_str += "\n"
+        dump_str += add_str
+    dump_str += " -------------------------------------------------------------------\n"
+    forces = np.array(forces)
+    dump_str += f" Cartesian Forces:  Max {max(forces):.9f} RMS {np.std(forces):.9f}\n"
+    return dump_str
+
+
+def out_to_logx_str(outfile, use_force=False, e_conv=(1/27.211397)):
     atoms_list = get_atoms_list_from_out(outfile)
     dump_str = logx_init_str
     do_cell = get_do_cell(atoms_list[0].cell)
+    if use_force:
+        do_cell = False
     for i in range(len(atoms_list)):
         dump_str += log_input_orientation(atoms_list[i], do_cell=do_cell)
         dump_str += f"\n SCF Done:  E =  {atoms_list[i].E*e_conv}\n\n"
         dump_str += log_charges(atoms_list[i])
+        dump_str += log_forces(atoms_list[i])
         dump_str += opt_spacer(i, len(atoms_list))
     if is_done(outfile):
         dump_str += log_input_orientation(atoms_list[-1])
@@ -166,9 +198,23 @@ def out_to_logx(save_dir, outfile, log_fn=lambda s: print(s)):
     except Exception as e:
         log_fn(e)
         pass
+    try:
+        fname = opj(save_dir, "out_wforce.logx")
+        with open(fname, "w") as f:
+            f.write(out_to_logx_str(outfile, use_force=True))
+        f.close()
+    except Exception as e:
+        log_fn(e)
+        pass
 
 
 def _write_logx(atoms, fname, do_cell=True, do_charges=True):
+    fb = os.path.basename(fname)
+    if ("." in fb):
+        force_fname = opj(os.path.dirname(fname), f"{fb.split('.')[-2]}_wforce.{fb.split('.')[-1]}")
+    else:
+        force_fname = opj(os.path.dirname(fname), f"{fb}_wforce.logx")
+    #######
     if not ope(fname):
         with open(fname, "w") as f:
             f.write(logx_init_str)
@@ -179,6 +225,19 @@ def _write_logx(atoms, fname, do_cell=True, do_charges=True):
         f.write(scf_str(atoms))
         if do_charges:
             f.write(log_charges(atoms))
+        f.write(opt_spacer(step, 100000))
+    ########
+    if not ope(force_fname):
+        with open(force_fname, "w") as f:
+            f.write(logx_init_str)
+    nLast = get_last_step(force_fname)
+    step = nLast + 1
+    with open(force_fname, "a") as f:
+        f.write(log_input_orientation(atoms, do_cell=False))
+        f.write(scf_str(atoms))
+        if do_charges:
+            f.write(log_charges(atoms))
+        f.write(log_forces(atoms))
         f.write(opt_spacer(step, 100000))
 
 
@@ -215,7 +274,7 @@ def get_opt_dot_log_faker_str(atoms_list):
     return dump_str
 
 def opt_dot_log_faker(outfile, save_dir):
-    atoms_list = get_atoms_list_from_out_wforce(outfile)
+    atoms_list = get_atoms_list_from_out(outfile)
     dump_str = get_opt_dot_log_faker_str(atoms_list)
     optdotlog = opj(save_dir, "opt.log")
     with open(optdotlog, "w") as f:
