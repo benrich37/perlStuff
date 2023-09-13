@@ -35,8 +35,6 @@ def write_scan_logx(scan_dir, log_fn=log_def):
 
 def log_forces(atoms):
     dump_str = ""
-    # dump_str += " Calling FoFJK, ICntrl=      2527 FMM=F ISym2X=1 I1Cent= 0 IOpClX= 0 NMat=1 NMatS=1 NMatT=0.\n"
-    # dump_str += " ***** Axes restored to original set *****\n"
     dump_str += "-------------------------------------------------------------------\n"
     dump_str += " Center     Atomic                   Forces (Hartrees/Bohr)\n"
     dump_str += " Number     Number              X              Y              Z\n"
