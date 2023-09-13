@@ -163,7 +163,6 @@ def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, log_fn=log_def)
     write(structure, atoms, format="vasp")
     log_fn(f"Finished lattice optimization")
     finished(lat_dir)
-    out_to_logx(lat_dir, opj(lat_dir, 'out'), log_fn=log_fn)
     return atoms, structure
 
 
@@ -195,7 +194,6 @@ def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, log_fn=log_def):
     structure_path = opj(ion_dir_path, "CONTCAR")
     write(structure_path, atoms_obj, format="vasp")
     finished(ion_dir_path)
-    out_to_logx(ion_dir_path, opj(ion_dir_path, 'out'), log_fn=log_fn)
     return atoms_obj
 
 
@@ -253,6 +251,23 @@ def copy_result_files(opt_dir, work_dir):
             cp(full, work_dir)
 
 
+def append_out_to_logx(outfile, logx, log_fn=log_def):
+    atoms_list = get_atoms_list_from_out(outfile)
+    do_cell = get_do_cell(atoms_list[0].pbc)
+    for atoms in atoms_list:
+        _write_logx(atoms, logx, do_cell=do_cell)
+
+def make_jdft_logx(opt_dir, log_fn=log_def):
+    outfile = opj(opt_dir, "out")
+    logx = opj(opt_dir, "out.logx")
+    if ope(logx):
+        append_out_to_logx(outfile, logx)
+    elif ope(outfile):
+        out_to_logx(opt_dir, outfile, log_fn=log_fn)
+
+
+
+
 def main():
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft = read_opt_inputs()
     os.chdir(work_dir)
@@ -272,15 +287,25 @@ def main():
     opt_log(f"Setting {structure} to atoms object")
     atoms = read(structure, format="vasp")
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
-    if (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt"))):
+    do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
+    restarting_lat = do_lat and restart
+    if do_lat:
+        if restarting_lat:
+            make_jdft_logx(lat_dir, log_fn=opt_log)
         atoms, structure = run_lat_opt(atoms, structure, lat_dir, work_dir, get_lat_calc, log_fn=opt_log)
+        make_jdft_logx(lat_dir, log_fn=opt_log)
         opt_dot_log_faker(opj(lat_dir, "out"), lat_dir)
         cp(opj(lat_dir, "opt.log"), work_dir)
+    restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
+    restarting_ion = restarting_ion and restart
     opt_log(f"Finding/copying any state files to {opt_dir}")
-    copy_best_state_files([work_dir, lat_dir], opt_dir, log_fn=opt_log)
+    copy_best_state_files([work_dir, lat_dir, opt_dir], opt_dir, log_fn=opt_log)
     if use_jdft:
+        if restarting_ion:
+            make_jdft_logx(opt_dir, log_fn=opt_log)
         opt_log(f"Running ion optimization with JDFTx optimizer")
         run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, log_fn=opt_log)
+        make_jdft_logx(opt_dir, log_fn=opt_log)
         opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
         if not (lat_iters > 0):
             cp(opj(opt_dir, "opt.log"), work_dir)
