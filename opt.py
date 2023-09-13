@@ -193,6 +193,8 @@ def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, log_fn=log_def):
     atoms_obj.pbc = pbc
     structure_path = opj(ion_dir_path, "CONTCAR")
     write(structure_path, atoms_obj, format="vasp")
+    structure_path = opj(ion_dir_path, "CONTCAR.gjf")
+    write(structure_path, atoms_obj, format="gaussian-in")
     finished(ion_dir_path)
     return atoms_obj
 
@@ -244,7 +246,7 @@ def run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, log_fn=log_def,
         run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, log_fn=log_fn, _failed_before=True)
 
 def copy_result_files(opt_dir, work_dir):
-    result_files = ["CONTCAR", "Ecomponents", "out"]
+    result_files = ["CONTCAR", "CONTCAR.gjf", "Ecomponents", "out"]
     for file in result_files:
         full = opj(opt_dir, file)
         if ope(full):
