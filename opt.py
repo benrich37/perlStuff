@@ -255,7 +255,7 @@ def append_out_to_logx(outfile, logx, log_fn=log_def):
     log_fn(f"Gathering minimization structures from existing out file")
     atoms_list = get_atoms_list_from_out(outfile)
     log_fn(f"{len(atoms_list)} found from out file")
-    do_cell = get_do_cell(atoms_list[0].pbc)
+    do_cell = get_do_cell(atoms_list[-1].pbc)
     for atoms in atoms_list:
         _write_logx(atoms, logx, do_cell=do_cell)
 
