@@ -184,7 +184,7 @@ def opt_spacer(i, nSteps):
 
 
 def scf_str(atoms, e_conv=(1/27.211397)):
-    return f"\n SCF Done:  E =  {atoms.get_potential_energy()*e_conv}\n\n"
+    return f"\n SCF Done:  E =  {atoms.E*e_conv}\n\n"
 
 
 def out_to_logx(save_dir, outfile, log_fn=lambda s: print(s)):
