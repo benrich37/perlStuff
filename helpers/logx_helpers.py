@@ -184,6 +184,10 @@ def opt_spacer(i, nSteps):
 
 
 def scf_str(atoms, e_conv=(1/27.211397)):
+    try:
+        E = atoms.E
+    except:
+        E = atoms.get_potential_energy()
     return f"\n SCF Done:  E =  {atoms.E*e_conv}\n\n"
 
 
