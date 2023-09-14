@@ -353,6 +353,27 @@ def just_passed_max(step, scan_dir, log_fn=log_def):
         log_fn(f"Step {step} detected to be a local maximum")
     return just_passed
 
+def get_dEdStep(step, scan_dir, log_fn=log_def):
+    # Gives the first derivative of energy surface w.r.t. step number at specified step
+    nrgs = get_nrgs(scan_dir)
+    dEdStep = nrgs[step] - nrgs[step - 1]
+    return dEdStep
+
+def get_ddEdStep(step, scan_dir, log_fn=log_def):
+    # Gives the second derivative of energy surface at specified step
+    ddEdStep = get_dEdStep(step, scan_dir) - get_dEdStep(step - 1, scan_dir)
+    return ddEdStep
+
+def is_kink(step, scan_dir, thresh = 0.001, log_fn=log_def):
+    ddEdStep = get_dEdStep(step, scan_dir) - get_dEdStep(step - 1, scan_dir)
+    kink = abs(ddEdStep) > thresh
+    if kink:
+        log_fn(f"Second deriv of energy w.r.t. scan step for step {step} is {ddEdStep}, surpassing threshold of {thresh} (kink detected)")
+    else:
+        log_fn(f"Second deriv of energy w.r.t. scan step for step {step} is {ddEdStep}, NOT surpassing {thresh} (no kink)")
+    return kink
+
+
 
 
 def main():
@@ -420,7 +441,8 @@ def main():
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
             write_scan_logx(scan_dir, log_fn=se_log)
             update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=se_log)
-            if just_passed_max(step, scan_dir, log_fn=se_log):
+            # if just_passed_max(step, scan_dir, log_fn=se_log):
+            if is_kink(step, scan_dir, log_fn=se_log):
                 se_log(f"Will break and restart at step {step} with finer step size")
                 schedule = insert_finer_steps(schedule, step, n=nflex)
                 write_schedule_to_text(schedule, work_dir)
