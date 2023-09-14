@@ -3,6 +3,7 @@ from os.path import exists as ope, join as opj
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
+from ase.constraints import FixAtoms
 from datetime import datetime
 from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell
@@ -25,7 +26,9 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "lattice steps: 0 # Number of steps for lattice optimization (0 = no lattice optimization)",
                 "opt program: jdft # Which program to use for ionic optimization",
                 "# jdft = Use JDFTx calculator for ionic optimization (faster)",
-                "# ase = Use ASE wrapper for optimization (slower but more flexible)"]
+                "# ase = Use ASE wrapper for optimization (slower but more flexible)",
+                "freeze base: True # Whether to freeze lower atoms",
+                "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base"]
 
 
 def read_opt_inputs(fname = "opt_input"):
@@ -42,6 +45,8 @@ def read_opt_inputs(fname = "opt_input"):
     pbc = [True, True, False]
     lat_iters = 0
     use_jdft = True
+    freeze_base = False
+    freeze_tol = 3.
     for input in inputs:
         key, val = input[0], input[1]
         if "structure" in key:
@@ -72,8 +77,13 @@ def read_opt_inputs(fname = "opt_input"):
                 use_jdft = False
             else:
                 pass
+        if ("freeze" in key):
+            if ("base" in key):
+                freeze_base = "true" in val.lower()
+            elif ("tol" in key):
+                freeze_tol = float(val)
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft
+    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol
 
 
 def finished(dirname):
@@ -150,7 +160,17 @@ def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use
     return structure, restart
 
 
-def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, log_fn=log_def):
+def freeze_surf_base(atoms, ztol = 3.):
+    max_z = max(atoms.positions[:, 2])
+    mask = (atoms.positions[:, 2] < (max_z - ztol))
+    c = FixAtoms(mask = mask)
+    atoms.set_constraint(c)
+    return atoms
+
+
+def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def):
+    if freeze_base:
+        atoms = freeze_surf_base(atoms, ztol=freeze_tol)
     atoms.set_calculator(calc_fn(lat_dir))
     log_fn("lattice optimization starting")
     atoms.get_forces()
@@ -166,20 +186,22 @@ def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, log_fn=log_def)
     return atoms, structure
 
 
-def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, log_fn=log_def, _failed_before=False):
+def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def, _failed_before=False):
     run_again = False
     try:
-        atoms, structure = run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, log_fn=log_fn)
+        atoms, structure = run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
     except Exception as e:
         check_for_restart(e, _failed_before, lat_dir, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
-        atoms, structure = run_lat_opt(atoms, structure, lat_dir, root, calc_fn, log_fn=log_fn, _failed_before=True)
+        atoms, structure = run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn, _failed_before=True)
     return atoms, structure
 
 
-def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, log_fn=log_def):
+def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def):
+    if freeze_base:
+        atoms_obj = freeze_surf_base(atoms_obj, ztol=freeze_tol)
     atoms_obj.set_calculator(calc_fn(ion_dir_path))
     log_fn("ionic optimization starting")
     pbc = atoms_obj.pbc
@@ -199,10 +221,10 @@ def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, log_fn=log_def):
     return atoms_obj
 
 
-def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=False, log_fn=log_def):
+def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False, freeze_tol = 0., _failed_before=False, log_fn=log_def):
     run_again = False
     try:
-        atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, log_fn=log_fn)
+        atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
     except Exception as e:
         check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
         run_again = True
@@ -212,7 +234,9 @@ def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=Fals
     return atoms_obj
 
 
-def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, log_fn=log_def):
+def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, freeze_base = False, freeze_tol = 0.,log_fn=log_def):
+    if freeze_base:
+        atoms = freeze_surf_base(atoms, ztol=freeze_tol)
     do_cell = get_do_cell(atoms.pbc)
     dyn = optimizer(atoms, root, opter)
     traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
@@ -233,17 +257,17 @@ def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, log_fn=log_def):
     finished(root)
 
 
-def run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, log_fn=log_def, _failed_before=False):
+def run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, freeze_base = False, freeze_tol = 0.,log_fn=log_def, _failed_before=False):
     atoms.set_calculator(calc_fn(opt_dir))
     run_again = False
     try:
-        run_ase_opt_runner(atoms, opt_dir, opter, fmax, max_steps, log_fn=log_fn)
+        run_ase_opt_runner(atoms, opt_dir, opter, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
     except Exception as e:
         check_for_restart(e, _failed_before, opt_dir, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
-        run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, log_fn=log_fn, _failed_before=True)
+        run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn, _failed_before=True)
 
 def copy_result_files(opt_dir, work_dir):
     result_files = ["CONTCAR", "CONTCAR.gjf", "Ecomponents", "out"]
@@ -275,7 +299,7 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft = read_opt_inputs()
+    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol = read_opt_inputs()
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
@@ -298,7 +322,7 @@ def main():
     if do_lat:
         if restarting_lat:
             make_jdft_logx(lat_dir, log_fn=opt_log)
-        atoms, structure = run_lat_opt(atoms, structure, lat_dir, work_dir, get_lat_calc, log_fn=opt_log)
+        atoms, structure = run_lat_opt(atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=opt_log)
         make_jdft_logx(lat_dir, log_fn=opt_log)
         opt_dot_log_faker(opj(lat_dir, "out"), lat_dir)
         cp(opj(lat_dir, "opt.log"), work_dir)
@@ -310,14 +334,14 @@ def main():
         if restarting_ion:
             make_jdft_logx(opt_dir, log_fn=opt_log)
         opt_log(f"Running ion optimization with JDFTx optimizer")
-        run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, log_fn=opt_log)
+        run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=opt_log)
         make_jdft_logx(opt_dir, log_fn=opt_log)
         opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
         if not (lat_iters > 0):
             cp(opj(opt_dir, "opt.log"), work_dir)
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
-        run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, log_fn=opt_log)
+        run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol,log_fn=opt_log)
     copy_result_files(opt_dir, work_dir)
 
 
