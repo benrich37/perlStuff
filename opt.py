@@ -66,9 +66,9 @@ def read_opt_inputs(fname = "opt_input"):
             except:
                 pass
         if ("opt" in key) and ("progr" in key):
-            if "jdft" in key:
+            if "jdft" in val:
                 use_jdft = True
-            if "ase" in key:
+            if "ase" in val:
                 use_jdft = False
             else:
                 pass
