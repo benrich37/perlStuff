@@ -161,8 +161,8 @@ def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use
 
 
 def freeze_surf_base(atoms, ztol = 3.):
-    max_z = max(atoms.positions[:, 2])
-    mask = (atoms.positions[:, 2] < (max_z - ztol))
+    min_z = min(atoms.positions[:, 2])
+    mask = (atoms.positions[:, 2] < (min_z + ztol))
     c = FixAtoms(mask = mask)
     atoms.set_constraint(c)
     return atoms
