@@ -5,12 +5,12 @@ from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from ase.constraints import FixAtoms
 from datetime import datetime
-from helpers.generic_helpers import get_cmds, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
+from helpers.generic_helpers import get_cmds_dict, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out
-from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds, get_ionic_opt_cmds
+from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_dict, get_ionic_opt_cmds_dict
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
 from sys import exit, stderr
@@ -308,9 +308,9 @@ def main():
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft)
     exe_cmd = get_exe_cmd(gpu, opt_log)
-    cmds = get_cmds(work_dir, ref_struct=structure)
-    lat_cmds = get_lattice_cmds(cmds, lat_iters, pbc)
-    ion_cmds = get_ionic_opt_cmds(cmds, max_steps)
+    cmds = get_cmds_dict(work_dir, ref_struct=structure)
+    lat_cmds = get_lattice_cmds_dict(cmds, lat_iters, pbc)
+    ion_cmds = get_ionic_opt_cmds_dict(cmds, max_steps)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, log_fn=opt_log)
     get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, log_fn=opt_log)
     get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, log_fn=opt_log)

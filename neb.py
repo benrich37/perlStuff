@@ -10,7 +10,7 @@ import numpy as np
 import shutil
 from helpers.neb_helpers import neb_optimizer, init_images, read_images, prep_neb
 from helpers.generic_helpers import read_line_generic, optimizer, get_int_dirs, get_log_fn, get_int_dirs_indices, add_bond_constraints, write_contcar
-from helpers.generic_helpers import dump_template_input, read_pbc_val, get_cmds
+from helpers.generic_helpers import dump_template_input, read_pbc_val, get_cmds_dict
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 
 neb_template = ["nImages: 10",
@@ -195,7 +195,7 @@ def read_from_int_dirs(work_dir):
 if __name__ == '__main__':
     nImages, restart_bool, work_dir, _initial, _final, k, neb_method, interp_method, fix_pairs, fmax, debug, max_steps, read_int_dirs, pbc, gpu = read_neb_inputs()
     log_stuff = get_log_fn(work_dir, "neb", False)
-    cmds = get_cmds(work_dir)
+    cmds = get_cmds_dict(work_dir)
     if not debug:
         from JDFTx import JDFTx
 

@@ -135,7 +135,7 @@ def insert_el(filename):
         f.write('\n'.join(contents))
 
 
-def read_inputs(work_dir, ref_struct=None):
+def read_inputs_dict(work_dir, ref_struct=None):
     inpfname = opj(work_dir, "inputs")
     if ope("inputs"):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump", "initial-state",
@@ -197,7 +197,7 @@ def get_nbands(poscar_fname):
     return max([int(nval / 2) + 10, int((nval / 2) * 1.2)])
 
 
-def dup_cmds(infile):
+def dup_cmds_dict(infile):
     lattice_line = None
     infile_cmds = {"dump": "End State"}
     ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump-name", "initial-state",
@@ -354,12 +354,12 @@ def log_generic(message, work, fname, print_bool):
         print(message)
 
 
-def get_cmds(work_dir, ref_struct=None):
+def get_cmds_dict(work_dir, ref_struct=None):
     chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
-        return dup_cmds(opj(work_dir, "in"))
+        return dup_cmds_dict(opj(work_dir, "in"))
     else:
-        return read_inputs(work_dir, ref_struct=ref_struct)
+        return read_inputs_dict(work_dir, ref_struct=ref_struct)
 
 
 def read_line_generic(line):
@@ -589,13 +589,13 @@ def has_coords_out_files(dir):
     return ope(opj(dir, "ionpos")) and ope(opj(dir, "lattice"))
 
 
-def get_lattice_cmds(cmds, lat_iters, pbc):
+def get_lattice_cmds_dict(cmds, lat_iters, pbc):
     lat_cmds = duplicate(cmds)
     lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
     lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
     return lat_cmds
 
-def get_ionic_opt_cmds(cmds, lat_iters):
+def get_ionic_opt_cmds_dict(cmds, lat_iters):
     lat_cmds = duplicate(cmds)
     lat_cmds["ionic-minimize"] = f"nIterations {lat_iters}"
     return lat_cmds

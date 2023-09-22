@@ -9,13 +9,13 @@ import numpy as np
 import shutil
 from ase.neb import NEB
 import time
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_atom_str, get_cmds, get_int_dirs_indices, \
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_atom_str, get_cmds_dict, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, add_bond_constraints, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, has_coords_out_files
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_bond_str, log_and_abort
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit, get_lattice_cmds
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, get_lattice_cmds_dict
 from helpers.generic_helpers import get_atoms_from_coords_out, death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
 from helpers.se_neb_helpers import get_nrgs, has_max, check_poscar, neb_optimizer, fix_step_size
@@ -186,7 +186,7 @@ def get_start_dist(scan_dir, atom_pair, restart=False, log_fn=log_def):
     return start_dist
 
 def run_ion_opt_runner(atoms_obj, ion_iters_int, ion_dir_path, cmds_list, log_fn=log_def):
-    ion_cmds = get_ionic_opt_cmds(cmds_list, ion_iters_int)
+    ion_cmds = get_ionic_opt_cmds_dict(cmds_list, ion_iters_int)
     atoms_obj.set_calculator(_get_calc(exe_cmd, ion_cmds, ion_dir_path, log_fn=log_fn))
     log_fn("lattice optimization starting")
     log_fn(f"Fmax: n/a, max_steps: {ion_iters_int}")
@@ -510,13 +510,13 @@ if __name__ == '__main__':
         check_poscar(work_dir, se_log)
     ####################################################################################################################
     se_log(f"Reading JDFTx commands")
-    cmds = get_cmds(work_dir, ref_struct="POSCAR")
+    cmds = get_cmds_dict(work_dir, ref_struct="POSCAR")
     exe_cmd = get_exe_cmd(True, se_log)
-    ion_opt_cmds = get_ionic_opt_cmds(cmds, jdft_steps)
+    ion_opt_cmds = get_ionic_opt_cmds_dict(cmds, jdft_steps)
     if True in pbc:
-        lat_opt_cmds = get_lattice_cmds(cmds, max_steps, pbc=pbc)
+        lat_opt_cmds = get_lattice_cmds_dict(cmds, max_steps, pbc=pbc)
     else:
-        lat_opt_cmds = get_ionic_opt_cmds(cmds, max_steps)
+        lat_opt_cmds = get_ionic_opt_cmds_dict(cmds, max_steps)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
     get_ionopt_calc = lambda root: _get_calc(exe_cmd, ion_opt_cmds, root, debug=False, log_fn=se_log)
     get_latopt_calc = lambda root: _get_calc(exe_cmd, lat_opt_cmds, root, debug=False, log_fn=se_log)

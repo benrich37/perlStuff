@@ -8,7 +8,7 @@ from JDFTx import JDFTx
 import numpy as np
 import shutil
 from helpers.generic_helpers import optimizer, read_pbc_val, get_inputs_list, add_bond_constraints, get_log_fn, \
-    get_cmds, write_contcar
+    get_cmds_dict, write_contcar
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import dump_template_input, get_nrg
 
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     debug = False
     atom_pair, scan_steps, step_length, restart_idx, work_dir, follow, pbc = read_scan_inputs()
     thrice_log = get_log_fn(work_dir, "scan_thrice", False)
-    cmds = get_cmds(work_dir)
+    cmds = get_cmds_dict(work_dir)
     exe_cmd = get_exe_cmd(True, thrice_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, log_fn=thrice_log)
     os.chdir(work_dir)

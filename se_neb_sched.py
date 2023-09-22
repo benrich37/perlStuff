@@ -5,13 +5,13 @@ from ase.optimize import FIRE
 from os.path import join as opj, exists as ope, isdir,  basename
 from os import mkdir, getcwd,  chdir
 from ase.neb import NEB
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds, get_int_dirs_indices, \
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds, check_submit
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit
 from helpers.geom_helpers import get_property
 from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
@@ -370,10 +370,10 @@ def main():
     step_list = get_step_list(schedule, restart_at)
     ####################################################################################################################
     se_log(f"Reading JDFTx commands")
-    cmds = get_cmds(work_dir, ref_struct="POSCAR")
+    cmds = get_cmds_dict(work_dir, ref_struct="POSCAR")
     exe_cmd = get_exe_cmd(gpu, se_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
-    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds(cmds, nMax), root, debug=False,
+    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds_dict(cmds, nMax), root, debug=False,
                                                    log_fn=se_log)
     ####################################################################################################################
     if not skip_to_neb:
