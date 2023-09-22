@@ -209,12 +209,9 @@ def read_inputs_list(work_dir, ref_struct=None):
                         if key not in ignore:
                             input_cmds = append_key_val_to_cmds_list(input_cmds, key, val, allow_duplicates=False)
         do_n_bands = False
-        print(f"input commands: {input_cmds}")
-        print(f"input keys: {input_cmds[:][0]}")
-        print(f"input keys alt: {input_cmds[0][:]}")
-        print(f"input keys alt2: {[cmd[0] for cmd in input_cmds]}")
-        if nbands_key in input_cmds[:][0]:
-            if input_cmds[input_cmds[:][0].index(nbands_key)][1] == "*":
+        keys = [cmd[0] for cmd in input_cmds]
+        if nbands_key in keys:
+            if input_cmds[keys.index(nbands_key)][1] == "*":
                 print("nbands key found as wildcard")
                 do_n_bands = True
         else:
@@ -693,11 +690,12 @@ def get_ionic_opt_cmds_dict(cmds, lat_iters):
 
 
 def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False):
-    if allow_duplicates or (not key in cmds[:][0]):
+    keys = [cmd[0] for cmd in cmds]
+    if allow_duplicates or (not key in keys):
         cmds.append((key, val))
     else:
-        print(f"overwriting f{cmds[cmds[:][0].index(key)][1]} to {val}")
-        cmds[cmds[:][0].index(key)][1] = val
+        print(f"overwriting {keys.index(key)[1]} to {val}")
+        cmds[keys.index(key)][1] = val
     return cmds
 
 
