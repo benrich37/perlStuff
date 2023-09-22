@@ -187,6 +187,7 @@ def read_inputs_list(work_dir, ref_struct=None):
                   "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
         input_cmds = [("dump", "End State")]
+        print("A")
         with open(inpfname) as f:
             for i, line in enumerate(f):
                 if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
@@ -205,11 +206,13 @@ def read_inputs_list(work_dir, ref_struct=None):
                             input_cmds.append((cmd, rest))
         do_n_bands = False
         nbands_key = "elec-n-bands"
+        print("B")
         if nbands_key in input_cmds[:][0]:
             if input_cmds[input_cmds[:][0].index(nbands_key)][1] == "*":
                 do_n_bands = True
         else:
             do_n_bands = True
+        print("C")
         if do_n_bands:
             if ref_struct is None:
                 ref_paths = [opj(work_dir, "POSCAR"), opj(work_dir, "CONTCAR")]
