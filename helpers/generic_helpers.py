@@ -202,23 +202,16 @@ def read_inputs_list(work_dir, ref_struct=None):
                     if not skip:
                         key = line[:line.index(" ")]
                         val = line.rstrip("\n")[line.index(" ") + 1:]
-                        if key == nbands_key:
-                            print(f"found nbands key!")
-                        print(repr(key))
-                        print(repr(val))
                         if key not in ignore:
                             input_cmds = append_key_val_to_cmds_list(input_cmds, key, val, allow_duplicates=False)
         do_n_bands = False
         keys = [cmd[0] for cmd in input_cmds]
         if nbands_key in keys:
             if input_cmds[keys.index(nbands_key)][1] == "*":
-                print("nbands key found as wildcard")
                 do_n_bands = True
         else:
-            print("nbands key not found")
             do_n_bands = True
         if do_n_bands:
-            print("doing nbands")
             if ref_struct is None:
                 ref_paths = [opj(work_dir, "POSCAR"), opj(work_dir, "CONTCAR")]
             else:
@@ -227,7 +220,6 @@ def read_inputs_list(work_dir, ref_struct=None):
                 if ope(p):
                     input_cmds = append_key_val_to_cmds_list(input_cmds, nbands_key, str(get_nbands(p)), allow_duplicates=False)
                     break
-        print(f"input cmds: {input_cmds}")
         return input_cmds
     else:
         return None
@@ -695,7 +687,6 @@ def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False):
     if allow_duplicates or (not key in keys):
         cmds.append((key, val))
     else:
-        print(f"overwriting {cmds[keys.index(key)][1]} to {val}")
         cmds[keys.index(key)] = (key, val)
     return cmds
 
