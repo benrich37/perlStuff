@@ -725,20 +725,30 @@ def get_pdos_cmd_orbitals(num):
     return orbs
 
 
-def get_pdos_cmd_helper(num, el, i):
+def get_pdos_cmd_helper(num, el, counter_dict):
     cmd_val = ""
     orbs = get_pdos_cmd_orbitals(num)
     for orb in orbs:
-        cmd_val += f"OrthoOrbital {el} {i + 1} {orb} "
+        cmd_val += f"OrthoOrbital {el} {counter_dict[el]} {orb} "
     return cmd_val
+
+
+def update_counter_dict(counter_dict, el):
+    if el not in counter_dict:
+        counter_dict[el] = 1
+    else:
+        counter_dict[el] += 1
+    return counter_dict
 
 
 def get_pdos_cmd_val(atoms):
     val = ""
     els = atoms.get_chemical_symbols()
     nums = atoms.get_atomic_numbers()
+    counter_dict = {}
     for i in range(len(els)):
-        val += get_pdos_cmd_helper(nums[i], els[i], i)
+        counter_dict = update_counter_dict(counter_dict, els[i])
+        val += get_pdos_cmd_helper(nums[i], els[i], counter_dict)
     return val
 
 
