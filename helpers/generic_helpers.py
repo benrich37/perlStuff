@@ -222,7 +222,7 @@ def read_inputs_list(work_dir, ref_struct=None):
             for p in ref_paths:
                 if ope(p):
                     print("F")
-                    input_cmds[input_cmds[:][0].index(nbands_key)][1] = str(get_nbands(p))
+                    input_cmds = append_key_val_to_cmds_list(input_cmds, nbands_key, str(get_nbands(p)), allow_duplicates=False)
                     break
         print("I")
         return input_cmds
