@@ -38,6 +38,8 @@ valence_electrons = {
     'au': 1, 'hg': 2, 'tl': 3, 'pb': 4, 'bi': 5, 'po': 6, 'at': 7, 'rn': 8,
 }
 
+
+
 foo_str = "fooooooooooooo"
 bar_str = "barrrrrrrrrrrr"
 
@@ -705,6 +707,55 @@ def get_ionic_opt_cmds_list(cmds, lat_iters):
     val = f"nIterations {lat_iters}"
     lat_cmds = append_key_val_to_cmds_list(lat_cmds, key, val, allow_duplicates = False)
     return lat_cmds
+
+has_subshells = {
+    1: "s",
+    3: "p",
+    11: "d"
+}
+
+m_orbs_dict = {1: ['s'], 3: ['p','px','py','pz'], 11: ['d','dxy','dxz','dyz','dz2','dx2-y2']}
+
+def get_pdos_cmd_orbitals(num):
+    orbs = []
+    for cutoff in list(m_orbs_dict.keys()):
+        if num >= cutoff:
+            for m_orb in m_orbs_dict[cutoff]:
+                orbs.append(m_orb)
+    return orbs
+
+
+def get_pdos_cmd_helper(num, el, i):
+    cmd_val = ""
+    orbs = get_pdos_cmd_orbitals(num)
+    for orb in orbs:
+        cmd_val += f"OrthoOrbital {el} {i + 1} {orb} "
+    return cmd_val
+
+
+def get_pdos_cmd_val(atoms):
+    val = ""
+    els = atoms.get_chemical_symbols()
+    nums = atoms.get_atomic_numbers()
+    for i in range(len(els)):
+        val += get_pdos_cmd_helper(nums[i], els[i], i)
+    return val
+
+
+
+
+def add_dos_cmds(cmds, atoms, dos_bool, pdos_bool):
+    if (dos_bool or pdos_bool):
+        key = "dump"
+        val = "End DOS"
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
+    if pdos_bool:
+        key = "density-of-states"
+        val = get_pdos_cmd_val(atoms)
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
+    return cmds
+
+
 
 
 def death_by_state(outfname, log_fn=lambda s: print(s)):
