@@ -695,7 +695,7 @@ def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False):
     if allow_duplicates or (not key in keys):
         cmds.append((key, val))
     else:
-        print(f"overwriting {keys.index(key)[1]} to {val}")
+        print(f"overwriting {cmds[keys.index(key)][1]} to {val}")
         cmds[keys.index(key)][1] = val
     return cmds
 
