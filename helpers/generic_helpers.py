@@ -209,6 +209,7 @@ def read_inputs_list(work_dir, ref_struct=None):
                         if key not in ignore:
                             input_cmds = append_key_val_to_cmds_list(input_cmds, key, val, allow_duplicates=False)
         do_n_bands = False
+        print(f"input keys: {input_cmds[:][0]}")
         if nbands_key in input_cmds[:][0]:
             if input_cmds[input_cmds[:][0].index(nbands_key)][1] == "*":
                 print("nbands key found as wildcard")
