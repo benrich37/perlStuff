@@ -696,7 +696,7 @@ def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False):
         cmds.append((key, val))
     else:
         print(f"overwriting {cmds[keys.index(key)][1]} to {val}")
-        cmds[keys.index(key)][1] = val
+        cmds[keys.index(key)] = (key, val)
     return cmds
 
 
