@@ -178,6 +178,50 @@ def read_inputs_dict(work_dir, ref_struct=None):
         return None
 
 
+def read_inputs_list(work_dir, ref_struct=None):
+    inpfname = opj(work_dir, "inputs")
+    if ope("inputs"):
+        ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump", "initial-state",
+                  "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
+                  "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
+        input_cmds = [("dump", "End State")]
+        with open(inpfname) as f:
+            for i, line in enumerate(f):
+                if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
+                    skip = False
+                    for ig in ignore:
+                        if ig in line:
+                            skip = True
+                    if "#" in line:
+                        skip = True
+                    if "ASE" in line:
+                        break
+                    if not skip:
+                        cmd = line[:line.index(" ")]
+                        rest = line.rstrip("\n")[line.index(" ") + 1:]
+                        if cmd not in ignore:
+                            input_cmds.append((cmd, rest))
+        do_n_bands = False
+        nbands_key = "elec-n-bands"
+        if nbands_key in input_cmds[:][0]:
+            if input_cmds[input_cmds[:][0].index(nbands_key)][1] == "*":
+                do_n_bands = True
+        else:
+            do_n_bands = True
+        if do_n_bands:
+            if ref_struct is None:
+                ref_paths = [opj(work_dir, "POSCAR"), opj(work_dir, "CONTCAR")]
+            else:
+                ref_paths = [opj(work_dir, ref_struct), opj(work_dir, "CONTCAR"), opj(work_dir, "POSCAR")]
+            for p in ref_paths:
+                if ope(p):
+                    input_cmds[input_cmds[:][0].index(nbands_key)][1] = str(get_nbands(p))
+                    break
+        return input_cmds
+    else:
+        return None
+
+
 def get_nbands(poscar_fname):
     atoms = read(poscar_fname)
     count_dict = {}
@@ -221,6 +265,33 @@ def dup_cmds_dict(infile):
                             if cmd not in ignore:
                                 if not cmd == "dump":
                                     infile_cmds[cmd] = rest
+    return infile_cmds
+
+
+def dup_cmds_list(infile):
+    lattice_line = None
+    infile_cmds = [("dump", "End State")]
+    ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump-name", "initial-state",
+              "coulomb-interaction", "coulomb-truncation-embed"]
+    with open(infile) as f:
+        for i, line in enumerate(f):
+            if "lattice " in line:
+                lattice_line = i
+            if lattice_line is not None:
+                if i > lattice_line + 3:
+                    if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
+                        skip = False
+                        for ig in ignore:
+                            if ig in line:
+                                skip = True
+                            elif line[:4] == "ion ":
+                                skip = True
+                        if not skip:
+                            cmd = line[:line.index(" ")]
+                            rest = line.rstrip("\n")[line.index(" ") + 1:]
+                            if cmd not in ignore:
+                                if not cmd == "dump":
+                                    infile_cmds.append((cmd, rest))
     return infile_cmds
 
 
@@ -353,6 +424,13 @@ def log_generic(message, work, fname, print_bool):
     if print_bool:
         print(message)
 
+
+def get_cmds_list(work_dir, ref_struct=None):
+    chdir(work_dir)
+    if not ope(opj(work_dir, "inputs")):
+        return dup_cmds_list(opj(work_dir, "in"))
+    else:
+        return read_inputs_list(work_dir, ref_struct=ref_struct)
 
 def get_cmds_dict(work_dir, ref_struct=None):
     chdir(work_dir)
@@ -598,6 +676,34 @@ def get_lattice_cmds_dict(cmds, lat_iters, pbc):
 def get_ionic_opt_cmds_dict(cmds, lat_iters):
     lat_cmds = duplicate(cmds)
     lat_cmds["ionic-minimize"] = f"nIterations {lat_iters}"
+    return lat_cmds
+
+
+def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False):
+    if allow_duplicates or (not key in cmds[:][0]):
+        cmds.append((key, val))
+    else:
+        cmds[cmds[:][0].index(key)][1] = val
+    return cmds
+
+
+def append_keys_vals_to_cmds_list(cmds, keys, vals, allow_duplicates = False):
+    assert(len(keys) == len(vals))
+    for i in range(len(keys)):
+        cmds = append_key_val_to_cmds_list(cmds, keys[i], vals[i], allow_duplicates = allow_duplicates)
+    return cmds
+def get_lattice_cmds_list(cmds, lat_iters, pbc):
+    lat_cmds = duplicate(cmds)
+    keys = ["lattice-minimize", "latt-move-scale"]
+    vals = [f"nIterations {lat_iters}", ' '.join([str(int(v)) for v in pbc])]
+    lat_cmds = append_keys_vals_to_cmds_list(lat_cmds, keys, vals, allow_duplicates = False)
+    return lat_cmds
+
+def get_ionic_opt_cmds_list(cmds, lat_iters):
+    lat_cmds = duplicate(cmds)
+    key = "ionic-minimize"
+    val = f"nIterations {lat_iters}"
+    lat_cmds = append_key_val_to_cmds_list(lat_cmds, key, val, allow_duplicates = False)
     return lat_cmds
 
 
