@@ -201,6 +201,8 @@ def read_inputs_list(work_dir, ref_struct=None):
                     if not skip:
                         key = line[:line.index(" ")]
                         val = line.rstrip("\n")[line.index(" ") + 1:]
+                        print(key)
+                        print(val)
                         if key not in ignore:
                             input_cmds = append_key_val_to_cmds_list(input_cmds, key, val, allow_duplicates=False)
         do_n_bands = False
@@ -685,6 +687,7 @@ def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False):
     if allow_duplicates or (not key in cmds[:][0]):
         cmds.append((key, val))
     else:
+        print(f"overwriting f{cmds[cmds[:][0].index(key)][1]} to {val}")
         cmds[cmds[:][0].index(key)][1] = val
     return cmds
 
