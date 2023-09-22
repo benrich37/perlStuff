@@ -227,6 +227,7 @@ def read_inputs_list(work_dir, ref_struct=None):
                 if ope(p):
                     input_cmds = append_key_val_to_cmds_list(input_cmds, nbands_key, str(get_nbands(p)), allow_duplicates=False)
                     break
+        print(f"input cmds: {input_cmds}")
         return input_cmds
     else:
         return None
