@@ -218,10 +218,13 @@ def read_inputs_list(work_dir, ref_struct=None):
                 ref_paths = [opj(work_dir, "POSCAR"), opj(work_dir, "CONTCAR")]
             else:
                 ref_paths = [opj(work_dir, ref_struct), opj(work_dir, "CONTCAR"), opj(work_dir, "POSCAR")]
+            print("E")
             for p in ref_paths:
                 if ope(p):
+                    print("F")
                     input_cmds[input_cmds[:][0].index(nbands_key)][1] = str(get_nbands(p))
                     break
+        print("I")
         return input_cmds
     else:
         return None
