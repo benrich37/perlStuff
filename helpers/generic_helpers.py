@@ -212,7 +212,7 @@ def read_inputs_list(work_dir, ref_struct=None):
         print(f"input commands: {input_cmds}")
         print(f"input keys: {input_cmds[:][0]}")
         print(f"input keys alt: {input_cmds[0][:]}")
-        print(f"input keys alt2: {input_cmds[:,0]}")
+        print(f"input keys alt2: {[cmd[0] for cmd in input_cmds]}")
         if nbands_key in input_cmds[:][0]:
             if input_cmds[input_cmds[:][0].index(nbands_key)][1] == "*":
                 print("nbands key found as wildcard")
