@@ -199,10 +199,10 @@ def read_inputs_list(work_dir, ref_struct=None):
                     if "ASE" in line:
                         break
                     if not skip:
-                        cmd = line[:line.index(" ")]
-                        rest = line.rstrip("\n")[line.index(" ") + 1:]
-                        if cmd not in ignore:
-                            input_cmds.append((cmd, rest))
+                        key = line[:line.index(" ")]
+                        val = line.rstrip("\n")[line.index(" ") + 1:]
+                        if key not in ignore:
+                            input_cmds = append_key_val_to_cmds_list(input_cmds, key, val, allow_duplicates=False)
         do_n_bands = False
         nbands_key = "elec-n-bands"
         if nbands_key in input_cmds[:][0]:
@@ -731,7 +731,6 @@ def get_pdos_cmd_helper(num, el, counter_dict):
     for orb in orbs:
         cmd_val += f"OrthoOrbital {el} {counter_dict[el]} {orb} "
     return cmd_val
-
 
 def update_counter_dict(counter_dict, el):
     if el not in counter_dict:
