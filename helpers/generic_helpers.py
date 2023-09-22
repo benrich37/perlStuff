@@ -209,10 +209,13 @@ def read_inputs_list(work_dir, ref_struct=None):
         nbands_key = "elec-n-bands"
         if nbands_key in input_cmds[:][0]:
             if input_cmds[input_cmds[:][0].index(nbands_key)][1] == "*":
+                print("nbands key found as wildcard")
                 do_n_bands = True
         else:
+            print("nbands key not found")
             do_n_bands = True
         if do_n_bands:
+            print("doing nbands")
             if ref_struct is None:
                 ref_paths = [opj(work_dir, "POSCAR"), opj(work_dir, "CONTCAR")]
             else:
