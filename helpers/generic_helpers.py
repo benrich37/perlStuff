@@ -911,6 +911,7 @@ def check_structure(structure, work, log_fn=log_def):
         atoms_obj = read(structure, format=use_fmt)
     except Exception as e:
         log_fn(e)
+    log_fn(f"Saving found structure {structure} as {opj(work, fname_out)}")
     structure = opj(work, fname_out)
     write(structure, atoms_obj, format="vasp")
     return structure
