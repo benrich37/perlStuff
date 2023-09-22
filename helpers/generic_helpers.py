@@ -725,7 +725,7 @@ has_subshells = {
     11: "d"
 }
 
-m_orbs_dict = {1: ['s'], 3: ['p','px','py','pz'], 11: ['d','dxy','dxz','dyz','dz2','dx2-y2']}
+m_orbs_dict = {1: ['s'], 3: ['p','px','py','pz'], 19: ['d','dxy','dxz','dyz','dz2','dx2-y2']}
 
 def get_pdos_cmd_orbitals(num):
     orbs = []
