@@ -357,12 +357,15 @@ def main():
         run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol,log_fn=opt_log)
     copy_result_files(opt_dir, work_dir)
 
-
+from sys import exc_info
+from traceback import format_exc
 
 if __name__ == '__main__':
     try:
         main()
     except Exception as e:
         print(f"Error: {e}", file=stderr)
+        print(format_exc())
+        print(exc_info())
         exit(1)
 
