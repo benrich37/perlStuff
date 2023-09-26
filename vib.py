@@ -313,7 +313,7 @@ def main():
     opt_log(f"Finding/copying any state files to {vib_dir}")
     copy_best_state_files([work_dir, lat_dir, opt_dir], vib_dir, log_fn=opt_log)
     check_submit(gpu, os.getcwd(), "vib", log_fn=opt_log)
-    run_sp(atoms, opt_dir, work_dir, get_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=opt_log)
+    run_sp(atoms, vib_dir, work_dir, get_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=opt_log)
     # copy_result_files(opt_dir, work_dir)
 
 from sys import exc_info
