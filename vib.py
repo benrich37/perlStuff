@@ -9,7 +9,7 @@ from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_dos_cmds, add_vib_cmds
-from helpers.generic_helpers import copy_best_state_files, has_coords_out_files,
+from helpers.generic_helpers import copy_best_state_files, has_coords_out_files
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx
 from sys import exit, stderr
