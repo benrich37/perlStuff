@@ -26,6 +26,8 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "scan: 1, 5, 10, 0.23 # (1st atom index (counting from 1 (1-based indexing)), 2nd atom index, number of steps, step size)",
                    "# target: 1.0 # (Not implemented yet) Modifies step size such that the final step's bond length matches",
                    "# the target length",
+                   "carry: 5, 6, 7 # coordinates scanned involving atom 1 will push atoms 6 and 7 along the same vector",
+                   "carry: 1, 2, 3 # command can be issued more than once for multiple carries"
                    "guess type: 0 # how structures are generated for the start of each bond scan step",
                    "# 0 = only move first atom (starting from previous step optimized geometry)",
                    "# 1 = only move second atom (starting from previous step optimized geometry)",
@@ -70,6 +72,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     jdft_steps = 5
     schedule = False
     gpu = False
+    carry_dict = {}
     for input in inputs:
         key, val = input[0], input[1]
         if "gpu" in key:
@@ -111,6 +114,9 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
             jdft_steps = int(val)
         if ("safe" in key) and ("mode" in key):
             safe_mode = "true" in val.lower()
+        if "carry" in key:
+            idcs = [int(v.strip()) - 1 for v in val.split(",")]
+            carry_dict[idcs[0]] = idcs[1:]
     atom_idcs = None
     scan_steps = None
     step_length = None
@@ -122,7 +128,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if schedule:
         scan_steps = count_scan_steps(work_dir)
     return atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method,\
-        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu
+        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, carry_dict
 
 
 def parse_lookline(lookline):
@@ -378,7 +384,7 @@ def is_kink(step, scan_dir, thresh = 0.001, log_fn=log_def):
 
 def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
-        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu = read_se_neb_inputs()
+        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, carry_dict = read_se_neb_inputs()
     chdir(work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
@@ -404,21 +410,18 @@ def main():
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
     get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds_dict(cmds, nMax), root, debug=False,
                                                    log_fn=se_log)
-
     def do_scan(schedule, restart_at, nflex=10):
         schedule, restart_at = step_list_looper(schedule, restart_at, nflex=nflex)
         step_list = get_step_list(schedule, restart_at)
         if not restart_at == step_list[-1]:
             do_scan(schedule, restart_at)
-
-
     def step_list_looper(schedule, restart_at, nflex=10, scan_dir=scan_dir, work_dir=work_dir, pbc=pbc, gpu=gpu, fmax=fmax, max_steps=max_steps, se_log=se_log):
         se_log("Entering scan")
         step_list = get_step_list(schedule, restart_at)
         se_log(f"Using the following as step list: \n {step_list} \n")
         setup_scan_dir(work_dir, scan_dir, restart_at, pbc, log_fn=se_log)
         prep_input = lambda step, step_dir_var: _prep_input(step, schedule, step_dir_var, scan_dir, work_dir,
-                                                            log_fn=se_log)
+                                                            carry_dict=carry_dict, log_fn=se_log)
         for i, step in enumerate(step_list):
             step_dir = opj(scan_dir, str(step))
             se_log(f"Running step {step} in {step_dir}")

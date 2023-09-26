@@ -123,7 +123,7 @@ def count_scan_steps(work_dir):
 
 
 def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_type, step_dir,
-                     val_target=False, log_func=log_def):
+                     val_target=False, log_func=log_def, carry_dict=None):
     print_str = ""
     prev_length = get_bond_length(atoms, atom_pair)
     log_func(f"Atom pair {get_bond_str(atoms, atom_pair[0], atom_pair[1])} previously at {prev_length:.5f}")
@@ -145,19 +145,34 @@ def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_typ
         if guess_type == 0:
             print_str += f" only {get_atom_str(atoms, atom_pair[0])} moved"
             atoms.positions[atom_pair[1]] += dir_vec
+            if not carry_dict is None:
+                if atom_pair[1] in list(carry_dict.keys()):
+                    for cidx in carry_dict[atom_pair[1]]:
+                        atoms.positions[cidx] += dir_vec
         elif guess_type == 1:
             print_str += f" only {get_atom_str(atoms, atom_pair[0])} moved"
             atoms.positions[atom_pair[0]] += (-1) * dir_vec
+            if not carry_dict is None:
+                if atom_pair[0] in list(carry_dict.keys()):
+                    for cidx in carry_dict[atom_pair[0]]:
+                        atoms.positions[cidx] += (-1) * dir_vec
         elif guess_type == 2:
             print_str += f" only {get_atom_str(atoms, atom_pair[0])} and {get_atom_str(atoms, atom_pair[1])} moved equidistantly"
             dir_vec *= 0.5
             atoms.positions[atom_pair[1]] += dir_vec
             atoms.positions[atom_pair[0]] += (-1) * dir_vec
+            if not carry_dict is None:
+                if atom_pair[0] in list(carry_dict.keys()):
+                    for cidx in carry_dict[atom_pair[0]]:
+                        atoms.positions[cidx] += (-1) * dir_vec
+                if atom_pair[1] in list(carry_dict.keys()):
+                    for cidx in carry_dict[atom_pair[1]]:
+                        atoms.positions[cidx] += dir_vec
     write(opj(step_dir, "POSCAR"), atoms, format="vasp")
     return print_str
 
 
-def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def):
+def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, carry_dict = None, log_fn=log_def):
     step_atoms, step_val, guess_type, target_bool = read_instructions_prep_input(schedule[str(step_idx)])
     step_prev_1_dir = opj(scan_dir, str(step_idx-1))
     step_prev_2_dir = opj(scan_dir, str(step_idx - 2))
@@ -170,7 +185,7 @@ def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, log_fn=log_def
     print_str = f"Prepared structure for step {step_idx} with"
     if len(step_atoms) == 2:
         print_str += _prep_input_bond(step_idx, atoms, prev_2_out, step_atoms, step_val, guess_type, step_dir,
-                                      log_func=log_fn, val_target=target_bool)
+                                      log_func=log_fn, val_target=target_bool, carry_dict = carry_dict)
         print_str += f" written to {opj(step_dir, 'POSCAR')}\n"
         print_str += "\t If you are restarting this step, the CONTCAR will be read, so the previous step does nothing \n"
         log_fn(print_str)
