@@ -306,7 +306,7 @@ def main():
     opt_log("Getting structure path")
     structure = opj(work_dir, structure)
     structure = check_structure(structure, work_dir, log_fn=opt_log)
-    structure, restart = get_structure(structure, True, work_dir, opt_dir, lat_dir, 0, True)
+    # structure, restart = get_structure(structure, True, work_dir, opt_dir, lat_dir, 0, True)
     opt_log("Organizing JDFTx commands")
     exe_cmd = get_exe_cmd(gpu, opt_log)
     cmds = get_cmds_list(work_dir, ref_struct=structure)
