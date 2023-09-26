@@ -289,23 +289,30 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 
-
+from os import mkdir
 
 
 
 def main():
     work_dir, structure, gpu, pbc, freeze_base, freeze_tol, save_dos, save_pdos = read_opt_inputs()
     os.chdir(work_dir)
+    opt_log = get_log_fn(work_dir, "vib", False, restart=True)
+    opt_log("Scanning/setting up dirs")
     vib_dir = opj(work_dir, "vib")
+    if not ope(vib_dir):
+        mkdir(vib_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
+    opt_log("Getting structure path")
     structure = opj(work_dir, structure)
-    opt_log = get_log_fn(work_dir, "vib", False, restart=True)
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, True, work_dir, opt_dir, lat_dir, 0, True)
+    opt_log("Organizing JDFTx commands")
     exe_cmd = get_exe_cmd(gpu, opt_log)
     cmds = get_cmds_list(work_dir, ref_struct=structure)
+    opt_log("Reading structure")
     atoms = read(structure, format="vasp")
+    opt_log("Adding single point special commands for calculation")
     cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
     cmds = add_vib_cmds(cmds)
     opt_log(f"Setting {structure} to atoms object")
