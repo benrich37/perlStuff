@@ -767,6 +767,16 @@ def add_dos_cmds(cmds, atoms, dos_bool, pdos_bool):
     return cmds
 
 
+def add_vib_cmds(cmds, temp=298, constrain_bool=True):
+    con_val = "no"
+    if constrain_bool:
+        con_val = "yes"
+    key = "vibrations"
+    val = f"T {temp} useConstraints {con_val}"
+    cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
+    return cmds
+
+
 
 
 def death_by_state(outfname, log_fn=lambda s: print(s)):
