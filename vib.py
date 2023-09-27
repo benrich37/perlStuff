@@ -314,7 +314,7 @@ def main():
     atoms = read(structure, format="vasp")
     opt_log("Adding single point special commands for calculation")
     cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
-    cmds = add_vib_cmds(cmds)
+    cmds = add_vib_cmds(cmds, constrain_bool=((True in pbc) or (freeze_base)))
     opt_log(f"Setting {structure} to atoms object")
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, log_fn=opt_log)
     opt_log(f"Finding/copying any state files to {vib_dir}")
