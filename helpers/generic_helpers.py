@@ -754,6 +754,30 @@ def get_pdos_cmd_val(atoms):
 
 
 
+def add_cohp_cmds(cmds):
+    dump_pairs = [
+        ["dump", "End BandProjections"],
+        ["dump", "End Fillings"],
+        ["dump", "End Gvectors"],
+        ["dump", "End Kpoints"],
+        ["dump", "End BandEigs"]
+    ]
+    rest_pairs = [
+        ["band-projections-params", "yes no"]
+    ]
+    for dp in dump_pairs:
+        key = dp[0]
+        val = dp[1]
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
+    for rp in rest_pairs:
+        key = rp[0]
+        val = rp[1]
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
+    return cmds
+
+
+
+
 
 def add_dos_cmds(cmds, atoms, dos_bool, pdos_bool):
     if (dos_bool or pdos_bool):
