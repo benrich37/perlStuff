@@ -763,7 +763,7 @@ def add_cohp_cmds(cmds):
         ["dump", "End BandEigs"]
     ]
     rest_pairs = [
-        ["band-projections-params", "yes no"]
+        ["band-projection-params", "yes no"]
     ]
     for dp in dump_pairs:
         key = dp[0]
