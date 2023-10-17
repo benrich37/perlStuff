@@ -801,6 +801,14 @@ def add_vib_cmds(cmds, temp=298, constrain_bool=True):
     return cmds
 
 
+def integ_trap(ygrid, xgrid):
+    integrated_array = []
+    cur = 0
+    for i in range(len(ygrid) - 2):
+        dx = (xgrid[i + 2] - xgrid[i])/2.
+        integrated_array.append(cur + (ygrid))
+    return np.array(integrated_array)
+
 
 
 def death_by_state(outfname, log_fn=lambda s: print(s)):
