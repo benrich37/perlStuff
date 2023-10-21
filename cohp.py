@@ -19,7 +19,7 @@ ads_indices = args.adsorbate_indices
 orb_resolved = args.orb_resolved
 curt = args.curt
 save_sum = args.sum
-if save_sum:
+if save_sum and orb_resolved:
     print(f"Argument 'orb_resolved' conflicts with argument 'sum'. Turning off resolution by orbital")
     orb_resolved = False
 
