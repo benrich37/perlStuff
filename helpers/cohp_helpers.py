@@ -399,6 +399,8 @@ def run_pCOHP(root, idx_pairs, _tensors=None, gamma=False, kidcs=None, orb_resol
                     _ipCOHP = int_pCOHP(_pCOHP, occ_sabcj, wk_sabc)
                     pCOHPs.append(_pCOHP)
                     ipCOHPs.append(_ipCOHP)
+    pCOHPs = np.array(pCOHPs)
+    ipCOHPs = np.array(ipCOHPs)
     return nrgs, pCOHPs, ipCOHPs, labels
 
 
