@@ -67,7 +67,7 @@ if save_sum:
         ipCOHPs[idx] += _ipCOHPs[i, :]
 
 if curt:
-    dump_str = "\t".join(labels) + "\n"
+    dump_str = "\t".join(["ipCOHP_" + v for v in labels]) + "\n"
     dump_str += "\t".join([fts(v) for v in ipCOHPs[:,-1]])
 else:
     dump_str = "Energies\t"
