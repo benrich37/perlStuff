@@ -17,11 +17,11 @@ root = getcwd()
 
 
 if ope("CONTCAR.gjf"):
-    atoms = read("CONTCAR.gjf", format="gaussin-in")
+    atoms = read("CONTCAR.gjf", format="gaussian-in")
 elif ope("CONTCAR"):
     atoms = read("CONTCAR.gjf", format="vasp")
 elif ope("POSCAR.gjf"):
-    atoms = read("POSCAR.gjf", format="gaussin-in")
+    atoms = read("POSCAR.gjf", format="gaussian-in")
 elif ope("POSCAR"):
     atoms = read("CONTCAR.gjf", format="vasp")
 else:
