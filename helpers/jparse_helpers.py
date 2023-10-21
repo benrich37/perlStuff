@@ -562,7 +562,7 @@ def orbs_idx_dict_helper(ion_names, ion_counts, nOrbsPerAtom):
     atom = 0
     for i, count in enumerate(ion_counts):
         for atom_num in range(count):
-            atom_label = ion_names[i] + ' #' + str(atom_num + 1)
+            atom_label = ion_names[i] + '#' + str(atom_num + 1)
             norbs = nOrbsPerAtom[atom]
             orbs_dict_out[atom_label] = list(range(iOrb, iOrb + norbs))
             iOrb += norbs

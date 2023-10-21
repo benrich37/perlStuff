@@ -387,8 +387,8 @@ def run_pCOHP(root, idx_pairs, _tensors=None, gamma=False, kidcs=None, orb_resol
             pCOHPs.append(_pCOHP)
             ipCOHPs.append(_ipCOHP)
         else:
-            sym1 = k1.split(" #")[0]
-            sym2 = k2.split(" #")[0]
+            sym1 = k1.split("#")[0]
+            sym2 = k2.split("#")[0]
             orblabels1 = orb_labels_dict[sym1]
             orblabels2 = orb_labels_dict[sym2]
             for ui, u in enumerate(orbs_dict[k1]):

@@ -42,9 +42,9 @@ for idx in ads_indices:
 nrgs, pCOHPs, ipCOHPs, labels = run_pCOHP(root, idx_pairs_list, orb_resolved=orb_resolved)
 dump_str = "Energies\t"
 for i in range(len(labels)):
-    dump_str += f"ipCOHP{labels[i]}\t"
+    dump_str += f"ipCOHP_{labels[i]}\t"
 for i in range(len(labels)):
-    dump_str += f"pCOHP{labels[i]}\t"
+    dump_str += f"pCOHP_{labels[i]}\t"
 dump_str += "\n"
 
 def fts(num):
