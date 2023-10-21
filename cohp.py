@@ -40,8 +40,6 @@ else:
 ids = atoms.get_chemical_symbols()
 nAtoms = len(ids)
 
-proj_sabcju, E_sabcj, occ_sabcj, wk_sabc, ks, orbs_dict, mu = parse_data(root=root)
-tensors = get_pCOHP_tensors(proj_sabcju, E_sabcj)
 
 idx_pairs_list = []
 associated_final_sum_idcs = []

@@ -175,7 +175,6 @@ def get_pdos(root, atom_idx, decompose=False, Erange=None):
 
 def get_P_uvjsabc(proj_sabcju):
     shape = np.shape(proj_sabcju)
-    print(shape)
     nSpin = shape[0]
     nKa = shape[1]
     nKb = shape[2]
@@ -586,7 +585,6 @@ def parse_data(root=None, bandfile="bandProjections", kPtsfile="kPts", eigfile="
     proj_flat = proj_kju.flatten()
     proj_sabcju = proj_flat.reshape(proj_shape)
     mu = get_mu(outfile)
-    print(f"proj {np.shape(proj_sabcju)}")
     if not kidcs is None:
         abc = []
         for i in range(3):
