@@ -15,15 +15,16 @@ parser.add_argument('adsorbate_indices', metavar='N', type=int, nargs='+',
                     help='atom indices of adsorbate species')
 parser.add_argument("-o", "--orb_resolved", help="resolve pCOHPs by orbitals", action="store_true")
 parser.add_argument("-c", "--curt", help="Only save final ipCOHP value for each atom pair", action="store_true")
-parser.add_argument("-s", "--sum", help="Sum all ipCOHP/pCOHPs for each adsorbate atom together", action="store_true")
+parser.add_argument("-a", "--surf_atom_resolved", help="Save data for individual surface atom contributions", action="store_true")
 args = parser.parse_args()
 ads_indices = args.adsorbate_indices
 orb_resolved = args.orb_resolved
 curt = args.curt
-save_sum = args.sum
-if save_sum and orb_resolved:
-    print(f"Argument 'orb_resolved' conflicts with argument 'sum'. Turning off resolution by orbital")
-    orb_resolved = False
+surf_atom_resolved = args.surf_atom_resolved
+if not surf_atom_resolved and orb_resolved:
+    print(f"Argument 'orb_resolved' currently requires surface atom resolution. Turning on surface atom resolution")
+    surf_atom_resolved = True
+save_sum = not surf_atom_resolved
 
 
 root = getcwd()
@@ -81,7 +82,7 @@ else:
         dump_str += "\t".join([fts(v) for v in ipCOHPs[:,i]]) + "\t"
         dump_str += "\t".join([fts(v) for v in pCOHPs[:, i]]) + "\n"
 
-savename = "pCOHP_" + "_".join(str(idx) for idx in ads_indices) + "_o"*orb_resolved + "_c"*curt + "_s"*save_sum
+savename = "pCOHP_" + "_".join(str(idx) for idx in ads_indices) + "_o"*orb_resolved + "_a"*surf_atom_resolved + "_c"*curt
 fname = opj(root, savename)
 with open(fname, "w") as f:
     f.write(dump_str)
