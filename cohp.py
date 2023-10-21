@@ -13,7 +13,7 @@ parser.add_argument('adsorbate_indices', metavar='N', type=int, nargs='+',
                     help='atom indices of adsorbate species')
 parser.add_argument("-o", "--orb_resolved", help="resolve pCOHPs by orbitals", action="store_true")
 parser.add_argument("-c", "--curt", help="Only save final ipCOHP value for each atom pair", action="store_true")
-parser.add_argument("-s", "--sum", help="Sum all ipCOHP/pCOHPs for each adsorbate atom together")
+parser.add_argument("-s", "--sum", help="Sum all ipCOHP/pCOHPs for each adsorbate atom together", action="store_true")
 args = parser.parse_args()
 ads_indices = args.adsorbate_indices
 orb_resolved = args.orb_resolved
