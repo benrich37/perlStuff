@@ -1,404 +1,64 @@
-import os
-from os.path import exists as ope, join as opj
-from ase.io import read, write
-from ase.io.trajectory import Trajectory
-from ase.constraints import FixAtoms
-from datetime import datetime
-from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
-    get_atoms_list_from_out, get_do_cell
-from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
-from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_dos_cmds, add_cohp_cmds, integ_trap
-from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
-from helpers.generic_helpers import get_bond_str
-from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
-import helpers.cohp_helpers as cfunc
-import helpers.jparse_helpers as jfunc
-from sys import exit, stderr
-from shutil import copy as cp
+from helpers.cohp_helpers import run_pCOHP, parse_data, get_pCOHP_tensors
+from os import getcwd
+from os.path import join as opj, exists as ope
+from ase.io import read
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('adsorbate_indices', metavar='N', type=int, nargs='+',
+                    help='atom indices of adsorbate species')
+parser.add_argument("-o", "--orb_resolved", help="resolve pCOHPs by orbitals", action="store_true")
+args = parser.parse_args()
+ads_indices = args.adsorbate_indices
+orb_resolved = args.orb_resolved
 
 
-cohp_template = ["# structure: POSCAR # Structure for optimization",
-                "# fmax: 0.04 # Max force for convergence criteria",
-                "# max_steps: 100 # Max number of steps before exit",
-                "gpu: True # Whether or not to use GPU (much faster)",
-                "restart: False # Whether to get structure from lat/opt dirs or from input structure",
-                "pbc: False False False # Periodic boundary conditions for unit cell",
-                "lattice steps: 0 # Number of steps for lattice optimization (0 = no lattice optimization)",
-                "freeze base: True # Whether to freeze lower atoms",
-                "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base",
-                "# dE: 0.001 # Resolution of Egrid used to calc COHP vals"
-                "cohp indices: 1, 2, 3  # Indices of atoms to analyze (leave empty to analyze all)",
-                "cohp pairs: [1, 2], [1, 3] "]
+root = getcwd()
 
 
-def read_cohp_inputs(fname ="cohp_input"):
-    work_dir = None
-    structure = None
-    if not ope(fname):
-        dump_template_input(fname, cohp_template, os.getcwd())
-        raise ValueError(f"No cohp input supplied: dumping template {fname}")
-    inputs = get_inputs_list(fname, auto_lower=False)
-    fmax = 0.01
-    max_steps = 100
-    gpu = True
-    restart = False
-    pbc = [True, True, False]
-    lat_iters = 0
-    freeze_base = False
-    freeze_tol = 3.
-    cohp_idcs = []
-    cohp_pairs = []
-    dE = 0.001
-    for input in inputs:
-        key, val = input[0], input[1]
-        if "structure" in key:
-            structure = val.strip()
-        if "work" in key:
-            work_dir = val
-        if "gpu" in key:
-            gpu = "true" in val.lower()
-        if "restart" in key:
-            restart = "true" in val.lower()
-        if "max" in key:
-            if "fmax" in key:
-                fmax = float(val)
-            elif "step" in key:
-                max_steps = int(val)
-        if "pbc" in key:
-            pbc = read_pbc_val(val)
-        if "lat" in key:
-            try:
-                n_iters = int(val)
-                lat_iters = n_iters
-            except:
-                pass
-        if ("freeze" in key):
-            if ("base" in key):
-                freeze_base = "true" in val.lower()
-            elif ("tol" in key):
-                freeze_tol = float(val)
-        if ("cohp" in key):
-            if ("indices" in key) or ("idcs" in key):
-                cohp_idcs = parse_cohp_idcs(val)
-            elif ("pair" in key):
-                cohp_pairs = parse_cohp_pairs(val)
-        if ("dE" in key):
-            dE = float(val.strip())
-    work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, cohp_idcs, cohp_pairs, dE
+if ope("CONTCAR.gjf"):
+    atoms = read("CONTCAR.gjf", format="gaussin-in")
+elif ope("CONTCAR"):
+    atoms = read("CONTCAR.gjf", format="vasp")
+elif ope("POSCAR.gjf"):
+    atoms = read("POSCAR.gjf", format="gaussin-in")
+elif ope("POSCAR"):
+    atoms = read("CONTCAR.gjf", format="vasp")
+else:
+    raise ValueError("No poscar/contcar found")
+ids = atoms.get_chemical_symbols()
+nAtoms = len(ids)
+
+proj_sabcju, E_sabcj, occ_sabcj, wk_sabc, ks, orbs_dict, mu = parse_data(root=root)
+tensors = get_pCOHP_tensors(proj_sabcju, E_sabcj)
+
+idx_pairs_list = []
+
+for idx in ads_indices:
+    for i in range(nAtoms):
+        if not i in ads_indices:
+            idx_pairs_list.append([i, idx])
+
+nrgs, pCOHPs, ipCOHPs, labels = run_pCOHP(root, idx_pairs_list, orb_resolved=orb_resolved)
+dump_str = "Energies\t"
+for i in range(len(labels)):
+    dump_str += f"ipCOHP{labels[i]}\t"
+for i in range(len(labels)):
+    dump_str += f"pCOHP{labels[i]}\t"
+dump_str += "\n"
+
+def fts(num):
+    return f"{num}"
+
+for i in range(len(nrgs)):
+    dump_str += fts(nrgs[i]) + "\t"
+    dump_str += "\t".join([fts(v) for v in ipCOHPs[:,i]]) + "\t"
+    dump_str += "\t".join([fts(v) for v in pCOHPs[:, i]]) + "\n"
+
+savename = "o_"*orb_resolved + "pCOHP_" + "_".join(str(idx) for idx in ads_indices)
+fname = opj(root, savename)
+with open(fname, "w") as f:
+    f.write(dump_str)
 
 
-def finished(dirname):
-    with open(opj(dirname, "finished.txt"), 'w') as f:
-        f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": Done")
-
-def parse_cohp_idcs(val):
-    val = val.strip().split(",")
-    idcs = [int(v.strip()) - 1 for v in val]
-    return idcs
-
-def parse_cohp_pairs(val):
-    starts = []
-    stops = []
-    for i, el in enumerate(val):
-        if el == "[":
-            starts.append(i)
-        elif el == "]":
-            stops.append(i)
-    pairs = []
-    for i in range(min(len(starts), len(stops))):
-        look = val[starts[i] + 1:stops[i]]
-        pair = [int(v.strip()) - 1 for v in look.split(",")]
-        pairs.append(pair)
-    return pairs
-
-
-def get_atoms_from_lat_dir(dir):
-    ionpos = opj(dir, "ionpos")
-    lattice = opj(dir, "lattice")
-    return get_atoms_from_coords_out(ionpos, lattice)
-
-
-def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jdft, log_fn=log_def):
-    if ope(opt_dir):
-        if not use_jdft:
-            if ope(opj(opt_dir, "CONTCAR")):
-                structure = opj(opt_dir, "CONTCAR")
-                log_fn(f"Found {structure} for restart structure")
-        else:
-            outfile = opj(opt_dir, "out")
-            if ope(outfile):
-                structure = opj(opt_dir, "POSCAR")
-                atoms_obj = get_atoms_list_from_out(outfile)[-1]
-                write(structure, atoms_obj, format="vasp")
-    elif ope(lat_dir):
-        os.mkdir(opt_dir)
-        if not has_coords_out_files(lat_dir):
-            log_fn(f"No ionpos and/or lattice found in {lat_dir}")
-            lat_out = opj(lat_dir, "out")
-            if ope(lat_out):
-                log_fn(f"Reading recent structure from out file in {lat_out}")
-                atoms = get_atoms_list_from_out(lat_out)[-1]
-                structure = opj(lat_dir, "POSCAR_lat_out")
-                log_fn(f"Saving read structure to {structure}")
-                write(structure, atoms, format="vasp")
-        else:
-            log_fn(f"Reading structure from {lat_dir}")
-            atoms = get_atoms_from_lat_dir(lat_dir)
-            structure = opj(lat_dir, "POSCAR_coords_out")
-            log_fn(f"Saving read structure to {structure}")
-            write(structure, atoms, format="vasp")
-    else:
-        os.mkdir(lat_dir)
-        os.mkdir(opt_dir)
-        log_fn(f"Could not gather restart structure from {work_dir}")
-        if ope(structure):
-            log_fn(f"Using {structure} for structure")
-            log_fn(f"Changing restart to False")
-            restart = False
-            log_fn("setting up lattice and opt dir")
-        else:
-            log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
-    return structure, restart
-
-
-def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=log_def):
-    dirs_list = [opt_dir]
-    if lat_iters > 0:
-        log_fn(f"Lattice opt requested ({lat_iters} iterations) - adding lat dir to setup list")
-        dirs_list.append(lat_dir)
-    if not restart:
-        for d in dirs_list:
-            if ope(d):
-                log_fn(f"Resetting {d}")
-                remove_dir_recursive(d)
-            os.mkdir(d)
-        if ope(structure):
-            log_fn(f"Found {structure} for structure")
-        else:
-            log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
-    else:
-        structure, restart = get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jdft, log_fn=log_fn)
-    return structure, restart
-
-
-def freeze_surf_base(atoms, ztol = 3.):
-    min_z = min(atoms.positions[:, 2])
-    mask = (atoms.positions[:, 2] < (min_z + ztol))
-    c = FixAtoms(mask = mask)
-    atoms.set_constraint(c)
-    return atoms
-
-
-def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def):
-    if freeze_base:
-        atoms = freeze_surf_base(atoms, ztol=freeze_tol)
-    atoms.set_calculator(calc_fn(lat_dir))
-    log_fn("lattice optimization starting")
-    atoms.get_forces()
-    ionpos = opj(lat_dir, "ionpos")
-    lattice = opj(lat_dir, "lattice")
-    pbc = atoms.pbc
-    atoms = get_atoms_from_coords_out(ionpos, lattice)
-    atoms.pbc = pbc
-    structure = opj(root, structure + "_lat_opted")
-    write(structure, atoms, format="vasp")
-    log_fn(f"Finished lattice optimization")
-    finished(lat_dir)
-    return atoms, structure
-
-
-def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def, _failed_before=False):
-    run_again = False
-    try:
-        atoms, structure = run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
-    except Exception as e:
-        check_for_restart(e, _failed_before, lat_dir, log_fn=log_fn)
-        run_again = True
-        pass
-    if run_again:
-        atoms, structure = run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn, _failed_before=True)
-    return atoms, structure
-
-
-def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def):
-    if freeze_base:
-        atoms_obj = freeze_surf_base(atoms_obj, ztol=freeze_tol)
-    atoms_obj.set_calculator(calc_fn(ion_dir_path))
-    log_fn("ionic optimization starting")
-    pbc = atoms_obj.pbc
-    atoms_obj.get_forces()
-    outfile = opj(ion_dir_path, "out")
-    if ope(outfile):
-        atoms_obj_list = get_atoms_list_from_out(outfile)
-        atoms_obj = atoms_obj_list[-1]
-    else:
-        log_and_abort(f"No output data given - check error file", log_fn=log_fn)
-    atoms_obj.pbc = pbc
-    structure_path = opj(ion_dir_path, "CONTCAR")
-    write(structure_path, atoms_obj, format="vasp")
-    structure_path = opj(ion_dir_path, "CONTCAR.gjf")
-    write(structure_path, atoms_obj, format="gaussian-in")
-    finished(ion_dir_path)
-    return atoms_obj
-
-
-def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False, freeze_tol = 0., _failed_before=False, log_fn=log_def):
-    run_again = False
-    try:
-        atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
-    except Exception as e:
-        check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
-        run_again = True
-        pass
-    if run_again:
-        atoms_obj = run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=False, log_fn=log_fn)
-    return atoms_obj
-
-
-def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, freeze_base = False, freeze_tol = 0.,log_fn=log_def):
-    if freeze_base:
-        atoms = freeze_surf_base(atoms, ztol=freeze_tol)
-    do_cell = get_do_cell(atoms.pbc)
-    dyn = optimizer(atoms, root, opter)
-    traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
-    logx = opj(root, "opt.logx")
-    write_logx = lambda: _write_logx(atoms, logx, do_cell=do_cell)
-    write_contcar = lambda: _write_contcar(atoms, root)
-    write_opt_log = lambda: _write_opt_iolog(atoms, dyn, max_steps, log_fn)
-    dyn.attach(traj.write, interval=1)
-    dyn.attach(write_contcar, interval=1)
-    dyn.attach(write_logx, interval=1)
-    dyn.attach(write_opt_log, interval=1)
-    log_fn("Optimization starting")
-    log_fn(f"Fmax: {fmax}, max_steps: {max_steps}")
-    dyn.run(fmax=fmax, steps=max_steps)
-    log_fn(f"Finished in {dyn.nsteps}/{max_steps}")
-    finished_logx(atoms, logx, dyn.nsteps, max_steps)
-    sp_logx(atoms, "sp.logx", do_cell=do_cell)
-    finished(root)
-
-
-def run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, freeze_base = False, freeze_tol = 0.,log_fn=log_def, _failed_before=False):
-    atoms.set_calculator(calc_fn(opt_dir))
-    run_again = False
-    try:
-        run_ase_opt_runner(atoms, opt_dir, opter, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
-    except Exception as e:
-        check_for_restart(e, _failed_before, opt_dir, log_fn=log_fn)
-        run_again = True
-        pass
-    if run_again:
-        run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn, _failed_before=True)
-
-def copy_result_files(opt_dir, work_dir):
-    result_files = ["CONTCAR", "CONTCAR.gjf", "Ecomponents", "out"]
-    for file in result_files:
-        full = opj(opt_dir, file)
-        if ope(full):
-            cp(full, work_dir)
-
-
-def append_out_to_logx(outfile, logx, log_fn=log_def):
-    log_fn(f"Gathering minimization structures from existing out file")
-    atoms_list = get_atoms_list_from_out(outfile)
-    log_fn(f"{len(atoms_list)} found from out file")
-    do_cell = get_do_cell(atoms_list[-1].pbc)
-    for atoms in atoms_list:
-        _write_logx(atoms, logx, do_cell=do_cell)
-
-def make_jdft_logx(opt_dir, log_fn=log_def):
-    outfile = opj(opt_dir, "out")
-    logx = opj(opt_dir, "out.logx")
-    if ope(logx):
-        log_fn("Appending existing out file data to existing logx file")
-        append_out_to_logx(outfile, logx, log_fn=log_fn)
-    elif ope(outfile):
-        out_to_logx(opt_dir, outfile, log_fn=log_fn)
-        log_fn("Writing existing out file to logx file")
-
-
-def run_cohp_helper(ion_dir, dE, pairs, atoms, bandfname = "bandProjections", kptsfname = "kPts", eigfname = "eigenvals"):
-    bandfile = opj(ion_dir, bandfname)
-    kPtsfile = opj(ion_dir, kptsfname)
-    eigfile = opj(ion_dir, eigfname)
-    proj, nStates, nBands, nProj, nOrbsPerAtom, wk, k_points, E = cfunc.parse_data(bandfile, kPtsfile, eigfile)
-    T_ijk, P_uvjk, e_jk = cfunc.prepare_small_funcs(proj, E)
-    pCOHP_uv, pCOHP_uv_u, H_atomic_matrix, H_uvk, pCOHP_uvk, pCOHP_uvk_u, Hk_atomic_matrix, H_atomic_matrices = cfunc.prepare_large_funcs(e_jk, P_uvjk, nBands, nStates, wk, k_points)
-    Egrid = cfunc.get_Egrid(E, dE)
-    Emin = min(Egrid)
-    Emax = max(Egrid)
-    orbs_idcs_ref = cfunc.get_orbs_idx_ref(nOrbsPerAtom)
-    labels = []
-    pcohps = []
-    for pair in pairs:
-        orbs_u = orbs_idcs_ref[pair[0]]
-        orbs_v = orbs_idcs_ref[pair[1]]
-        pcohp = cfunc.ez_pCOHP_sum(orbs_u, orbs_v, Egrid, Emin, Emax, dE, pCOHP_uv)
-        pcohps.append(pcohp)
-        labels.append(get_bond_str(atoms, pair[0], pair[1]))
-    return labels, Egrid, pcohps
-
-def run_cohp(ion_dir, dE, pairs, atoms):
-    labels, Egrid, pcohps = run_cohp_helper(ion_dir, dE, pairs, atoms)
-
-
-
-
-
-
-def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, cohp_idcs, cohp_pairs, dE = read_cohp_inputs()
-    os.chdir(work_dir)
-    opt_dir = opj(work_dir, "ion_opt")
-    lat_dir = opj(work_dir, "lat_opt")
-    structure = opj(work_dir, structure)
-    opt_log = get_log_fn(work_dir, "opt", False, restart=restart)
-    structure = check_structure(structure, work_dir, log_fn=opt_log)
-    structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, True)
-    exe_cmd = get_exe_cmd(gpu, opt_log)
-    cmds = get_cmds_list(work_dir, ref_struct=structure)
-    atoms = read(structure, format="vasp")
-    cmds = add_dos_cmds(cmds, atoms, True, True)
-    cmds = add_cohp_cmds(cmds)
-    lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
-    ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
-    opt_log(f"Setting {structure} to atoms object")
-    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, log_fn=opt_log)
-    get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, log_fn=opt_log)
-    check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
-    do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
-    restarting_lat = do_lat and restart
-    if do_lat:
-        if restarting_lat:
-            make_jdft_logx(lat_dir, log_fn=opt_log)
-        atoms, structure = run_lat_opt(atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=opt_log)
-        make_jdft_logx(lat_dir, log_fn=opt_log)
-        opt_dot_log_faker(opj(lat_dir, "out"), lat_dir)
-        cp(opj(lat_dir, "opt.log"), work_dir)
-    restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
-    restarting_ion = restarting_ion and restart
-    opt_log(f"Finding/copying any state files to {opt_dir}")
-    copy_best_state_files([work_dir, lat_dir, opt_dir], opt_dir, log_fn=opt_log)
-    if restarting_ion:
-        make_jdft_logx(opt_dir, log_fn=opt_log)
-    opt_log(f"Running ion optimization with JDFTx optimizer")
-    run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=opt_log)
-    make_jdft_logx(opt_dir, log_fn=opt_log)
-    opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
-    if not (lat_iters > 0):
-        cp(opj(opt_dir, "opt.log"), work_dir)
-    copy_result_files(opt_dir, work_dir)
-
-from sys import exc_info
-
-if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print(f"Error: {e}", file=stderr)
-        print(exc_info())
-        exit(1)
 
