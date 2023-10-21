@@ -19,7 +19,7 @@ def atom_idx_to_key_map(atoms):
         if not el in el_counter_dict:
             el_counter_dict[el] = 0
         el_counter_dict[el] += 1
-        idx_to_key_map.append(f"{el} #{el_counter_dict[el]}")
+        idx_to_key_map.append(f"{el}#{el_counter_dict[el]}")
     return idx_to_key_map
 
 
