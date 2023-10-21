@@ -1,3 +1,5 @@
+#!/global/homes/b/beri9208/.conda/envs/jdftx_env/bin/python
+
 from helpers.cohp_helpers import run_pCOHP, parse_data, get_pCOHP_tensors, atom_idx_to_key_map
 from os import getcwd
 from os.path import join as opj, exists as ope
