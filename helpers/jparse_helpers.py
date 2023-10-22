@@ -540,7 +540,11 @@ def get_atom_orb_labels_dict(root):
                         refs = ref_lists[j]
                         nShells = int(lsplit[4+j])
                         for k in range(nShells):
-                            labels_dict[sym] += refs
+                            if nShells > 1:
+                                for r in refs:
+                                    labels_dict[sym].append(f"{r}{k}")
+                            else:
+                                labels_dict[sym] += refs
 
 def get_kfolding(outfile):
     key = "kpoint-folding "
