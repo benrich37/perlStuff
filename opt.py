@@ -232,7 +232,7 @@ def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False
         run_again = True
         pass
     if run_again:
-        atoms_obj = run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=False, log_fn=log_fn)
+        atoms_obj = run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=True, log_fn=log_fn)
     return atoms_obj
 
 
