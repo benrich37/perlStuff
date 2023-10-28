@@ -2,7 +2,7 @@ from shutil import copy as cp
 import numpy as np
 from datetime import datetime as dt
 from ase import Atoms, Atom
-from ase.constraints import FixBondLength
+from ase.constraints import FixBondLength, FixAtoms
 from os.path import join as opj, exists as ope, isfile, isdir, basename
 from os import listdir as listdir, getcwd, chdir, listdir as get_sub_dirs
 from os import remove as rm, rmdir as rmdir, walk
@@ -471,6 +471,17 @@ def add_constraint(atoms, constraint):
     else:
         consts.append(constraint)
         atoms.set_constraint(consts)
+
+def get_freeze_surf_base_constraint(atoms, ztol = 3.):
+    min_z = min(atoms.positions[:, 2])
+    mask = (atoms.positions[:, 2] < (min_z + ztol))
+    c = FixAtoms(mask = mask)
+    return c
+
+def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0):
+    if freeze_base:
+        c = get_freeze_surf_base_constraint(atoms, ztol=ztol)
+        add_constraint(atoms, c)
 
 
 def add_bond_constraints(atoms, indices, log_fn=log_def):

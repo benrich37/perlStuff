@@ -8,10 +8,10 @@ from ase.neb import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
-from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def
+from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, add_cohp_cmds
 from helpers.geom_helpers import get_property
 from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
@@ -39,8 +39,10 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
                    "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
                    "# optimizes final structure without frozen bond",
-                   "gpu: False"
-                   "# safe mode: True # (Not implemented yet) If end is relaxed, scan images with bond lengths exceeding/smaller than this length",]
+                   "gpu: False \n",
+                   "# safe mode: True # (Not implemented yet) If end is relaxed, scan images with bond lengths exceeding/smaller than this length",
+                   "freeze base: True # Whether to freeze lower atoms",
+                   "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base"]
 
 def read_se_neb_inputs(fname="se_neb_inputs"):
     """ Reads
@@ -69,6 +71,8 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     jdft_steps = 5
     schedule = False
     gpu = False
+    freeze_base = False
+    freeze_tol = 3.
     for input in inputs:
         key, val = input[0], input[1]
         if "gpu" in key:
@@ -110,6 +114,11 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
             jdft_steps = int(val)
         if ("safe" in key) and ("mode" in key):
             safe_mode = "true" in val.lower()
+        if ("freeze" in key):
+            if ("base" in key):
+                freeze_base = "true" in val.lower()
+            elif ("tol" in key):
+                freeze_tol = float(val)
     atom_idcs = None
     scan_steps = None
     step_length = None
@@ -121,7 +130,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if schedule:
         scan_steps = count_scan_steps(work_dir)
     return atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method,\
-        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu
+        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, freeze_base, freeze_tol
 
 
 def parse_lookline(lookline):
@@ -216,13 +225,12 @@ def read_instructions_run_step(instructions):
     j_steps = instructions[j_steps_key]
     return freeze_list, j_steps
 
-
-
 def run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
-             fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False):
+             fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False, freeze_base = False, freeze_tol = 1.0):
     freeze_list, j_steps = read_instructions_run_step(instructions)
     run_again = False
     add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
+    add_freeze_surf_base_constraint(atoms_obj, freeze_base=freeze_base, ztol=freeze_tol)
     try:
         run_step_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, j_steps, get_jdft_opt_calc_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
     except Exception as e:
@@ -276,19 +284,20 @@ def setup_img_dirs(neb_path, scan_path, schedule, restart_bool=False, log_fn=log
     return img_dirs, restart_bool
 
 
-def setup_neb_imgs(img_path_list, pbc_bool_list, get_calc_fn, log_fn=log_def, restart_bool=False):
+def setup_neb_imgs(img_path_list, pbc_bool_list, get_calc_fn, log_fn=log_def, restart_bool=False, freeze_base = False, freeze_tol = 1.0,):
     imgs = []
     for i in range(len(img_path_list)):
         img_dir = img_path_list[i]
         log_fn(f"Looking for structure for image {i} in {img_dir}")
         img = get_atoms(img_dir, pbc_bool_list, restart_bool=restart_bool, log_fn=log_fn)
+        add_freeze_surf_base_constraint(img, freeze_base = freeze_base, ztol=freeze_tol)
         img.set_calculator(get_calc_fn(img_path_list[i]))
         imgs.append(img)
     return imgs
 
 
 
-def setup_neb(schedule, pbc_bool_list, get_calc_fn, neb_path, scan_path,
+def setup_neb(schedule, pbc_bool_list, get_calc_fn, neb_path, scan_path, freeze_base = False, freeze_tol = 1.0,
               opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def):
     if restart_bool:
         if not ope(opj(neb_path,"hessian.pckl")):
@@ -298,7 +307,7 @@ def setup_neb(schedule, pbc_bool_list, get_calc_fn, neb_path, scan_path,
     img_dirs, restart_bool = setup_img_dirs(neb_path, scan_path, schedule,
                                             restart_bool=restart_bool, log_fn=log_fn)
     log_fn(f"Creating image objects")
-    imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
+    imgs_atoms_list = setup_neb_imgs(img_dirs, pbc_bool_list, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn, freeze_base = freeze_base, freeze_tol = freeze_tol)
     log_fn(f"Creating NEB object")
     k_float, neb_method_str = get_neb_options(schedule, log_fn=log_fn)
     neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
@@ -347,12 +356,11 @@ def update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=log_def):
 
 def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
-        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu = read_se_neb_inputs()
+        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, freeze_base, freeze_tol = read_se_neb_inputs()
     chdir(work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
-                                relax_end,
-                                neb_steps, k, neb_method, work_dir)
+                                relax_end, neb_steps, k, neb_method, work_dir)
     schedule = read_schedule_file(work_dir)
     scan_dir = opj(work_dir, "scan")
     restart_at = get_restart_idx(restart_at, scan_dir)  # If was none, finds most recently converged step
@@ -371,6 +379,7 @@ def main():
     ####################################################################################################################
     se_log(f"Reading JDFTx commands")
     cmds = get_cmds_dict(work_dir, ref_struct="POSCAR")
+    cmds = add_cohp_cmds(cmds)
     exe_cmd = get_exe_cmd(gpu, se_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
     get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds_dict(cmds, nMax), root, debug=False,
@@ -398,7 +407,7 @@ def main():
             prep_input(step, step_dir)
             atoms = get_atoms(step_dir, pbc, restart_bool=restart_step, log_fn=se_log)
             check_submit(gpu, getcwd(), "se_neb", log_fn=se_log)
-            run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE,
+            run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE, freeze_base = freeze_base, freeze_tol = freeze_tol,
                      fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
             write_scan_logx(scan_dir, log_fn=se_log)
             update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=se_log)
@@ -412,7 +421,7 @@ def main():
     use_ci = has_max(get_nrgs(scan_dir))  # Use climbing image if PES has a local maximum
     if use_ci:
         se_log("Local maximum found within scan - using climbing image method in NEB")
-    dyn_neb, skip_to_neb = setup_neb(schedule, pbc, get_calc, neb_dir, scan_dir,
+    dyn_neb, skip_to_neb = setup_neb(schedule, pbc, get_calc, neb_dir, scan_dir, freeze_base = freeze_base, freeze_tol = freeze_tol,
                                      restart_bool=skip_to_neb, use_ci_bool=use_ci, log_fn=se_log)
     if skip_to_neb:
         check_submit(gpu, getcwd(), "se_neb", log_fn=se_log)
