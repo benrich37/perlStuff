@@ -5,7 +5,7 @@ from ase.optimize import FIRE
 from os.path import join as opj, exists as ope, isdir,  basename
 from os import mkdir, getcwd,  chdir
 from ase.neb import NEB
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_list, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint
@@ -378,7 +378,7 @@ def main():
     step_list = get_step_list(schedule, restart_at)
     ####################################################################################################################
     se_log(f"Reading JDFTx commands")
-    cmds = get_cmds_dict(work_dir, ref_struct="POSCAR")
+    cmds = get_cmds_list(work_dir, ref_struct="POSCAR")
     cmds = add_cohp_cmds(cmds)
     exe_cmd = get_exe_cmd(gpu, se_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
