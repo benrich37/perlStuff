@@ -476,7 +476,11 @@ def get_freeze_surf_base_constraint(atoms, ztol = 3., log_fn=log_def):
     min_z = min(atoms.positions[:, 2])
     mask = (atoms.positions[:, 2] < (min_z + ztol))
     log_fn(f"Imposing atom freezing for atoms in bottom {ztol:1.1g}A")
-    log_fn(f"(Mask = {mask})")
+    log_str = ""
+    for i, m in enumerate(mask):
+        if m:
+            log_str += f"{get_atom_str(atoms, i)}, "
+    log_fn(f"freezing {log_fn}")
     c = FixAtoms(mask = mask)
     return c
 
