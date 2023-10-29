@@ -8,7 +8,7 @@ from ase.neb import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_list, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
-from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint
+from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint, get_ionic_opt_cmds_list
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, add_cohp_cmds
@@ -230,7 +230,7 @@ def run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_
     freeze_list, j_steps = read_instructions_run_step(instructions)
     run_again = False
     add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
-    add_freeze_surf_base_constraint(atoms_obj, freeze_base=freeze_base, ztol=freeze_tol)
+    add_freeze_surf_base_constraint(atoms_obj, freeze_base=freeze_base, ztol=freeze_tol, log_fn=log_fn)
     try:
         run_step_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, j_steps, get_jdft_opt_calc_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
     except Exception as e:
@@ -382,7 +382,7 @@ def main():
     cmds = add_cohp_cmds(cmds)
     exe_cmd = get_exe_cmd(gpu, se_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
-    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds_dict(cmds, nMax), root, debug=False,
+    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, add_cohp_cmds(get_ionic_opt_cmds_list(cmds, nMax)), root, debug=False,
                                                    log_fn=se_log)
     ####################################################################################################################
     if not skip_to_neb:
