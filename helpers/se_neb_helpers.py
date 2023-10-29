@@ -142,20 +142,13 @@ def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_typ
     else:
         dir_vec = atoms.positions[atom_pair[1]] - atoms.positions[atom_pair[0]]
         dir_vec *= step_length / np.linalg.norm(dir_vec)
-        if guess_type == 0:
-            print_str += f" only {get_atom_str(atoms, atom_pair[0])} moved"
-            atoms.positions[atom_pair[1]] += dir_vec
+        if guess_type < 2:
+            print_str += f" only {get_atom_str(atoms, atom_pair[guess_type])} moved"
+            atoms.positions[atom_pair[guess_type]] += dir_vec
             if not carry_dict is None:
-                if atom_pair[1] in list(carry_dict.keys()):
-                    for cidx in carry_dict[atom_pair[1]]:
+                if atom_pair[guess_type] in list(carry_dict.keys()):
+                    for cidx in carry_dict[atom_pair[guess_type]]:
                         atoms.positions[cidx] += dir_vec
-        elif guess_type == 1:
-            print_str += f" only {get_atom_str(atoms, atom_pair[0])} moved"
-            atoms.positions[atom_pair[0]] += (-1) * dir_vec
-            if not carry_dict is None:
-                if atom_pair[0] in list(carry_dict.keys()):
-                    for cidx in carry_dict[atom_pair[0]]:
-                        atoms.positions[cidx] += (-1) * dir_vec
         elif guess_type == 2:
             print_str += f" only {get_atom_str(atoms, atom_pair[0])} and {get_atom_str(atoms, atom_pair[1])} moved equidistantly"
             dir_vec *= 0.5
