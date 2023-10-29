@@ -30,6 +30,8 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "# 1 = only move second atom (starting from previous step optimized geometry)",
                    "# 2 = move both atoms equidistantly (starting from previous step optimized geometry)",
                    "# 3 = move all atoms following trajectory of previous two steps' optimized geometry (bond length enforced by a type 2 guess)"
+                   "carry: 1, 6, 7 # coordinates scanned involving atom 1 will push atoms 6 and 7 along the same vector",
+                   "carry: 1, 2, 3 # command can be issued more than once for multiple carries",
                    "restart: 3 # step number to resume (if not given, this will be found automatically)",
                    "# restart: neb # would trigger a restart for the neb if scan has been completed"
                    "max_steps: 100 # max number of steps for scan opts",
@@ -73,6 +75,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     gpu = False
     freeze_base = False
     freeze_tol = 3.
+    carry_dict = {}
     for input in inputs:
         key, val = input[0], input[1]
         if "gpu" in key:
@@ -119,6 +122,9 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
                 freeze_base = "true" in val.lower()
             elif ("tol" in key):
                 freeze_tol = float(val)
+        if "carry" in key:
+            idcs = [int(v.strip()) - 1 for v in val.split(",")]
+            carry_dict[idcs[0]] = idcs[1:]
     atom_idcs = None
     scan_steps = None
     step_length = None
@@ -130,7 +136,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if schedule:
         scan_steps = count_scan_steps(work_dir)
     return atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method,\
-        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, freeze_base, freeze_tol
+        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, freeze_base, freeze_tol, carry_dict
 
 
 def parse_lookline(lookline):
@@ -356,7 +362,7 @@ def update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=log_def):
 
 def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
-        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, freeze_base, freeze_tol = read_se_neb_inputs()
+        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, freeze_base, freeze_tol, carry_dict = read_se_neb_inputs()
     chdir(work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
@@ -388,7 +394,7 @@ def main():
         se_log("Entering scan")
         setup_scan_dir(work_dir, scan_dir, restart_at, pbc, log_fn=se_log)
         prep_input = lambda step, step_dir_var: _prep_input(step, schedule, step_dir_var, scan_dir, work_dir,
-                                                            log_fn=se_log)
+                                                            log_fn=se_log, carry_dict=carry_dict)
         for i, step in enumerate(step_list):
             step_dir = opj(scan_dir, str(step))
             se_log(f"Running step {step} in {step_dir}")
