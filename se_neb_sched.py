@@ -379,10 +379,9 @@ def main():
     ####################################################################################################################
     se_log(f"Reading JDFTx commands")
     cmds = get_cmds_list(work_dir, ref_struct="POSCAR")
-    cmds = add_cohp_cmds(cmds)
     exe_cmd = get_exe_cmd(gpu, se_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
-    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, add_cohp_cmds(get_ionic_opt_cmds_list(cmds, nMax)), root, debug=False,
+    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds_list(cmds, nMax), root, debug=False,
                                                    log_fn=se_log)
     ####################################################################################################################
     if not skip_to_neb:

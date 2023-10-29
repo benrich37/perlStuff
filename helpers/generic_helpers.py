@@ -464,7 +464,7 @@ def remove_dir_recursive(path, log_fn=log_def):
     rmdir(path)  # remove the root directory itself
 
 
-def add_constraint(atoms, constraint):
+def add_constraint(atoms, constraint, log_fn=log_def):
     consts = atoms.constraints
     if len(consts) == 0:
         atoms.set_constraint(constraint)
@@ -472,15 +472,17 @@ def add_constraint(atoms, constraint):
         consts.append(constraint)
         atoms.set_constraint(consts)
 
-def get_freeze_surf_base_constraint(atoms, ztol = 3.):
+def get_freeze_surf_base_constraint(atoms, ztol = 3., log_fn=log_def):
     min_z = min(atoms.positions[:, 2])
     mask = (atoms.positions[:, 2] < (min_z + ztol))
+    log_fn(f"Imposing atom freezing for atoms in bottom {ztol:1.1g}A")
+    log_fn(f"(Mask = {mask})")
     c = FixAtoms(mask = mask)
     return c
 
-def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0):
+def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0, log_fn=log_def):
     if freeze_base:
-        c = get_freeze_surf_base_constraint(atoms, ztol=ztol)
+        c = get_freeze_surf_base_constraint(atoms, ztol=ztol, log_fn=log_fn)
         add_constraint(atoms, c)
 
 
