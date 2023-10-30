@@ -148,7 +148,8 @@ def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_typ
             if not carry_dict is None:
                 if atom_pair[guess_type] in list(carry_dict.keys()):
                     for cidx in carry_dict[atom_pair[guess_type]]:
-                        atoms.positions[cidx] += dir_vec
+                        if not cidx in atom_pair:
+                            atoms.positions[cidx] += dir_vec
         elif guess_type == 2:
             print_str += f" only {get_atom_str(atoms, atom_pair[0])} and {get_atom_str(atoms, atom_pair[1])} moved equidistantly"
             dir_vec *= 0.5
