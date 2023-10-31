@@ -6,7 +6,7 @@ from ase.optimize import FIRE
 from ase.constraints import FixAtoms
 from datetime import datetime
 from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
-    get_atoms_list_from_out, get_do_cell
+    get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds
@@ -15,6 +15,7 @@ from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
 from sys import exit, stderr
 from shutil import copy as cp
+import numpy as np
 
 
 opt_template = ["structure: POSCAR # Structure for optimization",
@@ -162,17 +163,12 @@ def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use
     return structure, restart
 
 
-def freeze_surf_base(atoms, ztol = 3.):
-    min_z = min(atoms.positions[:, 2])
-    mask = (atoms.positions[:, 2] < (min_z + ztol))
-    c = FixAtoms(mask = mask)
-    atoms.set_constraint(c)
-    return atoms
+
 
 
 def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def):
     if freeze_base:
-        atoms = freeze_surf_base(atoms, ztol=freeze_tol)
+        add_freeze_surf_base_constraint(atoms, ztol=freeze_tol)
     atoms.set_calculator(calc_fn(lat_dir))
     log_fn("lattice optimization starting")
     atoms.get_forces()

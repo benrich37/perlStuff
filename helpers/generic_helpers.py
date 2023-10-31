@@ -473,8 +473,11 @@ def add_constraint(atoms, constraint, log_fn=log_def):
         atoms.set_constraint(consts)
 
 def get_freeze_surf_base_constraint(atoms, ztol = 3., log_fn=log_def):
-    min_z = min(atoms.positions[:, 2])
-    mask = (atoms.positions[:, 2] < (min_z + ztol))
+    direct_posns = np.dot(atoms.positions, np.linalg.inv(atoms.cell))
+    for i in range(3):
+        direct_posns[:, i] *= np.linalg.norm(atoms.cell[i])
+    min_z = min(direct_posns[:, 2])
+    mask = (direct_posns[:, 2] < (min_z + ztol))
     log_fn(f"Imposing atom freezing for atoms in bottom {ztol:1.1g}A")
     log_str = ""
     for i, m in enumerate(mask):
