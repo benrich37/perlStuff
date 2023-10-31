@@ -167,8 +167,7 @@ def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use
 
 
 def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def):
-    if freeze_base:
-        add_freeze_surf_base_constraint(atoms, ztol=freeze_tol)
+    add_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_base=freeze_base)
     atoms.set_calculator(calc_fn(lat_dir))
     log_fn("lattice optimization starting")
     atoms.get_forces()
@@ -198,8 +197,7 @@ def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, f
 
 
 def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def):
-    if freeze_base:
-        add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol)
+    add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base)
     atoms_obj.set_calculator(calc_fn(ion_dir_path))
     log_fn("ionic optimization starting")
     pbc = atoms_obj.pbc
@@ -233,8 +231,7 @@ def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False
 
 
 def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, freeze_base = False, freeze_tol = 0.,log_fn=log_def):
-    if freeze_base:
-        add_freeze_surf_base_constraint(atoms, ztol=freeze_tol)
+    add_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_base=freeze_base)
     do_cell = get_do_cell(atoms.pbc)
     dyn = optimizer(atoms, root, opter)
     traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
