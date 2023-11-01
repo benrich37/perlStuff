@@ -11,7 +11,7 @@ from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list,
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint, get_ionic_opt_cmds_list
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, add_cohp_cmds
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, add_cohp_cmds, check_structure
 from helpers.geom_helpers import get_property
 from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
@@ -368,6 +368,7 @@ def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
         k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, freeze_base, freeze_tol, carry_dict, dump_cohp = read_se_neb_inputs()
     chdir(work_dir)
+    structure = check_structure("POSCAR", work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
                                 relax_end, neb_steps, k, neb_method, work_dir)
