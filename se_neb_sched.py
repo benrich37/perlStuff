@@ -44,7 +44,8 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "gpu: False \n",
                    "# safe mode: True # (Not implemented yet) If end is relaxed, scan images with bond lengths exceeding/smaller than this length",
                    "freeze base: True # Whether to freeze lower atoms",
-                   "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base"]
+                   "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base",
+                   "dump projections: False # Whether to dump output needed for COHP/PDOS's"]
 
 def read_se_neb_inputs(fname="se_neb_inputs"):
     """ Reads
@@ -76,6 +77,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     freeze_base = False
     freeze_tol = 3.
     carry_dict = {}
+    dump_cohp = False
     for input in inputs:
         key, val = input[0], input[1]
         if "gpu" in key:
@@ -125,6 +127,8 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
         if "carry" in key:
             idcs = [int(v.strip()) - 1 for v in val.split(",")]
             carry_dict[idcs[0]] = idcs[1:]
+        if ("dump" in key) and ("proj" in key):
+            dump_cohp = True
     atom_idcs = None
     scan_steps = None
     step_length = None
@@ -136,7 +140,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if schedule:
         scan_steps = count_scan_steps(work_dir)
     return atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method,\
-        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, freeze_base, freeze_tol, carry_dict
+        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, freeze_base, freeze_tol, carry_dict, dump_cohp
 
 
 def parse_lookline(lookline):
@@ -362,7 +366,7 @@ def update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=log_def):
 
 def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
-        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, freeze_base, freeze_tol, carry_dict = read_se_neb_inputs()
+        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, freeze_base, freeze_tol, carry_dict, dump_cohp = read_se_neb_inputs()
     chdir(work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
@@ -385,6 +389,8 @@ def main():
     ####################################################################################################################
     se_log(f"Reading JDFTx commands")
     cmds = get_cmds_list(work_dir, ref_struct="POSCAR")
+    if dump_cohp:
+        cmds = add_cohp_cmds(cmds)
     exe_cmd = get_exe_cmd(gpu, se_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
     get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds_list(cmds, nMax), root, debug=False,
