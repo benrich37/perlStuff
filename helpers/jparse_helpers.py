@@ -198,7 +198,7 @@ def parse_complex_bandprojection(tokens):
     for i in range(int(len(tokens)/2)):
         repart = tokens[2*i]
         impart = tokens[(2*i) + 1]
-        num = complex(float(repart), float(impart[1:]))
+        num = complex(float(repart), float(impart))
         out.append(num)
     return out
 
