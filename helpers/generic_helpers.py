@@ -774,7 +774,7 @@ def get_pdos_cmd_val(atoms):
 
 
 
-def add_cohp_cmds(cmds):
+def add_cohp_cmds(cmds, ortho=True):
     dump_pairs = [
         ["dump", "End BandProjections"],
         ["dump", "End Fillings"],
@@ -783,8 +783,12 @@ def add_cohp_cmds(cmds):
         ["dump", "End BandEigs"]
     ]
     rest_pairs = [
-        ["band-projection-params", "yes no"]
+        ["band-projection-params"]
     ]
+    if ortho:
+        rest_pairs[0].append("yes no")
+    else:
+        rest_pairs[0].append("no no")
     for dp in dump_pairs:
         key = dp[0]
         val = dp[1]

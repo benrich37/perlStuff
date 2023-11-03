@@ -50,6 +50,7 @@ def read_opt_inputs(fname = "opt_input"):
     freeze_tol = 3.
     save_dos = False
     save_pdos = False
+    ortho = True
     for input in inputs:
         key, val = input[0], input[1]
         if "structure" in key:
@@ -85,8 +86,10 @@ def read_opt_inputs(fname = "opt_input"):
                 freeze_base = "true" in val.lower()
             elif ("tol" in key):
                 freeze_tol = float(val)
+        if ("ortho" in key):
+            ortho = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol
+    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho
 
 
 def finished(dirname):
@@ -297,7 +300,7 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol = read_opt_inputs()
+    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho = read_opt_inputs()
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
@@ -309,7 +312,7 @@ def main():
     cmds = get_cmds_list(work_dir, ref_struct=structure)
     atoms = read(structure, format="vasp")
     # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
-    cmds = add_cohp_cmds(cmds)
+    cmds = add_cohp_cmds(cmds, ortho=ortho)
     lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
     ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
     opt_log(f"Setting {structure} to atoms object")
