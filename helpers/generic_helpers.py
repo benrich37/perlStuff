@@ -778,7 +778,7 @@ def add_cohp_cmds(cmds, ortho=True):
     dump_pairs = [
         ["dump", "End BandProjections"],
         ["dump", "End Fillings"],
-        ["dump", "End Gvectors"],
+        # ["dump", "End Gvectors"],
         ["dump", "End Kpoints"],
         ["dump", "End BandEigs"]
     ]
