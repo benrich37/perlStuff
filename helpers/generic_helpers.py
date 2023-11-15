@@ -1049,7 +1049,7 @@ def get_atoms_from_out(outfile):
     return atoms_list[-1]
 
 def get_atoms_list_from_out(outfile):
-    start_lines = get_start_lines(outfile)
+    start_lines = get_start_lines(outfile, add_end=True)
     for i in range(len(start_lines) - 1):
         i_start = start_lines[::-1][i+1]
         i_end = start_lines[::-1][i]
@@ -1368,15 +1368,19 @@ def get_charges(atoms, log_fn=log_def):
     return charges
 
 
-def get_start_lines(outfname):
+def get_start_lines(outfname, add_end=False):
     start_lines = []
+    end_line = 0
     for i, line in enumerate(open(outfname)):
         if "JDFTx 1." in line:
             start_lines.append(i)
+        end_line = i
+    if add_end:
+        start_lines.append(i)
     return start_lines
 
 def get_start_line(outfname):
-    start_lines = get_start_lines(outfname)
+    start_lines = get_start_lines(outfname, add_end=False)
     return start_lines[-1]
 
 
