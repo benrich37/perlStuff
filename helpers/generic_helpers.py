@@ -1054,8 +1054,9 @@ def get_atoms_list_from_out(outfile):
         i_start = start_lines[::-1][i+1]
         i_end = start_lines[::-1][i]
         atoms_list = get_atoms_list_from_out_slice(outfile, i_start, i_end)
-        if len(atoms_list):
-            return atoms_list
+        if type(atoms_list) is list:
+            if len(atoms_list):
+                return atoms_list
     erstr = "Failed getting atoms list from out file"
     raise ValueError(erstr)
 
