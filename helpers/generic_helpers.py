@@ -1056,10 +1056,11 @@ def get_atoms_list_from_out(outfile):
         atoms_list = get_atoms_list_from_out_slice(outfile, i_start, i_end)
         if len(atoms_list):
             return atoms_list
+    erstr = "Failed getting atoms list from out file"
+    raise ValueError(erstr)
 
 
 def get_atoms_list_from_out_slice(outfile, i_start, i_end):
-    start = get_start_line(outfile)
     charge_key = "oxidation-state"
     opts = []
     nAtoms = None
