@@ -1045,10 +1045,10 @@ def check_structure(structure, work, log_fn=log_def):
 #
 
 def get_atoms_from_out(outfile):
-    atoms_list = get_atoms_from_list_out(outfile)
+    atoms_list = get_atoms_list_from_out(outfile)
     return atoms_list[-1]
 
-def get_atoms_from_list_out(outfile):
+def get_atoms_list_from_out(outfile):
     start_lines = get_start_lines(outfile)
     for i in range(len(start_lines) - 1):
         i_start = start_lines[::-1][i+1]
