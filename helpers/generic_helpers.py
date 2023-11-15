@@ -1044,6 +1044,102 @@ def check_structure(structure, work, log_fn=log_def):
 #     return opts
 #
 
+def get_atoms_from_out(outfile):
+    start_lines = get_start_lines(outfile)
+    for i in range(len(start_lines) - 1):
+        i_start = start_lines[::-1][i+1]
+        i_end = start_lines[::-1][i]
+        atoms_list = get_atoms_list_from_out_slice(outfile, i_start, i_end)
+        if len(atoms_list):
+            return atoms_list[-1]
+
+
+def get_atoms_list_from_out_slice(outfile, i_start, i_end):
+    def get_atoms_list_from_out(outfile):
+        start = get_start_line(outfile)
+        charge_key = "oxidation-state"
+        opts = []
+        nAtoms = None
+        R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
+            new_posn, log_vars, E, charges, forces, active_forces, coords_forces = get_atoms_list_from_out_reset_vars()
+        for i, line in enumerate(open(outfile)):
+            if i > i_start and i < i_end:
+                if new_posn:
+                    if "Lowdin population analysis " in line:
+                        active_lowdin = True
+                    elif "R =" in line:
+                        active_lattice = True
+                    elif "# Forces in" in line:
+                        active_forces = True
+                        coords_forces = line.split()[3]
+                    elif line.find('# Ionic positions in') >= 0:
+                        coords = line.split()[4]
+                        active_posns = True
+                    elif active_lattice:
+                        if lat_row < 3:
+                            R[lat_row, :] = [float(x) for x in line.split()[1:-1]]
+                            lat_row += 1
+                        else:
+                            active_lattice = False
+                            lat_row = 0
+                    elif active_posns:
+                        tokens = line.split()
+                        if len(tokens) and tokens[0] == 'ion':
+                            names.append(tokens[1])
+                            posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
+                            if tokens[1] not in idxMap:
+                                idxMap[tokens[1]] = []
+                            idxMap[tokens[1]].append(j)
+                            j += 1
+                        else:
+                            posns = np.array(posns)
+                            active_posns = False
+                            nAtoms = len(names)
+                            if len(charges) < nAtoms:
+                                charges = np.zeros(nAtoms)
+                    ##########
+                    elif active_forces:
+                        tokens = line.split()
+                        if len(tokens) and tokens[0] == 'force':
+                            forces.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
+                        else:
+                            forces = np.array(forces)
+                            active_forces = False
+                    ##########
+                    elif "Minimize: Iter:" in line:
+                        if "F: " in line:
+                            E = float(line[line.index("F: "):].split(' ')[1])
+                        elif "G: " in line:
+                            E = float(line[line.index("G: "):].split(' ')[1])
+                    elif active_lowdin:
+                        if charge_key in line:
+                            look = line.rstrip('\n')[line.index(charge_key):].split(' ')
+                            symbol = str(look[1])
+                            line_charges = [float(val) for val in look[2:]]
+                            chargeDir[symbol] = line_charges
+                            for atom in list(chargeDir.keys()):
+                                for k, idx in enumerate(idxMap[atom]):
+                                    charges[idx] += chargeDir[atom][k]
+                        elif "#" not in line:
+                            active_lowdin = False
+                            log_vars = True
+                    elif log_vars:
+                        if np.sum(R) == 0.0:
+                            R = get_input_coord_vars_from_outfile(outfile)[2]
+                        if coords != 'cartesian':
+                            posns = np.dot(posns, R)
+                        if len(forces) == 0:
+                            forces = np.zeros([nAtoms, 3])
+                        if coords_forces.lower() != 'cartesian':
+                            forces = np.dot(forces, R)
+                        opts.append(get_atoms_from_outfile_data(names, posns, R, charges=charges, E=E, momenta=forces))
+                        R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
+                            new_posn, log_vars, E, charges, forces, active_forces, coords_forces = get_atoms_list_from_out_reset_vars(
+                            nAtoms=nAtoms)
+                elif "Computing DFT-D3 correction:" in line:
+                    new_posn = True
+        return opts
+
 
 def get_atoms_list_from_out(outfile):
     start = get_start_line(outfile)
@@ -1267,12 +1363,16 @@ def get_charges(atoms, log_fn=log_def):
     return charges
 
 
-def get_start_line(outfname):
-    start = 0
+def get_start_lines(outfname):
+    start_lines = []
     for i, line in enumerate(open(outfname)):
         if "JDFTx 1." in line:
-            start = i
-    return start
+            start_lines.append(i)
+    return start_lines
+
+def get_start_line(outfname):
+    start_lines = get_start_lines(outfname)
+    return start_lines[-1]
 
 
 def get_scan_atoms_list(scan_dir):
@@ -1316,3 +1416,10 @@ def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
     atoms_obj.pbc = pbc_bool_list
     log_fn(f"Setting pbc for atoms to {pbc_bool_list}")
     return atoms_obj
+
+# def remove_state_files(path, log_fn=log_def):
+#     for f in state_files:
+#         file = opj(path, f)
+#         if ope(file):
+#             log_fn("Deleting")
+#             rm(file)

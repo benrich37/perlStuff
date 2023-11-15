@@ -9,7 +9,7 @@ from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir
     get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds
+from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
@@ -48,8 +48,7 @@ def read_opt_inputs(fname = "opt_input"):
     use_jdft = True
     freeze_base = False
     freeze_tol = 3.
-    save_dos = False
-    save_pdos = False
+    save_state = False
     ortho = True
     for input in inputs:
         key, val = input[0], input[1]
@@ -88,8 +87,10 @@ def read_opt_inputs(fname = "opt_input"):
                 freeze_tol = float(val)
         if ("ortho" in key):
             ortho = "true" in val.lower()
+        if ("save" in key) and ("state" in key):
+            save_state = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho
+    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state
 
 
 def finished(dirname):
@@ -113,7 +114,7 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
             outfile = opj(opt_dir, "out")
             if ope(outfile):
                 structure = opj(opt_dir, "POSCAR")
-                atoms_obj = get_atoms_list_from_out(outfile)[-1]
+                atoms_obj = get_atoms_from_out(outfile)
                 write(structure, atoms_obj, format="vasp")
     elif ope(lat_dir):
         os.mkdir(opt_dir)
@@ -300,7 +301,7 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho = read_opt_inputs()
+    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state = read_opt_inputs()
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
