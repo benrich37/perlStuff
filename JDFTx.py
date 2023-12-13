@@ -41,8 +41,12 @@ class JDFTx(Calculator):
                 #Get default values from environment:
                 if executable is None:
                         self.executable = replaceVariable(executable, 'JDFTx')      #Path to the jdftx executable (cpu or gpu)
+                else:
+                        self.executable = executable
                 if pseudoDir is None:
                         self.pseudoDir = replaceVariable(pseudoDir, 'JDFTx_pseudo') #Path to the pseudopotentials folder
+                else:
+                        self.pseudoDir = pseudoDir
 
                 if (self.executable is None):
                         raise Exception('Specify path to jdftx in argument \'executable\' or in environment variable \'JDFTx\'.')
