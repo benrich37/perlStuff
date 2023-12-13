@@ -26,7 +26,6 @@ def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV_v1.5", debug=False, debug_fn=
         log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
         return JDFTx(
             executable=exe_cmd,
-            pseudoDir=env_vars_dict['jspuedodir'],
             pseudoSet=pseudoSet,
             commands=cmds,
             outfile=root,
