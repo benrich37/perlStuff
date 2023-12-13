@@ -50,8 +50,11 @@ def read_opt_inputs(fname = "opt_input"):
     freeze_tol = 3.
     save_state = False
     ortho = True
+    pseudoset = "GBRV_v1.5"
     for input in inputs:
         key, val = input[0], input[1]
+        if "pseudo" in key:
+            psuedoset = val.strip()
         if "structure" in key:
             structure = val.strip()
         if "work" in key:
@@ -90,7 +93,7 @@ def read_opt_inputs(fname = "opt_input"):
         if ("save" in key) and ("state" in key):
             save_state = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state
+    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset
 
 
 def finished(dirname):
@@ -301,7 +304,7 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state = read_opt_inputs()
+    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet = read_opt_inputs()
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
@@ -317,9 +320,9 @@ def main():
     lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
     ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
     opt_log(f"Setting {structure} to atoms object")
-    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, log_fn=opt_log)
-    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, log_fn=opt_log)
-    get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, log_fn=opt_log)
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
+    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
+    get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
     do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
     restarting_lat = do_lat and restart
