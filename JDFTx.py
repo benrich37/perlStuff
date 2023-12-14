@@ -44,8 +44,8 @@ class JDFTx(Calculator):
                 self.pseudoDir = replaceVariable(pseudoDir, 'JDFTx_pseudo') #Path to the pseudopotentials folder
                 print(f"pseudo dir is {self.pseudoDir}")
                 self.pseudoDir = "/global/homes/b/beri9208/pseudopotentials"
-                print(f"pseudo dir is {self.pseudoDir}")
-                self.pseudoDir = opj(pseudoDir, pseudoSet)
+                # print(f"pseudo dir is {self.pseudoDir}")
+                # self.pseudoDir = opj(pseudoDir, pseudoSet)
 
                 if (self.executable is None):
                         raise Exception('Specify path to jdftx in argument \'executable\' or in environment variable \'JDFTx\'.')
