@@ -44,6 +44,7 @@ class JDFTx(Calculator):
                 self.pseudoDir = replaceVariable(pseudoDir, 'JDFTx_pseudo') #Path to the pseudopotentials folder
                 print(f"pseudo dir is {self.pseudoDir}")
                 self.pseudoDir = "/global/homes/b/beri9208/pseudopotentials"
+                self.pseudoSet = pseudoSet
                 # print(f"pseudo dir is {self.pseudoDir}")
                 # self.pseudoDir = opj(pseudoDir, pseudoSet)
 
@@ -309,13 +310,14 @@ class JDFTx(Calculator):
                 #Add pseudopotentials
                 inputfile += '\n'
                 if not (self.pseudoDir is None):
+                        pseudoSetDir = opj(self.pseudoDir, self.pseudoSet)
                         added = []  # List of pseudopotential that have already been added
                         for atom in atomNames:
                                 if(sum([x == atom for x in added]) == 0.):  # Add ion-species command if not already added
                                         for filetype in self.pseudopotentials:
                                                 try:
-                                                        shell('ls %s | grep %s.%s' % (self.pseudoDir, atom, filetype))
-                                                        inputfile += 'ion-species %s/%s.%s\n' % (self.pseudoDir, atom, filetype)
+                                                        shell('ls %s | grep %s.%s' % (pseudoSetDir, atom, filetype))
+                                                        inputfile += 'ion-species %s/%s.%s\n' % (pseudoSetDir, atom, filetype)
                                                         added.append(atom)
                                                         break
                                                 except Exception as e:
