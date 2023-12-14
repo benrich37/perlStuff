@@ -317,6 +317,7 @@ class JDFTx(Calculator):
                                                         added.append(atom)
                                                         break
                                                 except:
+                                                        print("issue calling pseudopotentials")
                                                         pass
                 inputfile += self.pseudoSetCmd + '\n' #Pseudopotential sets
 
