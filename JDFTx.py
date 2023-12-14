@@ -316,8 +316,9 @@ class JDFTx(Calculator):
                                                         inputfile += 'ion-species %s/%s.%s\n' % (self.pseudoDir, atom, filetype)
                                                         added.append(atom)
                                                         break
-                                                except:
+                                                except Exception as e:
                                                         print("issue calling pseudopotentials")
+                                                        print(e)
                                                         pass
                 inputfile += self.pseudoSetCmd + '\n' #Pseudopotential sets
 
