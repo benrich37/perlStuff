@@ -10,6 +10,7 @@ import scipy, subprocess, re
 from ase.calculators.interface import Calculator
 from ase.units import Bohr, Hartree
 from os import environ as env_vars_dict
+from os.path import join as opj
 
 #Run shell command and return output as a string:
 def shell(cmd):
@@ -44,6 +45,7 @@ class JDFTx(Calculator):
                 print(f"pseudo dir is {self.pseudoDir}")
                 self.pseudoDir = "/global/homes/b/beri9208/pseudopotentials"
                 print(f"pseudo dir is {self.pseudoDir}")
+                self.pseudoDir = opj(pseudoDir, pseudoSet)
 
                 if (self.executable is None):
                         raise Exception('Specify path to jdftx in argument \'executable\' or in environment variable \'JDFTx\'.')
