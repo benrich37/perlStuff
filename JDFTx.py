@@ -30,7 +30,7 @@ class JDFTx(Calculator):
                 pseudoSetMap = {
                         'SG15' : 'SG15/$ID_ONCV_PBE.upf',
                         'GBRV' : 'GBRV/$ID_pbe.uspp',
-        					  'GBRV_v1.5' : 'GBRV_v1.5/$ID_pbe_v1.uspp',
+        				'GBRV_v1.5' : 'GBRV_v1.5/$ID_pbe_v1.uspp',
                         'GBRV-pbe' : 'GBRV/$ID_pbe.uspp',
                         'GBRV-lda' : 'GBRV/$ID_lda.uspp',
                         'GBRV-pbesol' : 'GBRV/$ID_pbesol.uspp',
@@ -42,7 +42,7 @@ class JDFTx(Calculator):
                 self.executable = replaceVariable(executable, 'JDFTx')      #Path to the jdftx executable (cpu or gpu)
                 self.pseudoDir = replaceVariable(pseudoDir, 'JDFTx_pseudo') #Path to the pseudopotentials folder
                 print(f"pseudo dir is {self.pseudoDir}")
-                self.pseudoDir = "/global/homes/b/beri9208/psuedos"
+                self.pseudoDir = "/global/homes/b/beri9208/pseudopotentials"
                 print(f"pseudo dir is {self.pseudoDir}")
 
                 if (self.executable is None):
