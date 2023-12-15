@@ -7,7 +7,7 @@ from ase.optimize import FIRE
 from ase.constraints import FixAtoms
 from datetime import datetime
 from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
-    get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint, get_cmds_dict
+    get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint, get_cmds_dict, get_lattice_cmds_dict, get_ionic_opt_cmds_dict
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out
@@ -338,13 +338,13 @@ def main():
             cmds = get_cmds_dict(_work_dir, ref_struct=structure)
             cmds["kpoint-folding"] = " ".join([kf for kf in ks])
             atoms = read(structure, format="vasp")
-            lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
-            ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
+            lat_cmds = get_lattice_cmds_dict(cmds, lat_iters, pbc)
+            ion_cmds = get_ionic_opt_cmds_dict(cmds, max_steps)
             opt_log(f"Setting {structure} to atoms object")
             get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
             get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
             get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
-            check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
+            check_submit(gpu, os.getcwd(), "kconv", log_fn=opt_log)
             do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
             restarting_lat = do_lat and restart
             if do_lat:
