@@ -332,7 +332,11 @@ def main():
             mkdir(work_dir)
         if not ope(opj(work_dir, "finished.txt")):
             opt_dir = opj(work_dir, "ion_opt")
+            if not ope(opt_dir):
+                mkdir(opt_dir)
             lat_dir = opj(work_dir, "lat_opt")
+            if not ope(lat_dir):
+                mkdir(lat_dir)
             structure = opj(_work_dir, structure)
             structure = check_structure(structure, work_dir, log_fn=opt_log)
             cmds = get_cmds_dict(_work_dir, ref_struct=structure)
