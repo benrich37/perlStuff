@@ -54,7 +54,7 @@ def read_opt_inputs(fname = "opt_input"):
     for input in inputs:
         key, val = input[0], input[1]
         if "pseudo" in key:
-            psuedoset = val.strip()
+            pseudoset = val.strip()
         if "structure" in key:
             structure = val.strip()
         if "work" in key:
