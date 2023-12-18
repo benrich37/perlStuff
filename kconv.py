@@ -329,7 +329,9 @@ def plot_kconv(root, kconv):
             ax[i].ticklabel_format(useOffset=False)
             ax[i].plot(range(len(kconv)), [nrgs[i] for i in idcs])
             ax[i].scatter(range(len(kconv)), [nrgs[i] for i in idcs])
-        ax[0].set_ylim(np.min([nrgs[i] for i in idcs][-3:]), np.max([nrgs[i] for i in idcs][-3:]))
+        nrgs_focus = np.array([nrgs[i] for i in idcs][-3:])
+        nrgs_std = np.std(nrgs_focus)
+        ax[0].set_ylim(np.min(nrgs_focus) - nrgs_std, np.max(nrgs_focus) + nrgs_std)
         ax[1].set_xticks(range(len(kconv)), [kconv[i] for i in idcs])
     else:
         plt.plot(range(len(kconv)), [nrgs[i] for i in idcs])
