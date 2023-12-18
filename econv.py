@@ -36,7 +36,7 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "econv: 10,15,20"]
 
 
-def read_opt_inputs(fname = "kconv_input"):
+def read_opt_inputs(fname = "econv_input"):
     work_dir = None
     structure = None
     if not ope(fname):
