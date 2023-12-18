@@ -408,7 +408,7 @@ def main():
             if "k" in conv_met:
                 cmds["kpoint-folding"] = " ".join([kf for kf in c])
             elif "e" in conv_met:
-                cmds["elec-cutoff"] = e
+                cmds["elec-cutoff"] = c
             elif "n" in conv_met:
                 cmds["elec-n-bands"] = read_nband_conv(c, cmds)
             atoms = read(structure, format="vasp")
