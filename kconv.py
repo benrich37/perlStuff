@@ -319,7 +319,14 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 def plot_kconv(root, kconv):
-    nrgs = [get_nrg(opj(root, k))*Hartree for k in kconv]
+    nrgs = []
+    for k in kconv:
+        nrg = np.nan
+        try:
+            nrg = get_nrg(opj(root, k))
+        except:
+            pass
+        nrgs.append(nrg)
     nks = [np.prod(np.array([int(i) for i in k])) for k in kconv]
     idcs = np.argsort(nks)
     if len(kconv) > 3:
@@ -330,8 +337,8 @@ def plot_kconv(root, kconv):
             ax[i].plot(range(len(kconv)), [nrgs[i] for i in idcs])
             ax[i].scatter(range(len(kconv)), [nrgs[i] for i in idcs])
         nrgs_focus = np.array([nrgs[i] for i in idcs][-3:])
-        nrgs_std = np.std(nrgs_focus)
-        ax[0].set_ylim(np.min(nrgs_focus) - nrgs_std, np.max(nrgs_focus) + nrgs_std)
+        nrgs_std = np.nanstd(nrgs_focus)
+        ax[0].set_ylim(np.nanmin(nrgs_focus) - nrgs_std, np.nanmax(nrgs_focus) + nrgs_std)
         ax[1].set_xticks(range(len(kconv)), [kconv[i] for i in idcs])
     else:
         plt.plot(range(len(kconv)), [nrgs[i] for i in idcs])
@@ -373,31 +380,38 @@ def main():
             check_submit(gpu, os.getcwd(), "kconv", log_fn=opt_log)
             do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
             restarting_lat = do_lat and restart
-            if do_lat:
-                if restarting_lat:
+            failed = False
+            try:
+                if do_lat:
+                    if restarting_lat:
+                        make_jdft_logx(lat_dir, log_fn=opt_log)
+                    atoms, structure = run_lat_opt(atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=opt_log)
                     make_jdft_logx(lat_dir, log_fn=opt_log)
-                atoms, structure = run_lat_opt(atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=opt_log)
-                make_jdft_logx(lat_dir, log_fn=opt_log)
-                opt_dot_log_faker(opj(lat_dir, "out"), lat_dir)
-                cp(opj(lat_dir, "opt.log"), work_dir)
-            restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
-            restarting_ion = restarting_ion and restart
-            opt_log(f"Finding/copying any state files to {opt_dir}")
-            copy_best_state_files([work_dir, lat_dir, opt_dir], opt_dir, log_fn=opt_log)
-            if use_jdft:
-                if restarting_ion:
+                    opt_dot_log_faker(opj(lat_dir, "out"), lat_dir)
+                    cp(opj(lat_dir, "opt.log"), work_dir)
+                restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
+                restarting_ion = restarting_ion and restart
+                opt_log(f"Finding/copying any state files to {opt_dir}")
+                copy_best_state_files([work_dir, lat_dir, opt_dir], opt_dir, log_fn=opt_log)
+                if use_jdft:
+                    if restarting_ion:
+                        make_jdft_logx(opt_dir, log_fn=opt_log)
+                    opt_log(f"Running ion optimization with JDFTx optimizer")
+                    run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=opt_log)
                     make_jdft_logx(opt_dir, log_fn=opt_log)
-                opt_log(f"Running ion optimization with JDFTx optimizer")
-                run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=opt_log)
-                make_jdft_logx(opt_dir, log_fn=opt_log)
-                opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
-                if not (lat_iters > 0):
-                    cp(opj(opt_dir, "opt.log"), work_dir)
-            else:
-                opt_log(f"Running ion optimization with ASE optimizer")
-                run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol,log_fn=opt_log)
-            copy_result_files(opt_dir, work_dir)
-            finished(work_dir)
+                    opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
+                    if not (lat_iters > 0):
+                        cp(opj(opt_dir, "opt.log"), work_dir)
+                else:
+                    opt_log(f"Running ion optimization with ASE optimizer")
+                    run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol,log_fn=opt_log)
+                copy_result_files(opt_dir, work_dir)
+                finished(work_dir)
+            except:
+                pass
+            if failed:
+                finished(work_dir)
+                opt_log(f"Issue running {ks} - continuing")
     plot_kconv(_work_dir, kconv)
 
 from sys import exc_info
