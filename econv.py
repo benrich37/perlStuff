@@ -103,18 +103,6 @@ def read_opt_inputs(fname = "econv_input"):
     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, econv
 
 
-def parse_kconv_str_list(kconv):
-    kconvs = []
-    for ks in kconv:
-        kconvs.append([int(s) for s in ks])
-    return kconvs
-
-def kconv_ints_to_str(kconv_ints):
-    kstr = ""
-    for i in kconv_ints:
-        kstr += str(i)
-    return kstr
-
 
 def finished(dirname):
     with open(opj(dirname, "finished.txt"), 'w') as f:
@@ -370,7 +358,7 @@ def main():
             get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
             get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
             get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
-            check_submit(gpu, os.getcwd(), "kconv", log_fn=opt_log)
+            check_submit(gpu, os.getcwd(), "econv", log_fn=opt_log)
             do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
             restarting_lat = do_lat and restart
             if do_lat:
