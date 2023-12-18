@@ -344,10 +344,10 @@ def plot_conv(root, conv, conv_met):
         idcs = np.argsort(nks)
         xvals = [nks[i] for i in idcs]
     elif "e" in conv_met:
-        idcs = np.argsort(float(e) for e in conv)
+        idcs = np.argsort([float(e) for e in conv])
         xvals = [float(conv[i]) for i in idcs]
     elif "n" in conv_met:
-        idcs = np.argsort(int(n) for n in conv)
+        idcs = np.argsort([int(n) for n in conv])
         xvals = [int(conv[i]) for i in idcs]
     yvals = [nrgs[i] for i in idcs]
     if len(conv) > 3:
