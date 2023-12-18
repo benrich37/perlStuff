@@ -39,7 +39,7 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "conv: n,100,120,140 # input for a nBand convergence test with explicit values"]
 
 
-def read_opt_inputs(fname = "kconv_input"):
+def read_opt_inputs(fname = "conv_input"):
     work_dir = None
     structure = None
     if not ope(fname):
@@ -389,7 +389,7 @@ def read_nband_conv(nconv, cmds):
 def main():
     _work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, conv, conv_met = read_opt_inputs()
     os.chdir(_work_dir)
-    opt_log = get_log_fn(_work_dir, "kconv", False, restart=restart)
+    opt_log = get_log_fn(_work_dir, "conv", False, restart=restart)
     exe_cmd = get_exe_cmd(gpu, opt_log)
     for c in conv:
         work_dir = opj(_work_dir, c)
@@ -418,7 +418,7 @@ def main():
             get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
             get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
             get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
-            check_submit(gpu, os.getcwd(), "kconv", log_fn=opt_log)
+            check_submit(gpu, os.getcwd(), "conv", log_fn=opt_log)
             do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
             restarting_lat = do_lat and restart
             failed = False
