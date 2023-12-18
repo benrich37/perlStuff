@@ -4,19 +4,21 @@ from os import mkdir
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
+from ase.units import Hartree
 from ase.constraints import FixAtoms
 from datetime import datetime
 from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint, get_cmds_dict, get_lattice_cmds_dict, get_ionic_opt_cmds_dict
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out
+from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out, get_nrg
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
 from sys import exit, stderr
 from shutil import copy as cp
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 opt_template = ["structure: POSCAR # Structure for optimization",
@@ -316,6 +318,24 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
         log_fn("Writing existing out file to logx file")
 
 
+def plot_kconv(root, kconv):
+    nrgs = [get_nrg(opj(root, k))*Hartree for k in kconv]
+    nks = [np.prod(np.array([int(i) for i in k])) for k in kconv]
+    idcs = np.argsort(nks)
+    if len(kconv) > 3:
+        fig, ax = plt.subplots(nrows=2, sharex=True)
+        for i in range(2):
+            ax[i].set_ylabel("E (eV)")
+            ax[i].ticklabel_format(useOffset=False)
+            ax[i].plot(range(len(kconv)), [nrgs[i] for i in idcs])
+            ax[i].scatter(range(len(kconv)), [nrgs[i] for i in idcs])
+        ax[0].set_ylim(np.min([nrgs[i] for i in idcs][-3:]), np.max([nrgs[i] for i in idcs][-3:]))
+        ax[1].set_xticks(range(len(kconv)), [kconv[i] for i in idcs])
+    else:
+        plt.plot(range(len(kconv)), [nrgs[i] for i in idcs])
+        plt.scatter(range(len(kconv)), [nrgs[i] for i in idcs])
+        plt.xticks(range(len(kconv)), [kconv[i] for i in idcs])
+        plt.savefig(opj(root, "kconv.png"))
 
 
 
@@ -376,6 +396,7 @@ def main():
                 run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol,log_fn=opt_log)
             copy_result_files(opt_dir, work_dir)
             finished(work_dir)
+    plot_kconv(_work_dir, kconv)
 
 from sys import exc_info
 
