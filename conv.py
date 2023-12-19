@@ -387,7 +387,7 @@ def read_nband_conv(nconv, cmds):
 
 
 def main():
-    _work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, conv, conv_met = read_opt_inputs()
+    _work_dir, _structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, conv, conv_met = read_opt_inputs()
     os.chdir(_work_dir)
     opt_log = get_log_fn(_work_dir, "conv", False, restart=restart)
     exe_cmd = get_exe_cmd(gpu, opt_log)
@@ -402,7 +402,7 @@ def main():
             lat_dir = opj(work_dir, "lat_opt")
             if not ope(lat_dir):
                 mkdir(lat_dir)
-            structure = opj(_work_dir, structure)
+            structure = opj(_work_dir, _structure)
             # structure = check_structure(structure, work_dir, log_fn=opt_log)
             cmds = get_cmds_dict(_work_dir, ref_struct=structure)
             if "k" in conv_met:
