@@ -403,7 +403,7 @@ def main():
             if not ope(lat_dir):
                 mkdir(lat_dir)
             structure = opj(_work_dir, structure)
-            structure = check_structure(structure, work_dir, log_fn=opt_log)
+            # structure = check_structure(structure, work_dir, log_fn=opt_log)
             cmds = get_cmds_dict(_work_dir, ref_struct=structure)
             if "k" in conv_met:
                 cmds["kpoint-folding"] = " ".join([kf for kf in c])
