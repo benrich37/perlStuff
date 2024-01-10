@@ -5,7 +5,7 @@ from ase import Atoms, Atom
 from ase.constraints import FixBondLength, FixAtoms
 from os.path import join as opj, exists as ope, isfile, isdir, basename
 from os import listdir as listdir, getcwd, chdir, listdir as get_sub_dirs
-from os import remove as rm, rmdir as rmdir, walk
+from os import remove as rm, rmdir as rmdir, walk, getenv
 from ase.io import read, write
 from ase.units import Bohr
 from pathlib import Path
@@ -137,7 +137,7 @@ def insert_el(filename):
         f.write('\n'.join(contents))
 
 
-def read_inputs_dict(work_dir, ref_struct=None):
+def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None):
     inpfname = opj(work_dir, "inputs")
     if ope("inputs"):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump", "initial-state",
@@ -173,7 +173,7 @@ def read_inputs_dict(work_dir, ref_struct=None):
                 ref_paths = [opj(work_dir, ref_struct), opj(work_dir, "CONTCAR"), opj(work_dir, "POSCAR")]
             for p in ref_paths:
                 if ope(p):
-                    input_cmds["elec-n-bands"] = str(get_nbands(p))
+                    input_cmds["elec-n-bands"] = str(get_nbands(p, pseudoSet=pseudoSet))
                     break
         return input_cmds
     else:
@@ -225,7 +225,31 @@ def read_inputs_list(work_dir, ref_struct=None):
         return None
 
 
-def get_nbands(poscar_fname):
+def get_zval(el, ps_set):
+    ps_top_dir = getenv("JDFTx_pseudo")
+    ps_dir = opj(ps_top_dir, ps_set)
+    fs = listdir(ps_dir)
+    file = None
+    for f in fs:
+        if f.split(".")[1].lower() == "upf":
+            _el = f.split(".")[0].lower()
+            if "_" in _el:
+                _el = _el.split("_")[0]
+            if el.lower() == _el:
+                file = f
+                break
+            else:
+                continue
+    with open(opj(ps_dir, file), "r") as f:
+        for line in f:
+            if "z_valence" in line.lower():
+                zval = int(float(line.split("=")[1].strip().strip('"').strip()))
+            elif "z valence" in line.lower():
+                zval = int(float(line.strip().split()[0]))
+    return zval
+
+
+def get_nbands(poscar_fname, pseudoSet="GBRV"):
     atoms = read(poscar_fname)
     count_dict = {}
     for a in atoms.get_chemical_symbols():
@@ -234,13 +258,9 @@ def get_nbands(poscar_fname):
         count_dict[a.lower()] += 1
     nval = 0
     for a in count_dict.keys():
-        if a in gbrv_15_ref[0].split(" "):
-            idx = gbrv_15_ref[0].split(" ").index(a)
-            val = (gbrv_15_ref[1].split(". "))[idx]
-            count = count_dict[a]
-            nval += int(val) * int(count)
-        else:
-            nval += int(valence_electrons[a]) * int(count_dict[a])
+        val = get_zval(a, pseudoSet)
+        count = count_dict[a]
+        nval += int(val) * int(count)
     return max([int(nval / 2) + 10, int((nval / 2) * 1.2)])
 
 
