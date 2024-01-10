@@ -43,7 +43,7 @@ class JDFTx(Calculator):
                 self.executable = replaceVariable(executable, 'JDFTx')      #Path to the jdftx executable (cpu or gpu)
                 self.pseudoDir = replaceVariable(pseudoDir, 'JDFTx_pseudo') #Path to the pseudopotentials folder
                 print(f"pseudo dir is {self.pseudoDir}")
-                self.pseudoDir = "/global/homes/b/beri9208/pseudopotentials"
+                # self.pseudoDir = "/global/homes/b/beri9208/pseudopotentials"
                 self.pseudoSet = pseudoSet
                 # print(f"pseudo dir is {self.pseudoDir}")
                 # self.pseudoDir = opj(pseudoDir, pseudoSet)
