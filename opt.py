@@ -25,11 +25,10 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "restart: False # Whether to get structure from lat/opt dirs or from input structure",
                 "pbc: False False False # Periodic boundary conditions for unit cell",
                 "lattice steps: 0 # Number of steps for lattice optimization (0 = no lattice optimization)",
-                "opt program: jdft # Which program to use for ionic optimization",
-                "# jdft = Use JDFTx calculator for ionic optimization (faster)",
-                "# ase = Use ASE wrapper for optimization (slower but more flexible)",
-                "freeze base: True # Whether to freeze lower atoms",
-                "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base"]
+                "opt program: jdft # Which program to use for ionic optimization, options are 'jdft' and 'ase'",
+                "freeze base: False # Whether to freeze lower atoms (don't use for bulk calcs)",
+                "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base",
+                "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)"]
 
 
 def read_opt_inputs(fname = "opt_input"):
