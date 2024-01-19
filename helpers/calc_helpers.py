@@ -42,3 +42,25 @@ def get_exe_cmd(gpu, log_fn):
     exe_cmd = 'srun ' + env_vars_dict[_get]
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
+
+def get_nNodes(log_fn):
+    key = "SLURM_NNODES"
+    if key in env_vars_dict:
+        nNodes = int(env_vars_dict[key])
+        log_fn(f"Found {nNodes} nodes available")
+        return nNodes
+    else:
+        nNodes = 1
+        log_fn(f"Could not find number of nodes ($SLURM_NNODES missing from environmental variables). Setting number of nodes to 1")
+        return nNodes
+
+def get_exe_cmd_test(gpu, log_fn):
+    if gpu:
+        _get = 'JDFTx_GPU'
+    else:
+        _get = 'JDFTx'
+    log_fn(f"Using {_get} for JDFTx exe")
+    nNodes = get_nNodes(log_fn)
+    exe_cmd = f'srun -N {nNodes}' + env_vars_dict[_get]
+    log_fn(f"exe_cmd: {exe_cmd}")
+    return exe_cmd
