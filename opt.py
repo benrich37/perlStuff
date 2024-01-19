@@ -50,7 +50,7 @@ def read_opt_inputs(fname = "opt_input"):
     freeze_tol = 3.
     save_state = False
     ortho = True
-    pseudoset = "GBRV_v1.5"
+    pseudoset = "GBRV"
     for input in inputs:
         key, val = input[0], input[1]
         if "pseudo" in key:
