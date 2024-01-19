@@ -61,6 +61,6 @@ def get_exe_cmd_test(gpu, log_fn):
         _get = 'JDFTx'
     log_fn(f"Using {_get} for JDFTx exe")
     nNodes = get_nNodes(log_fn)
-    exe_cmd = f'srun -N {nNodes}' + env_vars_dict[_get]
+    exe_cmd = f'srun -N {nNodes} ' + env_vars_dict[_get]
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
