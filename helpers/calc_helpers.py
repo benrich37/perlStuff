@@ -18,7 +18,7 @@ def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
     )
 
 
-def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV_v1.5", debug=False, debug_fn=None, log_fn=log_def):
+def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def):
     if debug:
         log_fn("Setting calc to debug calc")
         return debug_fn()

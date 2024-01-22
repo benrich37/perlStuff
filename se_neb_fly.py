@@ -73,8 +73,11 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     schedule = False
     gpu = False
     carry_dict = {}
+    pseudoset = "GBRV"
     for input in inputs:
         key, val = input[0], input[1]
+        if "pseudo" in key:
+            pseudoset = val.strip()
         if "gpu" in key:
             gpu = "true" in val.lower()
         if "scan" in key:
@@ -128,7 +131,7 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if schedule:
         scan_steps = count_scan_steps(work_dir)
     return atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method,\
-        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, carry_dict
+        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, carry_dict, pseudoset
 
 
 def parse_lookline(lookline):
@@ -384,7 +387,7 @@ def is_kink(step, scan_dir, thresh = 0.001, log_fn=log_def):
 
 def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
-        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, carry_dict = read_se_neb_inputs()
+        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, carry_dict, pseudoSet = read_se_neb_inputs()
     chdir(work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
@@ -407,8 +410,8 @@ def main():
     se_log(f"Reading JDFTx commands")
     cmds = get_cmds_dict(work_dir, ref_struct="POSCAR")
     exe_cmd = get_exe_cmd(gpu, se_log)
-    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, debug=False, log_fn=se_log)
-    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds_dict(cmds, nMax), root, debug=False,
+    get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=False, log_fn=se_log)
+    get_ionopt_calc = lambda root, nMax: _get_calc(exe_cmd, get_ionic_opt_cmds_dict(cmds, nMax), root, pseudoSet=pseudoSet, debug=False,
                                                    log_fn=se_log)
     def do_scan(schedule, restart_at, nflex=10):
         schedule, restart_at = step_list_looper(schedule, restart_at, nflex=nflex)
