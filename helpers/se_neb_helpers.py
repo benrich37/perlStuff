@@ -1,7 +1,7 @@
 
 from ase.build import sort
 from ase.io import read, write
-from os import mkdir as mkdir
+from os import mkdir as mkdir, listdir
 from os.path import join as opj, exists as ope, basename
 from time import time
 import numpy as np
@@ -54,9 +54,23 @@ def neb_optimizer(neb, neb_dir, opter, opt_alpha=150):
     return dyn
 
 
+def get_poscar_atoms(work_dir, log_fn):
+    fs = listdir(work_dir)
+    has_vasp = "POSCAR" in fs
+    has_gauss = "POSCAR.gjf" in fs
+    if has_vasp:
+        atoms = read(opj(work_dir, "POSCAR"), format="vasp")
+    elif has_gauss:
+        atoms = read(opj(work_dir, "POSCAR.gjf"), format="gaussian-in")
+    else:
+        raise ValueError("No POSCAR found")
+    return atoms
+
+
+
 def check_poscar(work_dir, log_fn):
     if need_sort(work_dir):
-        atoms = sort(read("POSCAR", format="vasp"))
+        atoms = get_poscar_atoms(work_dir, log_fn)
         write("POSCAR_sorted", atoms, format="vasp")
         log_fn("Unsorted POSCAR - saved sorted POCSAR to POSCAR_sorted - please update atom indices for scan accordingly", work_dir)
         raise ValueError("Unsorted POSCAR - saved sorted POCSAR to POSCAR_sorted - please update atom indices for scan accordingly")
