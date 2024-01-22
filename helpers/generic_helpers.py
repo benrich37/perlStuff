@@ -1420,24 +1420,35 @@ def get_scan_atoms_list(scan_dir):
 
 def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
     _abort = False
-    POSCAR = opj(dir_path, "POSCAR")
-    CONTCAR = opj(dir_path, "CONTCAR")
+    fs = listdir(dir_path)
     if restart_bool:
-        if ope(CONTCAR):
-            atoms_obj = read(CONTCAR, format="vasp")
+        if "CONTCAR" in fs:
+            atoms_obj = read(opj(dir_path, "CONTCAR"), format="vasp")
             log_fn(f"Found CONTCAR in {dir_path}")
-        elif ope(POSCAR):
-            atoms_obj = read(POSCAR, format="vasp")
+        elif "CONTCAR.gjf" in fs:
+            atoms_obj = read(opj(dir_path, "CONTCAR.gjf"), format="gaussian-in")
+            log_fn(f"Found CONTCAR.gjf in {dir_path}")
+        elif "POSCAR" in fs:
+            atoms_obj = read(opj(dir_path, "POSCAR"), format="vasp")
             log_fn(f"Could not find CONTCAR in {dir_path} - using POSCAR instead")
+        elif "POSCAR.gjf" in fs:
+            atoms_obj = read(opj(dir_path, "POSCAR.gjf"), format="gaussian-in")
+            log_fn(f"Could not find CONTCAR in {dir_path} - using POSCAR.gjf instead")
         else:
             _abort = True
     else:
-        if ope(POSCAR):
-            atoms_obj = read(POSCAR, format="vasp")
+        if "POSCAR" in fs:
+            atoms_obj = read(opj(dir_path, "POSCAR"), format="vasp")
             log_fn(f"Found POSCAR in {dir_path}")
-        elif ope(CONTCAR):
-            atoms_obj = read(CONTCAR, format="vasp")
-            log_fn(f"Could not find start POSCAR in {dir_path} - using found CONTCAR instead")
+        elif "POSCAR.gjf" in fs:
+            atoms_obj = read(opj(dir_path, "POSCAR.gjf"), format="gaussian-in")
+            log_fn(f"Found POSCAR.gjf in {dir_path}")
+        elif "CONTCAR" in fs:
+            atoms_obj = read(opj(dir_path, "CONTCAR"), format="vasp")
+            log_fn(f"Could not find POSCAR in {dir_path} - using CONTCAR instead")
+        elif "CONTCAR.gjf" in fs:
+            atoms_obj = read(opj(dir_path, "CONTCAR.gjf"), format="gaussian-in")
+            log_fn(f"Could not find POSCAR in {dir_path} - using CONTCAR.gjf instead")
         else:
             _abort = True
     if _abort:

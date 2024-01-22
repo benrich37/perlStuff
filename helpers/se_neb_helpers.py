@@ -194,6 +194,7 @@ def setup_scan_dir(work_path, scan_path, restart_at_idx, pbc_bool_list, log_fn=l
         log_fn(f"Setting up directory for step 0 (this is special for step 0 - please congratulate him)")
         mkdir(dir0)
         copy_state_files(work_path, dir0)
+        atoms_obj = get_poscar_atoms(work_path, log_fn)
         atoms_obj = get_atoms(work_path, pbc_bool_list, restart_bool=True, log_fn=log_fn)
         write(opj(dir0, "POSCAR"), atoms_obj, format="vasp")
     log_fn("Checking for scan steps to be overwritten")
