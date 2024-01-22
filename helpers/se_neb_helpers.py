@@ -1,13 +1,11 @@
-
-from ase.build import sort
 from ase.io import read, write
-from os import mkdir as mkdir, listdir
+from os import mkdir as mkdir
 from os.path import join as opj, exists as ope, basename
 from time import time
 import numpy as np
 
 from helpers.generic_helpers import get_int_dirs, get_atoms, get_bond_str, get_atom_str, log_and_abort, \
-    copy_state_files, remove_dir_recursive, time_to_str,  need_sort, log_def, get_nrg
+    copy_state_files, remove_dir_recursive, time_to_str, need_sort, log_def, get_nrg, get_poscar_atoms
 from helpers.geom_helpers import get_bond_length, get_atoms_prep_follow
 from helpers.schedule_helpers import read_instructions_prep_input
 
@@ -52,20 +50,6 @@ def neb_optimizer(neb, neb_dir, opter, opt_alpha=150):
     restart = opj(neb_dir, "hessian.pckl")
     dyn = opter(neb, trajectory=traj, logfile=log, restart=restart, a=(opt_alpha / 70) * 0.1)
     return dyn
-
-
-def get_poscar_atoms(work_dir, log_fn):
-    fs = listdir(work_dir)
-    has_vasp = "POSCAR" in fs
-    has_gauss = "POSCAR.gjf" in fs
-    if has_vasp:
-        atoms = read(opj(work_dir, "POSCAR"), format="vasp")
-    elif has_gauss:
-        atoms = read(opj(work_dir, "POSCAR.gjf"), format="gaussian-in")
-    else:
-        raise ValueError("No POSCAR found")
-    return atoms
-
 
 
 def check_poscar(work_dir, log_fn):

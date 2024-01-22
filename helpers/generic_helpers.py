@@ -4,7 +4,7 @@ from datetime import datetime as dt
 from ase import Atoms, Atom
 from ase.constraints import FixBondLength, FixAtoms
 from os.path import join as opj, exists as ope, isfile, isdir, basename
-from os import listdir as listdir, getcwd, chdir, listdir as get_sub_dirs
+from os import listdir as listdir, getcwd, chdir, listdir as get_sub_dirs, listdir
 from os import remove as rm, rmdir as rmdir, walk, getenv
 from ase.io import read, write
 from ase.units import Bohr
@@ -414,7 +414,7 @@ def get_sort_bool(symbols):
 
 
 def need_sort(root):
-    atoms = read(opj(root, "POSCAR"), format="vasp")
+    atoms = get_poscar_atoms(root, log_def)
     return get_sort_bool(atoms.get_chemical_symbols())
 
 
@@ -1452,3 +1452,14 @@ def get_atoms(dir_path, pbc_bool_list, restart_bool=False, log_fn=log_def):
 #         if ope(file):
 #             log_fn("Deleting")
 #             rm(file)
+def get_poscar_atoms(work_dir, log_fn):
+    fs = listdir(work_dir)
+    has_vasp = "POSCAR" in fs
+    has_gauss = "POSCAR.gjf" in fs
+    if has_vasp:
+        atoms = read(opj(work_dir, "POSCAR"), format="vasp")
+    elif has_gauss:
+        atoms = read(opj(work_dir, "POSCAR.gjf"), format="gaussian-in")
+    else:
+        raise ValueError("No POSCAR found")
+    return atoms
