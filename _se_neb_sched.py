@@ -445,5 +445,6 @@ def main():
 
 
 if __name__ == '__main__':
+    print("DONT USE ME IM DEPRECATED")
     main()
 
