@@ -448,11 +448,12 @@ def main():
             write_scan_logx(scan_dir, log_fn=se_log)
             update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=se_log)
             # if just_passed_max(step, scan_dir, log_fn=se_log):
-            if is_kink(step, scan_dir, log_fn=se_log):
-                se_log(f"Will break and restart at step {step} with finer step size")
-                schedule = insert_finer_steps(schedule, step, n=nflex)
-                write_schedule_to_text(schedule, work_dir)
-                return schedule, step
+            if i > 1:
+                if is_kink(step, scan_dir, log_fn=se_log):
+                    se_log(f"Will break and restart at step {step} with finer step size")
+                    schedule = insert_finer_steps(schedule, step, n=nflex)
+                    write_schedule_to_text(schedule, work_dir)
+                    return schedule, step
         return schedule, step_list[-1]
 
     ####################################################################################################################
