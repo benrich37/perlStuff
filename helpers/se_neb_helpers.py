@@ -169,10 +169,9 @@ def _prep_input(step_idx, schedule, step_dir, scan_dir, work_dir, carry_dict = N
     step_prev_1_dir = opj(scan_dir, str(step_idx-1))
     step_prev_2_dir = opj(scan_dir, str(step_idx - 2))
     if step_idx == 0:
-        prev_1_out = opj(work_dir, "POSCAR")
+        atoms = get_atoms(work_dir, [False, False, False], False, log_fn)
     else:
-        prev_1_out = opj(step_prev_1_dir, "CONTCAR")
-    atoms = read(prev_1_out, format="vasp")
+        atoms = get_atoms(step_prev_1_dir, [False, False, False], True, log_fn)
     prev_2_out = opj(step_prev_2_dir, "CONTCAR")
     print_str = f"Prepared structure for step {step_idx} with"
     if len(step_atoms) == 2:
