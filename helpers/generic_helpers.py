@@ -488,9 +488,6 @@ def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def):
     log_and_abort(msg, log_fn)
 
 
-
-
-sdsds
 def get_cmds_list(work_dir, ref_struct=None, log_fn=log_def):
     chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
