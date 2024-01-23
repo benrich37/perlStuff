@@ -367,24 +367,19 @@ def plot_conv_helper(root, conv, conv_met, nrgs):
         xvals = [int(conv[i]) for i in idcs]
     yvals = [nrgs[i] for i in idcs]
     nrgs_focus = get_nrgs_focus(nrgs)
+    fig, ax = plt.subplots(nrows=2, sharex=True)
+    for i in range(2):
+        ax[i].set_ylabel("E (eV)")
+        ax[i].ticklabel_format(useOffset=False)
+        ax[i].plot(xvals, yvals)
+        ax[i].scatter(xvals, yvals)
     if len(nrgs_focus) == 3:
-        fig, ax = plt.subplots(nrows=2, sharex=True)
-        for i in range(2):
-            ax[i].set_ylabel("E (eV)")
-            ax[i].ticklabel_format(useOffset=False)
-            ax[i].plot(xvals, yvals)
-            ax[i].scatter(xvals, yvals)
         nrgs_std = np.nanstd(nrgs_focus)
         ax[0].set_ylim(np.nanmin(nrgs_focus) - nrgs_std, np.nanmax(nrgs_focus) + nrgs_std)
-        ax[1].set_xticks(xvals, [conv[i] for i in idcs])
-        ax[1].set_xlabel(cmet_ref_dict[conv_met])
-        fig.savefig(opj(root, "conv.png"))
-    else:
-        plt.plot(xvals, yvals)
-        plt.scatter(xvals, yvals)
-        plt.xticks(xvals, yvals)
-        plt.xlabel(cmet_ref_dict[conv_met])
-        plt.savefig(opj(root, "conv.png"))
+    ax[1].set_xticks(xvals, [conv[i] for i in idcs])
+    ax[1].set_xlabel(cmet_ref_dict[conv_met])
+    fig.savefig(opj(root, "conv.png"))
+
 
 
 def plot_conv(root, conv, conv_met, conv_out_met_func=get_nrg):
