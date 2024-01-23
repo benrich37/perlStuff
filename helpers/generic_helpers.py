@@ -97,6 +97,14 @@ jdftx_calc_params = {
     "symmetries": "none",
 }
 
+jdftx_solv_params = {
+    "fluid": "LinearPCM",
+    "pcm-variant": "CANDLE",
+    "fluid-solvent": "H2O",
+    "fluid-cation": "Na+ 0.5",
+    "fluid-anion": "F- 0.5"
+}
+
 
 def copy_file(file, tgt_dir, log_fn=log_def):
     cp(file, tgt_dir)
@@ -469,7 +477,7 @@ def log_generic(message, work, fname, print_bool):
     if print_bool:
         print(message)
 
-def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def):
+def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, pbc=None):
     input_cmds = jdftx_calc_params
     if input_cmds["elec-n-bands"] == "*":
         nbands = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
@@ -482,9 +490,13 @@ def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def):
     inputs_str = ""
     for k in input_cmds:
         inputs_str += f"{k} {input_cmds[k]}\n"
+    if False in pbc:
+        log_fn("Non-bulk calculation - adding default solvation parameters")
+        for k in jdftx_solv_params:
+            inputs_str += f"{k} {jdftx_solv_params[k]}\n"
     with open(opj(work_dir, "inputs"), "w") as f:
         f.write(inputs_str)
-    msg = "Default inputs dumped - check params before proceeding\n"
+    msg = "Default inputs dumped - check params before proceeding"
     log_and_abort(msg, log_fn)
 
 
@@ -500,13 +512,13 @@ def get_cmds_list(work_dir, ref_struct=None, log_fn=log_def):
     else:
         return read_inputs_list(work_dir, ref_struct=ref_struct)
 
-def get_cmds_dict(work_dir, ref_struct=None, log_fn=log_def):
+def get_cmds_dict(work_dir, ref_struct=None, log_fn=log_def, pbc=None):
     chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
         if ope(opj(work_dir, "in")):
             return dup_cmds_list(opj(work_dir, "in"))
         else:
-            dump_default_inputs(work_dir, ref_struct)
+            dump_default_inputs(work_dir, ref_struct, log_fn=log_fn, pbc=pbc)
             msg = "No inputs or in file found - dumping template inputs"
             log_and_abort(msg, log_fn)
     else:
