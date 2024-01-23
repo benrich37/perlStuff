@@ -83,6 +83,20 @@ submit_cpu_perl_ref = [
     f"python {bar_str} > {foo_str}.out",
 ]
 
+jdftx_calc_params = {
+    "elec-ex-corr": "gga",
+    "van-der-waals": "D3",
+    "elec-n-bands": "*",
+    "kpoint-folding": "*",
+    "electronic-minimize": "nIterations 100 energyDiffThreshold  1e-07",
+    "elec-smearing": "Fermi 0.001",
+    "elec-initial-magnetization": "0 no",
+    "spintype": "z-spin",
+    "core-overlap-check": "none",
+    "converge-empty-states": "yes",
+    "symmetries": "none",
+}
+
 
 def copy_file(file, tgt_dir, log_fn=log_def):
     cp(file, tgt_dir)
@@ -247,6 +261,14 @@ def get_zval(el, ps_set):
             elif "z valence" in line.lower():
                 zval = int(float(line.strip().split()[0]))
     return zval
+
+
+def get_kfolding(poscar_fname, kpt_density=24):
+    atoms = read(poscar_fname)
+    lengths = [np.linalg.norm(atoms.cell[i]) for i in range(3)]
+    kfold = [str(int(np.ceil(kpt_density/lengths[i]))) for i in range(3)]
+    return " ".join(kfold)
+
 
 
 def get_nbands(poscar_fname, pseudoSet="GBRV"):
@@ -447,18 +469,49 @@ def log_generic(message, work, fname, print_bool):
     if print_bool:
         print(message)
 
+def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def):
+    input_cmds = jdftx_calc_params
+    if input_cmds["elec-n-bands"] == "*":
+        nbands = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
+        log_fn(f"Default nbands for {ref_struct} set to {nbands}")
+        input_cmds["elec-n-bands"] = nbands
+    if input_cmds["kpoint-folding"] == "*":
+        kfold = str(get_kfolding(ref_struct))
+        log_fn(f"Default k-point folding for {ref_struct} set to {kfold}")
+        input_cmds["kpoint-folding"] = kfold
+    inputs_str = ""
+    for k in input_cmds:
+        inputs_str += f"{k} {input_cmds[k]}\n"
+    with open(opj(work_dir, "inputs"), "w") as f:
+        f.write(inputs_str)
+    msg = "Default inputs dumped - check params before proceeding\n"
+    log_and_abort(msg, log_fn)
 
-def get_cmds_list(work_dir, ref_struct=None):
+
+
+
+sdsds
+def get_cmds_list(work_dir, ref_struct=None, log_fn=log_def):
     chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
-        return dup_cmds_list(opj(work_dir, "in"))
+        if ope(opj(work_dir, "in")):
+            return dup_cmds_list(opj(work_dir, "in"))
+        else:
+            dump_default_inputs(work_dir, ref_struct)
+            msg = "No inputs or in file found - dumping template inputs"
+            log_and_abort(msg, log_fn)
     else:
         return read_inputs_list(work_dir, ref_struct=ref_struct)
 
-def get_cmds_dict(work_dir, ref_struct=None):
+def get_cmds_dict(work_dir, ref_struct=None, log_fn=log_def):
     chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
-        return dup_cmds_dict(opj(work_dir, "in"))
+        if ope(opj(work_dir, "in")):
+            return dup_cmds_list(opj(work_dir, "in"))
+        else:
+            dump_default_inputs(work_dir, ref_struct)
+            msg = "No inputs or in file found - dumping template inputs"
+            log_and_abort(msg, log_fn)
     else:
         return read_inputs_dict(work_dir, ref_struct=ref_struct)
 
@@ -952,6 +1005,8 @@ def check_for_restart(e, failed_before, opt_dir, log_fn=log_def):
     return True
 
 def log_and_abort(err_str, log_fn=log_def):
+    if err_str[-1:] != "\n":
+        err_str += "\n"
     log_fn(err_str)
     raise ValueError(err_str)
 

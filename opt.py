@@ -6,7 +6,7 @@ from ase.optimize import FIRE
 from ase.constraints import FixAtoms
 from datetime import datetime
 from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
-    get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint
+    get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint, get_cmds_dict
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out
@@ -312,6 +312,7 @@ def main():
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft)
     exe_cmd = get_exe_cmd(gpu, opt_log)
+    cmds = get_cmds_dict(work_dir, ref_struct=structure)
     cmds = get_cmds_list(work_dir, ref_struct=structure)
     atoms = read(structure, format="vasp")
     # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
