@@ -344,6 +344,16 @@ def get_conv_data(root, conv, conv_out_met_func=get_nrg):
     return conv_out_mets
 
 
+def get_nrgs_focus(nrgs):
+    nrgs_focus = []
+    for nrg in nrgs:
+        if not nrg is np.nan:
+            nrgs_focus.append(nrg)
+    if len(nrgs_focus) > 3:
+        nrgs_focus = nrgs_focus[-3:]
+    return nrgs_focus
+
+
 def plot_conv_helper(root, conv, conv_met, nrgs):
     if "k" in conv_met:
         nks = [np.prod(np.array([int(i) for i in k])) for k in conv]
@@ -356,14 +366,14 @@ def plot_conv_helper(root, conv, conv_met, nrgs):
         idcs = np.argsort([int(n) for n in conv])
         xvals = [int(conv[i]) for i in idcs]
     yvals = [nrgs[i] for i in idcs]
-    if len(nrgs) > 3:
+    nrgs_focus = get_nrgs_focus(nrgs)
+    if len(nrgs_focus) == 3:
         fig, ax = plt.subplots(nrows=2, sharex=True)
         for i in range(2):
             ax[i].set_ylabel("E (eV)")
             ax[i].ticklabel_format(useOffset=False)
             ax[i].plot(xvals, yvals)
             ax[i].scatter(xvals, yvals)
-        nrgs_focus = yvals[-3:]
         nrgs_std = np.nanstd(nrgs_focus)
         ax[0].set_ylim(np.nanmin(nrgs_focus) - nrgs_std, np.nanmax(nrgs_focus) + nrgs_std)
         ax[1].set_xticks(xvals, [conv[i] for i in idcs])
