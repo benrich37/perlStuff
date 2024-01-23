@@ -28,6 +28,7 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "restart: False # Whether to get structure from lat/opt dirs or from input structure",
                 "pbc: False False False # Periodic boundary conditions for unit cell",
                 "lattice steps: 0 # Number of steps for lattice optimization (0 = no lattice optimization)",
+                "pseudoset: GBRV # name of pseudo-potential set to be used"
                 "opt program: jdft # Which program to use for ionic optimization",
                 "# jdft = Use JDFTx calculator for ionic optimization (faster)",
                 "# ase = Use ASE wrapper for optimization (slower but more flexible)",
@@ -57,7 +58,7 @@ def read_opt_inputs(fname = "conv_input"):
     freeze_tol = 3.
     save_state = False
     ortho = True
-    pseudoset = "GBRV_v1.5"
+    pseudoset = "GBRV"
     conv_met = None
     conv = None
     for input in inputs:
