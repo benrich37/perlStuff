@@ -330,15 +330,20 @@ cmet_ref_dict = {
 }
 
 
-def plot_conv(root, conv, conv_met):
-    nrgs = []
+def get_conv_data(root, conv, conv_out_met_func=get_nrg):
+    conv_out_mets = []
     for c in conv:
-        nrg = np.nan
+        cdir = opj(root, c)
+        conv_out_met = np.nan
         try:
-            nrg = get_nrg(opj(root, c))
+            conv_out_met = conv_out_met_func(cdir)
         except:
             pass
-        nrgs.append(nrg)
+        conv_out_mets.append(conv_out_met)
+    return conv_out_mets
+
+
+def plot_conv_helper(root, conv, conv_met, nrgs):
     if "k" in conv_met:
         nks = [np.prod(np.array([int(i) for i in k])) for k in conv]
         idcs = np.argsort(nks)
@@ -350,7 +355,7 @@ def plot_conv(root, conv, conv_met):
         idcs = np.argsort([int(n) for n in conv])
         xvals = [int(conv[i]) for i in idcs]
     yvals = [nrgs[i] for i in idcs]
-    if len(conv) > 3:
+    if len(nrgs) > 3:
         fig, ax = plt.subplots(nrows=2, sharex=True)
         for i in range(2):
             ax[i].set_ylabel("E (eV)")
@@ -369,6 +374,16 @@ def plot_conv(root, conv, conv_met):
         plt.xticks(xvals, yvals)
         plt.xlabel(cmet_ref_dict[conv_met])
         plt.savefig(opj(root, "conv.png"))
+
+
+def plot_conv(root, conv, conv_met, conv_out_met_func=get_nrg):
+    nrgs = get_conv_data(root, conv, conv_out_met_func=conv_out_met_func)
+    nDone = 0
+    for nrg in nrgs:
+        if not nrg is np.nan:
+            nDone += 1
+    if nDone > 1:
+        plot_conv_helper(root, conv, conv_met, nrgs)
 
 
 def read_nband_conv(nconv, cmds):
@@ -392,6 +407,7 @@ def main():
     opt_log = get_log_fn(_work_dir, "conv", False, restart=restart)
     exe_cmd = get_exe_cmd(gpu, opt_log)
     for c in conv:
+        plot_conv(_work_dir, conv, conv_met)
         work_dir = opj(_work_dir, c)
         if not ope(work_dir):
             mkdir(work_dir)
@@ -432,8 +448,8 @@ def main():
                     cp(opj(lat_dir, "opt.log"), work_dir)
                 restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
                 restarting_ion = restarting_ion and restart
-                opt_log(f"Finding/copying any state files to {opt_dir}")
-                copy_best_state_files([work_dir, lat_dir, opt_dir], opt_dir, log_fn=opt_log)
+                # opt_log(f"Finding/copying any state files to {opt_dir}")
+                # copy_best_state_files([work_dir, lat_dir, opt_dir], opt_dir, log_fn=opt_log)
                 if use_jdft:
                     if restarting_ion:
                         make_jdft_logx(opt_dir, log_fn=opt_log)
