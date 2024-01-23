@@ -855,8 +855,15 @@ def get_pdos_cmd_val(atoms):
     return val
 
 
+def cmds_dict_to_list(cmds_dict):
+    cmds_list = []
+    for k in cmds_dict:
+        cmds_list.append([k, cmds_dict[k]])
+    return cmds_list
+
 
 def add_cohp_cmds(cmds, ortho=True):
+    is_dict = (type(cmds) == dict)
     dump_pairs = [
         ["dump", "End BandProjections"],
         ["dump", "End Fillings"],

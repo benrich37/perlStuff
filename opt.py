@@ -11,7 +11,7 @@ from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_in
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort, cmds_dict_to_list
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
 from sys import exit, stderr
 from shutil import copy as cp
@@ -316,6 +316,7 @@ def main():
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
     atoms = read(structure, format="vasp")
     # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
+    cmds = cmds_dict_to_list(cmds)
     cmds = add_cohp_cmds(cmds, ortho=ortho)
     lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
     ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
