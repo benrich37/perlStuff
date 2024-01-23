@@ -384,7 +384,11 @@ def plot_conv(root, conv, conv_met, conv_out_met_func=get_nrg):
         if not nrg is np.nan:
             nDone += 1
     if nDone > 1:
-        plot_conv_helper(root, conv, conv_met, nrgs)
+        try:
+            plot_conv_helper(root, conv, conv_met, nrgs)
+        except:
+            print("Issue printing convergence plot")
+            pass
 
 
 def read_nband_conv(nconv, cmds):
