@@ -95,6 +95,7 @@ jdftx_calc_params = {
     "core-overlap-check": "none",
     "converge-empty-states": "yes",
     "symmetries": "none",
+    "elec-cutoff": "25",
 }
 
 jdftx_solv_params = {
