@@ -170,7 +170,7 @@ def get_restart_idx(restart_idx, scan_path, log_fn=log_def):
                 look_dir = int_dirs[int_dirs_indices[i]]
                 if ope(look_dir):
                     if is_done(look_dir):
-                        restart_idx = i
+                        restart_idx = i+1
                     else:
                         return i
                 else:
