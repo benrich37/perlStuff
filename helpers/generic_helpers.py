@@ -7,7 +7,7 @@ from os.path import join as opj, exists as ope, isfile, isdir, basename
 from os import listdir as listdir, getcwd, chdir, listdir as get_sub_dirs, listdir
 from os import remove as rm, rmdir as rmdir, walk, getenv
 from ase.io import read, write
-from ase.units import Bohr
+from ase.units import Bohr, Hartree
 from pathlib import Path
 from subprocess import run as run
 from copy import copy as duplicate
@@ -478,7 +478,15 @@ def log_generic(message, work, fname, print_bool):
     if print_bool:
         print(message)
 
-def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, pbc=None):
+def bias_to_mu(bias_str, v0 = 4.66):
+    if type(bias_str) is str:
+        voltage = float(bias_str.rstrip("V")) + v0
+    else:
+        voltage = bias_str + v0
+    mu = - voltage / Hartree
+    return mu
+
+def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, pbc=None, bias=0.0):
     input_cmds = jdftx_calc_params
     if input_cmds["elec-n-bands"] == "*":
         nbands = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
@@ -488,6 +496,9 @@ def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, 
         kfold = str(get_kfolding(ref_struct))
         log_fn(f"Default k-point folding for {ref_struct} set to {kfold}")
         input_cmds["kpoint-folding"] = kfold
+    if "target-mu" in input_cmds:
+        if input_cmds["target-mu"] == "*":
+            input_cmds["target-mu"] = str(bias_to_mu(bias))
     inputs_str = ""
     for k in input_cmds:
         inputs_str += f"{k} {input_cmds[k]}\n"
@@ -513,13 +524,13 @@ def get_cmds_list(work_dir, ref_struct=None, log_fn=log_def):
     else:
         return read_inputs_list(work_dir, ref_struct=ref_struct)
 
-def get_cmds_dict(work_dir, ref_struct=None, log_fn=log_def, pbc=None):
+def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None):
     chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
         if ope(opj(work_dir, "in")):
             return dup_cmds_list(opj(work_dir, "in"))
         else:
-            dump_default_inputs(work_dir, ref_struct, log_fn=log_fn, pbc=pbc)
+            dump_default_inputs(work_dir, ref_struct, log_fn=log_fn, pbc=pbc, bias=bias)
             msg = "No inputs or in file found - dumping template inputs"
             log_and_abort(msg, log_fn)
     else:

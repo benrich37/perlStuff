@@ -28,7 +28,8 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "opt program: jdft # Which program to use for ionic optimization, options are 'jdft' and 'ase'",
                 "freeze base: False # Whether to freeze lower atoms (don't use for bulk calcs)",
                 "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base",
-                "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)"]
+                "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)",
+                "bias: -1.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file"]
 
 
 def read_opt_inputs(fname = "opt_input"):
@@ -50,6 +51,7 @@ def read_opt_inputs(fname = "opt_input"):
     save_state = False
     ortho = True
     pseudoset = "GBRV"
+    bias = 0.0
     for input in inputs:
         key, val = input[0], input[1]
         if "pseudo" in key:
@@ -91,8 +93,10 @@ def read_opt_inputs(fname = "opt_input"):
             ortho = "true" in val.lower()
         if ("save" in key) and ("state" in key):
             save_state = "true" in val.lower()
+        if "bias" in key:
+            bias = float(val.rstrip("V"))
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset
+    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, bias
 
 
 def finished(dirname):
@@ -313,7 +317,7 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet = read_opt_inputs()
+    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias = read_opt_inputs()
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
@@ -322,7 +326,7 @@ def main():
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft)
     exe_cmd = get_exe_cmd(gpu, opt_log)
-    cmds = get_cmds_dict(work_dir, ref_struct=structure, pbc=pbc, log_fn=opt_log)
+    cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=opt_log)
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
     atoms = read(structure, format="vasp")
     # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
