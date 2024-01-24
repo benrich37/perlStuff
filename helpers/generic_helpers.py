@@ -160,7 +160,7 @@ def insert_el(filename):
         f.write('\n'.join(contents))
 
 
-def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None):
+def read_inputs_dict_helper(work_dir):
     inpfname = opj(work_dir, "inputs")
     if ope("inputs"):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump", "initial-state",
@@ -183,24 +183,26 @@ def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None):
                         rest = line.rstrip("\n")[line.index(" ") + 1:]
                         if cmd not in ignore:
                             input_cmds[cmd] = rest
-        do_n_bands = False
-        if "elec-n-bands" in input_cmds.keys():
-            if input_cmds["elec-n-bands"] == "*":
-                do_n_bands = True
-        else:
-            do_n_bands = True
-        if do_n_bands:
-            if ref_struct is None:
-                ref_paths = [opj(work_dir, "POSCAR"), opj(work_dir, "CONTCAR")]
-            else:
-                ref_paths = [opj(work_dir, ref_struct), opj(work_dir, "CONTCAR"), opj(work_dir, "POSCAR")]
-            for p in ref_paths:
-                if ope(p):
-                    input_cmds["elec-n-bands"] = str(get_nbands(p, pseudoSet=pseudoSet))
-                    break
         return input_cmds
     else:
         return None
+
+
+
+def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
+    input_cmds = read_inputs_dict_helper(work_dir)
+    if not input_cmds is None:
+        nbandkey = "elec-n-bands"
+        ref_struct = opj(work_dir, "POSCAR")
+        if nbandkey in input_cmds and input_cmds[nbandkey] == "*":
+            input_cmds[nbandkey] = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
+        kfoldkey = "kpoint-folding"
+        if kfoldkey in input_cmds and input_cmds[kfoldkey] == "*":
+            input_cmds[kfoldkey] = str(get_kfolding(ref_struct))
+        biaskey = "target-mu"
+        if biaskey in input_cmds and input_cmds[biaskey] == "*":
+            input_cmds[biaskey] = str(bias_to_mu(bias))
+    return input_cmds
 
 
 def read_inputs_list(work_dir, ref_struct=None):
