@@ -117,7 +117,7 @@ def count_scan_steps(work_dir):
                 key = line.split(":")[0]
                 if (not "#" in key) and (not "neb" in key):
                     scan_ints.append(int(key.strip()))
-    return max(scan_ints) - 1
+    return max(scan_ints) + 1
 
 
 def _prep_input_bond(step_idx, atoms, prev_2_out, atom_pair, step_val, guess_type, step_dir,

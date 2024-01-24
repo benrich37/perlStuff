@@ -396,7 +396,7 @@ def main():
     scan_dir = opj(work_dir, "scan")
     restart_at = get_restart_idx(restart_at, scan_dir)  # If was none, finds most recently converged step
     restart = restart_at > 0
-    skip_to_neb = (restart_at > scan_steps)
+    skip_to_neb = (restart_at > scan_steps - 1)
     se_log = get_log_fn(work_dir, "se_neb", False, restart=restart)
     update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=se_log)
     if skip_to_neb:
