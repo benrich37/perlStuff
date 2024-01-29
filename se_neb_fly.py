@@ -45,7 +45,7 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "gpu: False"
                    "# safe mode: True # (Not implemented yet) If end is relaxed, scan images with bond lengths exceeding/smaller than this length",]
 
-debug = True #TODO: Change me to False
+debug = False
 if debug:
     from os import environ
     environ["JDFTx_pseudo"] = "D:\\scratch_backup\\pseudopotentials"
