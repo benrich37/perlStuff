@@ -45,6 +45,13 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "gpu: False"
                    "# safe mode: True # (Not implemented yet) If end is relaxed, scan images with bond lengths exceeding/smaller than this length",]
 
+debug = True #TODO: Change me to False
+if debug:
+    from os import environ
+    environ["JDFTx_pseudo"] = "D:\\scratch_backup\\pseudopotentials"
+    environ["JDFTx_GPU"] = "None"
+    environ["JDFTx"] = "None"
+
 def read_se_neb_inputs(fname="se_neb_inputs"):
     """ Reads
     :param fname:
@@ -388,6 +395,7 @@ def is_kink(step, scan_dir, thresh = 0.001, log_fn=log_def):
 def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
         k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, carry_dict, pseudoSet = read_se_neb_inputs()
+    #work_dir = "D:\\scratch_backup\\perl\\deepdive\\TiC_GBRV\\calcs\\neb\\hex_-111_a_trv1\\N2\\0.00V\\dis1"
     chdir(work_dir)
     if not schedule:
         write_autofill_schedule(atom_idcs, scan_steps, step_length, guess_type, j_steps, [atom_idcs], relax_start,
@@ -435,7 +443,7 @@ def main():
                 restart_step = False
             if restart_step:
                 se_log(f"Restarting step")
-            if step > 0 and not restart_step:
+            if step > 0:
                 prev_step_dir = opj(scan_dir, str(step - 1))
             else:
                 prev_step_dir = work_dir
@@ -481,5 +489,7 @@ def main():
 
 
 if __name__ == '__main__':
+    work_dir = "D:\\scratch_backup\\perl\\deepdive\\TiC_GBRV\\calcs\\neb\\hex_-111_a_trv1\\N2\\0.00V\\dis1\\"
+    chdir(work_dir)
     main()
 

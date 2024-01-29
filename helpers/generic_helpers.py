@@ -653,8 +653,6 @@ def get_inputs_list(fname, auto_lower=True):
 def fix_work_dir(work_dir):
     if work_dir is None:
         work_dir = getcwd()
-    if work_dir[-1] != "/":
-        work_dir += "/"
     return work_dir
 
 
