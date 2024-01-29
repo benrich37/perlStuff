@@ -489,7 +489,8 @@ def main():
 
 
 if __name__ == '__main__':
-    work_dir = "D:\\scratch_backup\\perl\\deepdive\\TiC_GBRV\\calcs\\neb\\hex_-111_a_trv1\\N2\\0.00V\\dis1\\"
-    chdir(work_dir)
+    if debug:
+        work_dir = "D:\\scratch_backup\\perl\\deepdive\\TiC_GBRV\\calcs\\neb\\hex_-111_a_trv1\\N2\\0.00V\\dis1\\"
+        chdir(work_dir)
     main()
 
