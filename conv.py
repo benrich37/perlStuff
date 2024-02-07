@@ -37,7 +37,8 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "conv: k,111,222,333 # input for a kpt convergence test",
                 "conv: e,10,15,20 # input for a ecut convergence test",
                 "conv: n,-10,0,+10 # input for a nBand convergence test wrt default value",
-                "conv: n,100,120,140 # input for a nBand convergence test with explicit values"]
+                "conv: n,100,120,140 # input for a nBand convergence test with explicit values",
+                "conv: v,20,30,40,50 # input for a vacuum space convergence test"]
 
 
 def read_opt_inputs(fname = "conv_input"):
@@ -365,6 +366,9 @@ def plot_conv_helper(root, conv, conv_met, nrgs):
     elif "n" in conv_met:
         idcs = np.argsort([int(n) for n in conv])
         xvals = [int(conv[i]) for i in idcs]
+    elif "v" in conv_met:
+        idcs = np.argsort([int(n) for n in conv])
+        xvals = [int(conv[i]) for i in idcs]
     yvals = [nrgs[i] for i in idcs]
     nrgs_focus = get_nrgs_focus(nrgs)
     fig, ax = plt.subplots(nrows=2, sharex=True)
@@ -408,6 +412,22 @@ def read_nband_conv(nconv, cmds):
         val = int(nconv)
     return str(val)
 
+def get_vdist(atoms):
+    sc = atoms.get_scaled_positions()
+    mins = np.min(sc[:,2])
+    maxs = np.max(sc[:,2])
+    dels = maxs - mins
+    vdist = np.linalg.norm(atoms.cell[2])*(1-dels)
+    return vdist
+
+def set_vdist(atoms, vset):
+    vdist = get_vdist(atoms)
+    sdist = np.linalg.norm(atoms.cell[2]) - vdist
+    vecscale = ((vset + sdist)/(vdist + sdist))
+    atoms.cell[2] *= vecscale
+    atoms.center()
+    return atoms
+
 
 
 
@@ -431,13 +451,15 @@ def main():
             structure = opj(_work_dir, _structure)
             # structure = check_structure(structure, work_dir, log_fn=opt_log)
             cmds = get_cmds_dict(_work_dir, ref_struct=structure)
+            atoms = read(structure, format="vasp")
             if "k" in conv_met:
                 cmds["kpoint-folding"] = " ".join([kf for kf in c])
             elif "e" in conv_met:
                 cmds["elec-cutoff"] = c
             elif "n" in conv_met:
                 cmds["elec-n-bands"] = read_nband_conv(c, cmds)
-            atoms = read(structure, format="vasp")
+            elif "v" in conv_met:
+                atoms = set_vdist(atoms, c)
             lat_cmds = get_lattice_cmds_dict(cmds, lat_iters, pbc)
             ion_cmds = get_ionic_opt_cmds_dict(cmds, max_steps)
             opt_log(f"Setting {structure} to atoms object")
