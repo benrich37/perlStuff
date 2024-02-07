@@ -94,7 +94,7 @@ def read_opt_inputs(fname = "opt_input"):
         if ("save" in key) and ("state" in key):
             save_state = "true" in val.lower()
         if "bias" in key:
-            bias = float(val.rstrip("V"))
+            bias = float(val.strip().rstrip("V"))
     work_dir = fix_work_dir(work_dir)
     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, bias
 
