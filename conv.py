@@ -436,6 +436,7 @@ def main():
     os.chdir(_work_dir)
     opt_log = get_log_fn(_work_dir, "conv", False, restart=restart)
     exe_cmd = get_exe_cmd(gpu, opt_log)
+    print(conv)
     for c in conv:
         plot_conv(_work_dir, conv, conv_met)
         work_dir = opj(_work_dir, c)
