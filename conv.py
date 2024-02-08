@@ -459,7 +459,7 @@ def main():
             elif "n" in conv_met:
                 cmds["elec-n-bands"] = read_nband_conv(c, cmds)
             elif "v" in conv_met:
-                atoms = set_vdist(atoms, c)
+                atoms = set_vdist(atoms, float(c))
             lat_cmds = get_lattice_cmds_dict(cmds, lat_iters, pbc)
             ion_cmds = get_ionic_opt_cmds_dict(cmds, max_steps)
             opt_log(f"Setting {structure} to atoms object")
