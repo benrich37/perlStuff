@@ -35,6 +35,7 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
     ortho = True
     pseudoset = "GBRV"
     bias = 0.0
+    skip_sp = False
     for input in inputs:
         key, val = input[0], input[1]
         if "pseudo" in key:
@@ -53,8 +54,10 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
             save_state = "true" in val.lower()
         if "bias" in key:
             bias = float(val.strip().rstrip("V"))
+        if ("skip" in key) and (("sp" in key) or ("single" in key)):
+            skip_sp = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias
+    return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias, skip_sp
 
 
 def finished(dir_path):
@@ -115,7 +118,7 @@ def run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=
 
 
 def main():
-    work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias = read_opt_inputs()
+    work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias, skip_sp = read_opt_inputs()
     os.chdir(work_dir)
     wannier_dir = opj(work_dir, job_type_name)
     if not ope(wannier_dir):
@@ -123,20 +126,22 @@ def main():
     structure = opj(work_dir, structure)
     wannier_log = get_log_fn(work_dir, job_type_name, False, restart=False)
     structure = check_structure(structure, work_dir, log_fn=wannier_log)
-    sp_exe_cmd = get_exe_cmd(gpu, wannier_log)
-    sp_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
     atoms = read(structure, format="vasp")
-    sp_cmds = cmds_dict_to_list(sp_cmds)
-    sp_cmds = add_sp_cmds(sp_cmds)
-    sp_cmds = add_cohp_cmds(sp_cmds, ortho=ortho)
-    sp_ion_cmds = get_ionic_opt_cmds_list(sp_cmds, 0)
-    wannier_log(f"Setting {structure} to atoms object")
-    get_sp_ion_calc = lambda root: _get_calc(sp_exe_cmd, sp_ion_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
-    check_submit(gpu, os.getcwd(), job_type_name, log_fn=wannier_log)
-    wannier_log(f"Running single point calculation")
-    run_sp(atoms, wannier_dir, work_dir, get_sp_ion_calc, log_fn=wannier_log)
+    if not skip_sp:
+        sp_exe_cmd = get_exe_cmd(gpu, wannier_log)
+        sp_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
+        sp_cmds = cmds_dict_to_list(sp_cmds)
+        sp_cmds = add_sp_cmds(sp_cmds)
+        sp_cmds = add_cohp_cmds(sp_cmds, ortho=ortho)
+        sp_ion_cmds = get_ionic_opt_cmds_list(sp_cmds, 0)
+        wannier_log(f"Setting {structure} to atoms object")
+        get_sp_ion_calc = lambda root: _get_calc(sp_exe_cmd, sp_ion_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
+        check_submit(gpu, os.getcwd(), job_type_name, log_fn=wannier_log)
+        wannier_log(f"Running single point calculation")
+        run_sp(atoms, wannier_dir, work_dir, get_sp_ion_calc, log_fn=wannier_log)
     wannier_exe_cmd = get_wannier_exe_cmd(gpu, log_fn=wannier_log)
     wannier_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
+    wannier_cmds = cmds_dict_to_list(wannier_cmds)
     wannier_cmds = add_wannier_cmds(wannier_cmds, None)
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
     run_wannier(atoms, wannier_dir, work_dir, get_wannier_calc, _failed_before=False, log_fn=wannier_log)
