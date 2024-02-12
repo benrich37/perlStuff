@@ -375,6 +375,7 @@ class Wannier(Calculator):
 
         def __init__(self, executable=None, pseudoDir=None, pseudoSet='GBRV', commands=None, outfile=None, gpu=False):
                 self.ran = False
+                self.E = None
                 #Valid pseudopotential sets (mapping to path and suffix):
                 pseudoSetMap = {
                         'SG15' : 'SG15/$ID_ONCV_PBE.upf',
@@ -481,13 +482,15 @@ class Wannier(Calculator):
         def clean(self):
                 shell('rm -rf ' + self.runDir)
 
-        def calculation_required(self, atoms, quantities):
-                return not self.ran
 
-        # def get_potential_energy(self, atoms, force_consistent=False):
-        #         if(self.calculation_required(atoms, None)):
-        #                 self.update(atoms)
-        #         return self.E
+
+        def calculation_required(self, atoms, quantities):
+                return ((self.E is None) or (not self.ran))
+
+        def get_potential_energy(self, atoms, force_consistent=False):
+                if(self.calculation_required(atoms, None)):
+                        self.update(atoms)
+                return self.E
         #
         #
         # def get_charges(self, atoms):
@@ -504,15 +507,16 @@ class Wannier(Calculator):
 
         ################### I/O ###################
 
-        # def __readEnergy(self, filename):
-        #         Efinal = None
-        #         for line in open(filename):
-        #                 tokens = line.split()
-        #                 if len(tokens)==3:
-        #                         Efinal = float(tokens[2])
-        #         if Efinal is None:
-        #                 raise IOError('Error: Energy not found.')
-        #         return Efinal * Hartree #Return energy from final line (Etot, F or G)
+        def __readEnergy(self, filename):
+                return 0
+                # Efinal = None
+                # for line in open(filename):
+                #         tokens = line.split()
+                #         if len(tokens)==3:
+                #                 Efinal = float(tokens[2])
+                # if Efinal is None:
+                #         raise IOError('Error: Energy not found.')
+                # return Efinal * Hartree #Return energy from final line (Etot, F or G)
 
         # def __readForces(self, filename):
         #         idxMap = {}
@@ -579,6 +583,7 @@ class Wannier(Calculator):
                 #Run jdftx:
                 shell('cd %s && %s -i in -o out' % (self.runDir, self.executable))
                 self.ran = True
+                self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
                 # self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
                 # self.Forces = self.__readForces('%s/force' % (self.runDir))
                 # self.Charges = self.__readCharges('%s/out' % (self.runDir))

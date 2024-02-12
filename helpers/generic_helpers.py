@@ -873,6 +873,10 @@ def cmds_dict_to_list(cmds_dict):
         cmds_list.append([k, cmds_dict[k]])
     return cmds_list
 
+def add_wannier_cmds(cmds, something):
+    print("Fill me out")
+    return cmds
+
 
 def add_sp_cmds(cmds):
     dump_pairs = [

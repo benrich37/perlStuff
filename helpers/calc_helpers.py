@@ -18,21 +18,15 @@ def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
     )
 
 
-def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, log_fn=log_def):
+def _get_wannier_calc(exe_cmd, cmds, root, pseudoSet="GBRV", gpu=False, log_fn=log_def):
     log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
     return Wannier(
         executable=exe_cmd,
         pseudoSet=pseudoSet,
         commands=cmds,
         outfile=root,
+        gpu=gpu
     )
-        return JDFTx(
-            executable=exe_cmd,
-            pseudoSet=pseudoSet,
-            commands=cmds,
-            outfile=root,
-            ionic_steps=False
-        )
 
 def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def):
     if debug:
@@ -48,6 +42,16 @@ def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None,
             ionic_steps=False
         )
 
+
+def get_wannier_exe_cmd(gpu, log_fn):
+    if gpu:
+        _get = 'Wannier_GPU'
+    else:
+        _get = 'Wannier'
+    log_fn(f"Using {_get} for Wannier exe")
+    exe_cmd = 'srun ' + env_vars_dict[_get]
+    log_fn(f"exe_cmd: {exe_cmd}")
+    return exe_cmd
 
 def get_exe_cmd(gpu, log_fn):
     if gpu:

@@ -1,12 +1,12 @@
 import os
-from os.path import exists as ope, join as opj
+from os.path import exists as ope, join as opj, basename
 from ase.io import read, write
 from datetime import datetime
 from helpers.generic_helpers import get_inputs_list, fix_work_dir, remove_dir_recursive, get_atoms_list_from_out, get_cmds_dict
 from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_val
-from helpers.calc_helpers import _get_calc, get_exe_cmd
+from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_wannier_calc, get_wannier_exe_cmd
 from helpers.generic_helpers import check_submit, add_cohp_cmds, get_atoms_from_out, add_sp_cmds
-from helpers.generic_helpers import get_ionic_opt_cmds_list, check_for_restart
+from helpers.generic_helpers import get_ionic_opt_cmds_list, check_for_restart, add_wannier_cmds
 from helpers.generic_helpers import log_def, check_structure, log_and_abort, cmds_dict_to_list
 from sys import exit, stderr
 from shutil import copy as cp
@@ -56,9 +56,14 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
     return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias
 
 
-def finished(dirname):
-    with open(opj(dirname, "finished.txt"), 'w') as f:
-        f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": Done")
+def finished(dir_path):
+    with open(opj(dir_path, f"finished_{basename(dir_path)}.txt"), "w") as f:
+        f.write("done")
+
+
+def is_done(dir_path):
+    idx = int(basename(dir_path))
+    return ope(opj(dir_path, f"finished_{idx}.txt"))
 
 def run_sp_runner(atoms_obj, sp_dir_path, calc_fn, log_fn=log_def):
     atoms_obj.set_calculator(calc_fn(sp_dir_path))
@@ -84,6 +89,29 @@ def run_sp(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=False, lo
     return atoms_obj
 
 
+def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
+    atoms_obj.set_calculator(calc_fn(wannier_dir_path))
+    log_fn("Wannier localization starting")
+    atoms_obj.get_forces()
+    outfile = opj(wannier_dir_path, "out")
+    if ope(outfile):
+        finished(wannier_dir_path)
+    else:
+        log_and_abort(f"No output data given - check error file", log_fn=log_fn)
+    return atoms_obj
+
+def run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=False, log_fn=log_def):
+    run_again = False
+    try:
+        atoms_obj = run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_fn)
+    except Exception as e:
+        check_for_restart(e, _failed_before, wannier_dir_path, log_fn=log_fn)
+        run_again = True
+        pass
+    if run_again:
+        atoms_obj = run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=True, log_fn=log_fn)
+    return atoms_obj
+
 
 def main():
     work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias = read_opt_inputs()
@@ -104,6 +132,10 @@ def main():
     check_submit(gpu, os.getcwd(), job_type_name, log_fn=wannier_log)
     wannier_log(f"Running single point calculation")
     run_sp(atoms, wannier_dir, work_dir, get_sp_ion_calc, log_fn=wannier_log)
+    wannier_exe_cmd = get_wannier_exe_cmd(gpu, log_fn=wannier_log)
+    wannier_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
+    wannier_cmds = add_wannier_cmds(wannier_cmds, None)
+    get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
 
 from sys import exc_info
 
