@@ -874,7 +874,22 @@ def cmds_dict_to_list(cmds_dict):
     return cmds_list
 
 def add_wannier_cmds(cmds, something):
+    rest_pairs = [
+        ["wannier-initial-state", "sp.$VAR"],
+        ["wannier-dump-name", "wannier.$VAR"],
+    ]
+    wannier_centers = [
+        ["wannier-center", "Gaussian 0.5 0.5 0.5"]
+    ]
     print("Fill me out")
+    for rp in rest_pairs:
+        key = rp[0]
+        val = rp[1]
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
+    for wc in wannier_centers:
+        key = wc[0]
+        val = wc[1]
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
     return cmds
 
 
