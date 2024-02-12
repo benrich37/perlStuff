@@ -875,8 +875,8 @@ def cmds_dict_to_list(cmds_dict):
 
 def add_wannier_cmds(cmds, something):
     rest_pairs = [
-        ["wannier-initial-state", "sp.$VAR"],
-        ["wannier-dump-name", "wannier.$VAR"],
+        ["wannier-initial-state", "$VAR"],
+        ["wannier-dump-name", "$VAR"],
     ]
     wannier_centers = [
         ["wannier-center", "Gaussian 0.5 0.5 0.5"]
@@ -900,7 +900,7 @@ def add_sp_cmds(cmds):
         ["dump", "End EigStats"]
     ]
     rest_pairs = [
-        ["dump-name", "sp.$VAR"]
+        # ["dump-name", "sp.$VAR"]
     ]
     for dp in dump_pairs:
         key = dp[0]

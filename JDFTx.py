@@ -117,8 +117,8 @@ class JDFTx(Calculator):
                 #self.addDump("End", "State")
                 self.addDump("End", "Forces")
                 self.addDump("End", "Ecomponents")
-                self.addDump("End", "Dtot")
-                self.addDump("End", "ElecDensity")
+                # self.addDump("End", "Dtot")
+                # self.addDump("End", "ElecDensity")
 
                 #Run directory:
                 #self.runDir = tempfile.mkdtemp()
