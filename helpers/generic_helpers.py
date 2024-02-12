@@ -876,7 +876,7 @@ def cmds_dict_to_list(cmds_dict):
 def add_wannier_cmds(cmds, something):
     rest_pairs = [
         ["wannier-initial-state", "$VAR"],
-        ["wannier-dump-name", "$VAR"],
+        ["wannier-dump-name", "wannier.$VAR"],
     ]
     wannier_centers = [
         ["wannier-center", "Gaussian 0.5 0.5 0.5"],
