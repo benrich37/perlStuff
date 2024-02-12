@@ -407,7 +407,8 @@ class Wannier(Calculator):
                         self.pseudoSetCmd = ''
 
                 # Gets the input file template
-                self.acceptableCommands = set(['electronic-SCF'])
+                self.acceptableCommands = set([])
+                # self.acceptableCommands = set(['electronic-SCF'])
                 template = str(shell('%s -t' % (self.executable)))
                 for match in re.findall(r"# (\S+) ", template):
                         self.acceptableCommands.add(match)

@@ -1,5 +1,5 @@
 from os import getcwd as getcwd, environ as env_vars_dict
-from JDFTx import JDFTx
+from JDFTx import JDFTx, Wannier
 from helpers.generic_helpers import log_def
 
 
@@ -17,6 +17,22 @@ def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
             ignoreStress=True,
     )
 
+
+def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, log_fn=log_def):
+    log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
+    return Wannier(
+        executable=exe_cmd,
+        pseudoSet=pseudoSet,
+        commands=cmds,
+        outfile=root,
+    )
+        return JDFTx(
+            executable=exe_cmd,
+            pseudoSet=pseudoSet,
+            commands=cmds,
+            outfile=root,
+            ionic_steps=False
+        )
 
 def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def):
     if debug:
