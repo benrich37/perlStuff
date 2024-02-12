@@ -879,8 +879,8 @@ def add_wannier_cmds(cmds, something):
         ["wannier-dump-name", "$VAR"],
     ]
     wannier_centers = [
-        ["wannier-center", "Gaussian 0.5 0.5 0.5",
-         "wannier-center", "Gaussian 0.6 0.6 0.6"]
+        ["wannier-center", "Gaussian 0.5 0.5 0.5"],
+        ["wannier-center", "Gaussian 0.6 0.6 0.6"]
     ]
     print("Fill me out")
     for rp in rest_pairs:
