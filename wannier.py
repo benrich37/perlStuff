@@ -1,5 +1,6 @@
 import os
 from os.path import exists as ope, join as opj, basename
+from os import mkdir
 from ase.io import read, write
 from datetime import datetime
 from helpers.generic_helpers import get_inputs_list, fix_work_dir, remove_dir_recursive, get_atoms_list_from_out, get_cmds_dict
@@ -117,6 +118,8 @@ def main():
     work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias = read_opt_inputs()
     os.chdir(work_dir)
     wannier_dir = opj(work_dir, job_type_name)
+    if not ope(wannier_dir):
+        mkdir(wannier_dir)
     structure = opj(work_dir, structure)
     wannier_log = get_log_fn(work_dir, job_type_name, False, restart=False)
     structure = check_structure(structure, work_dir, log_fn=wannier_log)
