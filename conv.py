@@ -328,7 +328,8 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 cmet_ref_dict = {
     "k": "kpt-folding",
     "e": "Planewave Energy Cutoff",
-    "n": "Number of computed bands"
+    "n": "Number of computed bands",
+    "v": "Distance of Vacuum (A)"
 }
 
 
