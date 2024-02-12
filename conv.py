@@ -356,7 +356,7 @@ def get_nrgs_focus(nrgs):
     return nrgs_focus
 
 
-def plot_conv_helper(root, conv, conv_met, nrgs):
+def plot_conv_helper(root, conv, conv_met, nrgs, sys_name=None):
     if "k" in conv_met:
         nks = [np.prod(np.array([int(i) for i in k])) for k in conv]
         idcs = np.argsort(nks)
@@ -383,11 +383,13 @@ def plot_conv_helper(root, conv, conv_met, nrgs):
         ax[0].set_ylim(np.nanmin(nrgs_focus) - nrgs_std, np.nanmax(nrgs_focus) + nrgs_std)
     ax[1].set_xticks(xvals, [conv[i] for i in idcs])
     ax[1].set_xlabel(cmet_ref_dict[conv_met])
+    if not sys_name is None:
+        ax[0].set_title(f"Convergence plot of {sys_name}")
     fig.savefig(opj(root, "conv.png"))
 
 
 
-def plot_conv(root, conv, conv_met, conv_out_met_func=get_nrg):
+def plot_conv(root, conv, conv_met, conv_out_met_func=get_nrg, sys_name=None):
     nrgs = get_conv_data(root, conv, conv_out_met_func=conv_out_met_func)
     nDone = 0
     for nrg in nrgs:
@@ -395,7 +397,7 @@ def plot_conv(root, conv, conv_met, conv_out_met_func=get_nrg):
             nDone += 1
     if nDone > 1:
         try:
-            plot_conv_helper(root, conv, conv_met, nrgs)
+            plot_conv_helper(root, conv, conv_met, nrgs, sys_name=sys_name)
         except:
             print("Issue printing convergence plot")
             pass

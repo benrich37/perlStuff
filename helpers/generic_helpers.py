@@ -817,12 +817,12 @@ def get_lattice_cmds_list(cmds, lat_iters, pbc):
     lat_cmds = append_keys_vals_to_cmds_list(lat_cmds, keys, vals, allow_duplicates = False)
     return lat_cmds
 
-def get_ionic_opt_cmds_list(cmds, lat_iters):
-    lat_cmds = duplicate(cmds)
+def get_ionic_opt_cmds_list(cmds, ion_iters):
+    ion_cmds = duplicate(cmds)
     key = "ionic-minimize"
-    val = f"nIterations {lat_iters}"
-    lat_cmds = append_key_val_to_cmds_list(lat_cmds, key, val, allow_duplicates = False)
-    return lat_cmds
+    val = f"nIterations {ion_iters}"
+    ion_cmds = append_key_val_to_cmds_list(ion_cmds, key, val, allow_duplicates = False)
+    return ion_cmds
 
 has_subshells = {
     1: "s",
@@ -872,6 +872,26 @@ def cmds_dict_to_list(cmds_dict):
     for k in cmds_dict:
         cmds_list.append([k, cmds_dict[k]])
     return cmds_list
+
+
+def add_sp_cmds(cmds):
+    dump_pairs = [
+        ["dump", "End BandEigs"],
+        ["dump", "End ElecDensity"],
+        ["dump", "End EigStats"]
+    ]
+    rest_pairs = [
+        ["dump-name", "sp.$VAR"]
+    ]
+    for dp in dump_pairs:
+        key = dp[0]
+        val = dp[1]
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
+    for rp in rest_pairs:
+        key = rp[0]
+        val = rp[1]
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
+    return cmds
 
 
 def add_cohp_cmds(cmds, ortho=True):
