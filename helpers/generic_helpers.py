@@ -894,15 +894,22 @@ def add_wannier_cmds(cmds, something):
     return cmds
 
 
-def add_sp_cmds(cmds):
+def add_sp_cmds(cmds, ortho=True):
     dump_pairs = [
         ["dump", "End BandEigs"],
         ["dump", "End ElecDensity"],
-        ["dump", "End EigStats"]
+        ["dump", "End EigStats"],
+        ["dump", "End BandProjections"],
+        ["dump", "End Fillings"],
+        ["dump", "End Kpoints"],
     ]
     rest_pairs = [
-        # ["dump-name", "sp.$VAR"]
+        ["band-projection-params"]
     ]
+    if ortho:
+        rest_pairs[0].append("yes no")
+    else:
+        rest_pairs[0].append("no no")
     for dp in dump_pairs:
         key = dp[0]
         val = dp[1]
