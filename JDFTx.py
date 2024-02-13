@@ -591,8 +591,9 @@ class Wannier(Calculator):
                 fp.close()
                 #Run jdftx:
                 shell('cd %s && %s -i in -o out' % (self.runDir, self.executable))
+                print("ran")
                 self.ran = True
-                self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
+                self.E = self.__readEnergy(None)
                 # self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
                 # self.Forces = self.__readForces('%s/force' % (self.runDir))
                 # self.Charges = self.__readCharges('%s/out' % (self.runDir))
