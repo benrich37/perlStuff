@@ -6,8 +6,8 @@ from datetime import datetime
 from helpers.generic_helpers import get_inputs_list, fix_work_dir, remove_dir_recursive, get_atoms_list_from_out, get_cmds_dict
 from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_wannier_calc, get_wannier_exe_cmd
-from helpers.generic_helpers import check_submit, add_cohp_cmds, get_atoms_from_out, add_sp_cmds
-from helpers.generic_helpers import get_ionic_opt_cmds_list, check_for_restart, add_wannier_cmds
+from helpers.generic_helpers import check_submit, add_cohp_cmds, get_atoms_from_out, add_sp_cmds, append_key_val_to_cmds_list
+from helpers.generic_helpers import get_ionic_opt_cmds_list, check_for_restart, add_wannier_centers
 from helpers.generic_helpers import log_def, check_structure, log_and_abort, cmds_dict_to_list, get_int_dirs
 from sys import exit, stderr
 from shutil import copy as cp, move as mv
@@ -18,9 +18,10 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "gpu: True # Whether or not to use GPU (much faster)",
                 "pbc: False False False # Periodic boundary conditions for unit cell",
                 "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)",
-                "bias: -1.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file",
-                "center: Gaussian 0.5 0.5 0.5",
-                "center: Gaussian 0.0 0.0 0.0"]
+                "bias: 0.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file",
+                "center: atom 0 px # specify centers for 'wannier-center'",
+                "center-pinned: Gaussian 0.5 0.5 0.5 # specify centers for 'wannier-center-pinned'"
+                "wannier: localizationMeasure RealSpace # specify key/args for the 'wannier' command"]
 
 
 job_type_name = "wannier"
@@ -39,10 +40,17 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
     bias = 0.0
     skip_sp = False
     centers = []
+    centers_pinned = []
+    wannier_cmds = []
     for input in inputs:
         key, val = input[0], input[1]
         if "center" in key:
-            centers.append(val)
+            if "pin" in key:
+                centers_pinned.append(val)
+            else:
+                centers.append(val)
+        elif "wannier" in key:
+            wannier_cmds.append(val)
         if "pseudo" in key:
             pseudoset = val.strip()
         if "structure" in key:
@@ -62,7 +70,7 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
         if ("skip" in key) and (("sp" in key) or ("single" in key)):
             skip_sp = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias, skip_sp, centers
+    return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias, skip_sp, centers, centers_pinned, wannier_cmds
 
 
 def finished(dir_path):
@@ -184,7 +192,7 @@ def parse_centers(centers, atoms):
 
 
 def main():
-    work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias, skip_sp, centers = read_opt_inputs()
+    work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias, skip_sp, centers, centers_pinned, wan_special_cmds = read_opt_inputs()
     os.chdir(work_dir)
     wannier_dir = opj(work_dir, job_type_name)
     if not ope(wannier_dir):
@@ -194,6 +202,7 @@ def main():
     structure = check_structure(structure, work_dir, log_fn=wannier_log)
     atoms = read(structure, format="vasp")
     centers = parse_centers(centers, atoms)
+    centers_pinned = parse_centers(centers_pinned, atoms)
     if not skip_sp:
         sp_exe_cmd = get_exe_cmd(gpu, wannier_log)
         sp_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
@@ -209,7 +218,10 @@ def main():
     wannier_exe_cmd = get_wannier_exe_cmd(gpu, log_fn=wannier_log)
     wannier_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
     wannier_cmds = cmds_dict_to_list(wannier_cmds)
-    wannier_cmds = add_wannier_cmds(wannier_cmds, centers)
+    wannier_cmds = add_wannier_centers(wannier_cmds, centers)
+    wannier_cmds = add_wannier_centers(wannier_cmds, centers_pinned, pin=True)
+    if len(wan_special_cmds):
+        wannier_cmds = append_key_val_to_cmds_list(wannier_cmds, "wannier", " ".join(wan_special_cmds), allow_duplicates=False)
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
     run_wannier(atoms, wannier_dir, work_dir, get_wannier_calc, _failed_before=False, log_fn=wannier_log)
     store_wannier(wannier_dir, centers)

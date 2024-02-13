@@ -873,14 +873,17 @@ def cmds_dict_to_list(cmds_dict):
         cmds_list.append([k, cmds_dict[k]])
     return cmds_list
 
-def add_wannier_cmds(cmds, centers, misc_list = []):
+def add_wannier_centers(cmds, centers, pin=False):
     rest_pairs = [
         ["wannier-initial-state", "$VAR"],
         ["wannier-dump-name", "wannier.$VAR"],
     ]
     wannier_centers = []
+    cmd_prefix = "wannier-center"
+    if pin:
+        cmd_prefix += "-pinned"
     for c in centers:
-        wannier_centers.append(["wannier-center", c])
+        wannier_centers.append([cmd_prefix, c])
     print("Fill me out")
     for rp in rest_pairs:
         key = rp[0]
