@@ -141,6 +141,43 @@ def store_wannier(wannier_dir_path, centers):
         f.write(str(centers))
 
 
+def get_el_idx(atoms, aidx):
+    el_idx_list = get_el_idx_list(atoms)
+    return el_idx_list[aidx]
+
+
+def get_el_idx_list(atoms):
+    syms = atoms.get_chemical_symbols()
+    el_idx_list = []
+    count_dict = {}
+    for sym in syms:
+        if not sym in count_dict:
+            count_dict[sym] = 0
+        count_dict[sym] += 1
+        el_idx_list.append(count_dict[sym])
+    return el_idx_list
+
+def get_wan_center_cmd(csplit, atoms):
+    aidx = csplit[1]
+    sym = atoms.get_chemical_symbols()[aidx]
+    idx = get_el_idx(atoms, aidx)
+    wan_cmd = f"{sym} {idx} " + " ".join(csplit[2:])
+    return wan_cmd
+
+
+def parse_centers(centers, atoms):
+    parsed_centers = []
+    for c in centers:
+        csplit = c.split(" ")
+        c_type = csplit[0]
+        if "atom" in c_type.lower():
+            parsed_centers.append(get_wan_center_cmd(csplit, atoms))
+        else:
+            parsed_centers.append(c)
+    return parsed_centers
+
+
+
 
 
 def main():
@@ -153,6 +190,7 @@ def main():
     wannier_log = get_log_fn(work_dir, job_type_name, False, restart=False)
     structure = check_structure(structure, work_dir, log_fn=wannier_log)
     atoms = read(structure, format="vasp")
+    centers = parse_centers(centers, atoms)
     if not skip_sp:
         sp_exe_cmd = get_exe_cmd(gpu, wannier_log)
         sp_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
