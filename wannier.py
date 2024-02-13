@@ -42,7 +42,7 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
     for input in inputs:
         key, val = input[0], input[1]
         if "center" in key:
-            centers.append(val)
+            centers.append([val.split(",")][:2])
         if "pseudo" in key:
             pseudoset = val.strip()
         if "structure" in key:
@@ -147,7 +147,7 @@ def main():
     wannier_exe_cmd = get_wannier_exe_cmd(gpu, log_fn=wannier_log)
     wannier_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
     wannier_cmds = cmds_dict_to_list(wannier_cmds)
-    wannier_cmds = add_wannier_cmds(wannier_cmds, None)
+    wannier_cmds = add_wannier_cmds(wannier_cmds, centers)
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
     run_wannier(atoms, wannier_dir, work_dir, get_wannier_calc, _failed_before=False, log_fn=wannier_log)
 
