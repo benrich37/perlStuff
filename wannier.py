@@ -1,6 +1,6 @@
 import os
 from os.path import exists as ope, join as opj, basename
-from os import mkdir
+from os import mkdir, listdir
 from ase.io import read, write
 from datetime import datetime
 from helpers.generic_helpers import get_inputs_list, fix_work_dir, remove_dir_recursive, get_atoms_list_from_out, get_cmds_dict
@@ -8,9 +8,9 @@ from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_va
 from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_wannier_calc, get_wannier_exe_cmd
 from helpers.generic_helpers import check_submit, add_cohp_cmds, get_atoms_from_out, add_sp_cmds
 from helpers.generic_helpers import get_ionic_opt_cmds_list, check_for_restart, add_wannier_cmds
-from helpers.generic_helpers import log_def, check_structure, log_and_abort, cmds_dict_to_list
+from helpers.generic_helpers import log_def, check_structure, log_and_abort, cmds_dict_to_list, get_int_dirs
 from sys import exit, stderr
-from shutil import copy as cp
+from shutil import copy as cp, move as mv
 import numpy as np
 
 
@@ -118,7 +118,6 @@ def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
 def run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=False, log_fn=log_def):
     run_again = False
     try:
-        print("h10")
         atoms_obj = run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_fn)
     except Exception as e:
         check_for_restart(e, _failed_before, wannier_dir_path, log_fn=log_fn)
@@ -127,6 +126,21 @@ def run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=
     if run_again:
         atoms_obj = run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=True, log_fn=log_fn)
     return atoms_obj
+
+def store_wannier(wannier_dir_path, centers):
+    int_dirs = get_int_dirs(wannier_dir_path)
+    last = int(basename(int_dirs[-1]))
+    cur = last + 1
+    store_dir = opj(wannier_dir_path, str(cur))
+    mkdir(store_dir)
+    fs = listdir(wannier_dir_path)
+    for f in fs:
+        if "mlwf" in f:
+            mv(opj(wannier_dir_path, f), opj(store_dir, f))
+    with open(opj(store_dir, "wan_input.txt"), "w") as f:
+        f.write(str(centers))
+
+
 
 
 def main():
@@ -156,9 +170,7 @@ def main():
     wannier_cmds = cmds_dict_to_list(wannier_cmds)
     wannier_cmds = add_wannier_cmds(wannier_cmds, centers)
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
-    print("h1")
     run_wannier(atoms, wannier_dir, work_dir, get_wannier_calc, _failed_before=False, log_fn=wannier_log)
-    print("eend")
 
 from sys import exc_info
 
