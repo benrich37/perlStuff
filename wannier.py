@@ -129,7 +129,10 @@ def run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=
 
 def store_wannier(wannier_dir_path, centers):
     int_dirs = get_int_dirs(wannier_dir_path)
-    last = int(basename(int_dirs[-1]))
+    if len(int_dirs):
+        last = int(basename(int_dirs[-1]))
+    else:
+        last = -1
     cur = last + 1
     store_dir = opj(wannier_dir_path, str(cur))
     mkdir(store_dir)
