@@ -873,15 +873,14 @@ def cmds_dict_to_list(cmds_dict):
         cmds_list.append([k, cmds_dict[k]])
     return cmds_list
 
-def add_wannier_cmds(cmds, something):
+def add_wannier_cmds(cmds, centers, misc_list = []):
     rest_pairs = [
         ["wannier-initial-state", "$VAR"],
         ["wannier-dump-name", "wannier.$VAR"],
     ]
-    wannier_centers = [
-        ["wannier-center", "Gaussian 0.5 0.5 0.5"],
-        ["wannier-center", "Gaussian 0.6 0.6 0.6"]
-    ]
+    wannier_centers = []
+    for c in centers:
+        wannier_centers.append(["wannier-center", c])
     print("Fill me out")
     for rp in rest_pairs:
         key = rp[0]
@@ -891,6 +890,13 @@ def add_wannier_cmds(cmds, something):
         key = wc[0]
         val = wc[1]
         cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
+    for cmdp in misc_list:
+        if (type(cmdp) is list) and(len(cmdp) is 2):
+            key = cmdp[0]
+            val = cmdp[1]
+            cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
+        else:
+            raise ValueError(f"Unable to add key/val pair {cmdp}")
     return cmds
 
 

@@ -18,7 +18,9 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "gpu: True # Whether or not to use GPU (much faster)",
                 "pbc: False False False # Periodic boundary conditions for unit cell",
                 "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)",
-                "bias: -1.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file"]
+                "bias: -1.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file",
+                "center: Gaussian 0.5 0.5 0.5",
+                "center: Gaussian 0.0 0.0 0.0"]
 
 
 job_type_name = "wannier"
@@ -36,8 +38,11 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
     pseudoset = "GBRV"
     bias = 0.0
     skip_sp = False
+    centers = []
     for input in inputs:
         key, val = input[0], input[1]
+        if "center" in key:
+            centers.append(val)
         if "pseudo" in key:
             pseudoset = val.strip()
         if "structure" in key:
@@ -57,7 +62,7 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
         if ("skip" in key) and (("sp" in key) or ("single" in key)):
             skip_sp = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias, skip_sp
+    return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias, skip_sp, centers
 
 
 def finished(dir_path):
@@ -118,7 +123,7 @@ def run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=
 
 
 def main():
-    work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias, skip_sp = read_opt_inputs()
+    work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias, skip_sp, centers = read_opt_inputs()
     os.chdir(work_dir)
     wannier_dir = opj(work_dir, job_type_name)
     if not ope(wannier_dir):
