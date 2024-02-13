@@ -893,13 +893,13 @@ def add_wannier_centers(cmds, centers, pin=False):
         key = wc[0]
         val = wc[1]
         cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
-    for cmdp in misc_list:
-        if (type(cmdp) is list) and(len(cmdp) is 2):
-            key = cmdp[0]
-            val = cmdp[1]
-            cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
-        else:
-            raise ValueError(f"Unable to add key/val pair {cmdp}")
+    # for cmdp in misc_list:
+    #     if (type(cmdp) is list) and(len(cmdp) is 2):
+    #         key = cmdp[0]
+    #         val = cmdp[1]
+    #         cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
+    #     else:
+    #         raise ValueError(f"Unable to add key/val pair {cmdp}")
     return cmds
 
 
