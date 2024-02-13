@@ -209,6 +209,7 @@ def main():
     wannier_cmds = add_wannier_cmds(wannier_cmds, centers)
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
     run_wannier(atoms, wannier_dir, work_dir, get_wannier_calc, _failed_before=False, log_fn=wannier_log)
+    store_wannier(wannier_dir, centers)
 
 from sys import exc_info
 
