@@ -99,6 +99,7 @@ def run_sp(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=False, lo
 
 
 def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
+    print("h2")
     atoms_obj.set_calculator(calc_fn(wannier_dir_path))
     log_fn("Wannier localization starting")
     atoms_obj.get_potential_energy()
@@ -149,6 +150,7 @@ def main():
     wannier_cmds = cmds_dict_to_list(wannier_cmds)
     wannier_cmds = add_wannier_cmds(wannier_cmds, centers)
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
+    print("h1")
     run_wannier(atoms, wannier_dir, work_dir, get_wannier_calc, _failed_before=False, log_fn=wannier_log)
 
 from sys import exc_info
