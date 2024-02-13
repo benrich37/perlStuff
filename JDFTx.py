@@ -376,6 +376,7 @@ class Wannier(Calculator):
         def __init__(self, executable=None, pseudoDir=None, pseudoSet='GBRV', commands=None, outfile=None, gpu=False):
                 self.ran = False
                 self.E = None
+                print("initiating")
                 #Valid pseudopotential sets (mapping to path and suffix):
                 pseudoSetMap = {
                         'SG15' : 'SG15/$ID_ONCV_PBE.upf',
@@ -487,7 +488,7 @@ class Wannier(Calculator):
         def calculation_required(self, atoms, quantities):
                 return ((self.E is None) or (not self.ran))
 
-        def get_potential_energy(self, atoms, force_consistent=False):
+        def get_potential_energy(self, atoms=atoms, force_consistent=False):
                 if(self.calculation_required(atoms, None)):
                         self.update(atoms)
                 return self.E
@@ -519,6 +520,7 @@ class Wannier(Calculator):
                 # return Efinal * Hartree #Return energy from final line (Etot, F or G)
 
         # def __readForces(self, filename):
+        #         return
         #         idxMap = {}
         #         symbolList = self.lastAtoms.get_chemical_symbols()
         #         for i, symbol in enumerate(symbolList):

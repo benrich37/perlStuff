@@ -103,12 +103,13 @@ def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
     atoms_obj.set_calculator(calc_fn(wannier_dir_path))
     print("h3")
     log_fn("Wannier localization starting")
-    atoms_obj.get_potential_energy()
-    print("h4")
+    try:
+        atoms_obj.get_potential_energy()
+    except Exception as e:
+        print(e)
     outfile = opj(wannier_dir_path, "out")
     if ope(outfile):
         finished(wannier_dir_path)
-        print("h5")
     else:
         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     return atoms_obj
@@ -116,6 +117,7 @@ def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
 def run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=False, log_fn=log_def):
     run_again = False
     try:
+        print("h10")
         atoms_obj = run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_fn)
     except Exception as e:
         check_for_restart(e, _failed_before, wannier_dir_path, log_fn=log_fn)
