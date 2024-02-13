@@ -107,17 +107,14 @@ def run_sp(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=False, lo
 
 
 def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
-    print("h2")
     fn = calc_fn(wannier_dir_path)
     atoms_obj.set_calculator(fn)
-    print("h3")
     log_fn("Wannier localization starting")
     try:
         atoms_obj.get_potential_energy()
     except Exception as e:
         print("problem running vannier (l118)")
         print(e)
-    print("h20")
     outfile = opj(wannier_dir_path, "out")
     if ope(outfile):
         finished(wannier_dir_path)
@@ -153,7 +150,7 @@ def store_wannier(wannier_dir_path, centers, centers_pinned, wan_special_cmds):
     with open(opj(store_dir, "wan_input.txt"), "w") as f:
         out_str = str(centers) + "\n"
         out_str += str(centers_pinned) + "\n"
-        out_str += wan_special_cmds + "\n"
+        out_str += str(wan_special_cmds) + "\n"
         f.write(out_str)
 
 

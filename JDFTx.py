@@ -489,10 +489,8 @@ class Wannier(Calculator):
                 return ((self.E is None) or (not self.ran))
 
         def get_potential_energy(self, atoms, force_consistent=False):
-                print("getting")
                 try:
                         if(self.calculation_required(atoms, None)):
-                                print("updating")
                                 self.update(atoms)
                         return self.E
                 except Exception as e:
@@ -585,13 +583,11 @@ class Wannier(Calculator):
         def runWannier(self, inputfile):
                 """ Runs a JDFTx calculation """
                 #Write input file:
-                print("running")
                 fp = open(self.runDir+'/in', 'w')
                 fp.write(inputfile)
                 fp.close()
                 #Run jdftx:
                 shell('cd %s && %s -i in -o out' % (self.runDir, self.executable))
-                print("ran")
                 self.ran = True
                 self.E = self.__readEnergy(None)
                 # self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
