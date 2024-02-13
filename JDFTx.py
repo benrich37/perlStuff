@@ -489,9 +489,14 @@ class Wannier(Calculator):
                 return ((self.E is None) or (not self.ran))
 
         def get_potential_energy(self, atoms, force_consistent=False):
-                if(self.calculation_required(atoms, None)):
-                        self.update(atoms)
-                return self.E
+
+                try:
+                        if(self.calculation_required(atoms, None)):
+                                self.update(atoms)
+                        return self.E
+                except Exception as e:
+                        print(e)
+
         #
         #
         # def get_charges(self, atoms):
