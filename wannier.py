@@ -161,7 +161,7 @@ def get_el_idx_list(atoms):
     return el_idx_list
 
 def get_wan_center_cmd(csplit, atoms):
-    aidx = csplit[1]
+    aidx = int(csplit[1])
     sym = atoms.get_chemical_symbols()[aidx]
     idx = get_el_idx(atoms, aidx)
     wan_cmd = f"{sym} {idx} " + " ".join(csplit[2:])
@@ -171,7 +171,7 @@ def get_wan_center_cmd(csplit, atoms):
 def parse_centers(centers, atoms):
     parsed_centers = []
     for c in centers:
-        csplit = c.split(" ")
+        csplit = c.strip().split(" ")
         c_type = csplit[0]
         if "atom" in c_type.lower():
             parsed_centers.append(get_wan_center_cmd(csplit, atoms))
