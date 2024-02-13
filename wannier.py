@@ -42,7 +42,7 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
     for input in inputs:
         key, val = input[0], input[1]
         if "center" in key:
-            centers.append([val.split(",")][:2])
+            centers.append(val.split(",")[:2])
         if "pseudo" in key:
             pseudoset = val.strip()
         if "structure" in key:
@@ -100,7 +100,8 @@ def run_sp(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=False, lo
 
 def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
     print("h2")
-    atoms_obj.set_calculator(calc_fn(wannier_dir_path))
+    fn = calc_fn(wannier_dir_path)
+    atoms_obj.set_calculator(fn)
     print("h3")
     log_fn("Wannier localization starting")
     try:
