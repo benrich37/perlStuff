@@ -101,11 +101,14 @@ def run_sp(atoms_obj, ion_dir_path, root_path, calc_fn, _failed_before=False, lo
 def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
     print("h2")
     atoms_obj.set_calculator(calc_fn(wannier_dir_path))
+    print("h3")
     log_fn("Wannier localization starting")
     atoms_obj.get_potential_energy()
+    print("h4")
     outfile = opj(wannier_dir_path, "out")
     if ope(outfile):
         finished(wannier_dir_path)
+        print("h5")
     else:
         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     return atoms_obj
@@ -152,6 +155,7 @@ def main():
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
     print("h1")
     run_wannier(atoms, wannier_dir, work_dir, get_wannier_calc, _failed_before=False, log_fn=wannier_log)
+    print("eend")
 
 from sys import exc_info
 
