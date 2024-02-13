@@ -492,6 +492,7 @@ class Wannier(Calculator):
                 print("getting")
                 try:
                         if(self.calculation_required(atoms, None)):
+                                print("updating")
                                 self.update(atoms)
                         return self.E
                 except Exception as e:
@@ -584,6 +585,7 @@ class Wannier(Calculator):
         def runWannier(self, inputfile):
                 """ Runs a JDFTx calculation """
                 #Write input file:
+                print("running")
                 fp = open(self.runDir+'/in', 'w')
                 fp.write(inputfile)
                 fp.close()
