@@ -135,7 +135,7 @@ def run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=
         atoms_obj = run_wannier(atoms_obj, wannier_dir_path, root_path, calc_fn, _failed_before=True, log_fn=log_fn)
     return atoms_obj
 
-def store_wannier(wannier_dir_path, centers):
+def store_wannier(wannier_dir_path, centers, centers_pinned, wan_special_cmds):
     int_dirs = get_int_dirs(wannier_dir_path)
     if len(int_dirs):
         last = int(basename(int_dirs[-1]))
@@ -149,7 +149,10 @@ def store_wannier(wannier_dir_path, centers):
         if "mlwf" in f:
             mv(opj(wannier_dir_path, f), opj(store_dir, f))
     with open(opj(store_dir, "wan_input.txt"), "w") as f:
-        f.write(str(centers))
+        out_str = str(centers) + "\n"
+        out_str += str(centers_pinned) + "\n"
+        out_str += wan_special_cmds + "\n"
+        f.write(out_str)
 
 
 def get_el_idx(atoms, aidx):
@@ -224,7 +227,7 @@ def main():
         wannier_cmds = append_key_val_to_cmds_list(wannier_cmds, "wannier", " ".join(wan_special_cmds), allow_duplicates=False)
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
     run_wannier(atoms, wannier_dir, work_dir, get_wannier_calc, _failed_before=False, log_fn=wannier_log)
-    store_wannier(wannier_dir, centers)
+    store_wannier(wannier_dir, centers, centers_pinned, wan_special_cmds)
 
 from sys import exc_info
 
