@@ -115,6 +115,7 @@ def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
     try:
         atoms_obj.get_potential_energy()
     except Exception as e:
+        print("problem running vannier (l118)")
         print(e)
     outfile = opj(wannier_dir_path, "out")
     if ope(outfile):
