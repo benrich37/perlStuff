@@ -42,7 +42,7 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
     for input in inputs:
         key, val = input[0], input[1]
         if "center" in key:
-            centers.append(val.split(",")[:2])
+            centers.append(val)
         if "pseudo" in key:
             pseudoset = val.strip()
         if "structure" in key:
