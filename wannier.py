@@ -117,6 +117,7 @@ def run_wannier_runner(atoms_obj, wannier_dir_path, calc_fn, log_fn=log_def):
     except Exception as e:
         print("problem running vannier (l118)")
         print(e)
+    print("h20")
     outfile = opj(wannier_dir_path, "out")
     if ope(outfile):
         finished(wannier_dir_path)
