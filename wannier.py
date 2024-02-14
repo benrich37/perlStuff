@@ -220,7 +220,7 @@ def main():
     wannier_exe_cmd = get_wannier_exe_cmd(gpu, log_fn=wannier_log)
     wannier_cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=wannier_log)
     wannier_cmds = cmds_dict_to_list(wannier_cmds)
-    wannier_cmds = add_wannier_centers(wannier_cmds, centers)
+    wannier_cmds = add_wannier_centers(wannier_cmds, centers, debug_dens=True)
     wannier_cmds = add_wannier_centers(wannier_cmds, centers_pinned, pin=True)
     if len(wan_special_cmds):
         wannier_cmds = append_key_val_to_cmds_list(wannier_cmds, "wannier", " ".join(wan_special_cmds), allow_duplicates=False)

@@ -873,7 +873,7 @@ def cmds_dict_to_list(cmds_dict):
         cmds_list.append([k, cmds_dict[k]])
     return cmds_list
 
-def add_wannier_centers(cmds, centers, pin=False):
+def add_wannier_centers(cmds, centers, pin=False, debug_dens=False):
     rest_pairs = [
         ["wannier-initial-state", "$VAR"],
         ["wannier-dump-name", "wannier.$VAR"],
@@ -892,6 +892,10 @@ def add_wannier_centers(cmds, centers, pin=False):
     for wc in wannier_centers:
         key = wc[0]
         val = wc[1]
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
+    if debug_dens:
+        key = "dump"
+        val = "End ElecDensity"
         cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
     # for cmdp in misc_list:
     #     if (type(cmdp) is list) and(len(cmdp) is 2):
@@ -1529,11 +1533,9 @@ def get_charges(atoms, log_fn=log_def):
 
 def get_start_lines(outfname, add_end=False):
     start_lines = []
-    end_line = 0
     for i, line in enumerate(open(outfname)):
         if "JDFTx 1." in line:
             start_lines.append(i)
-        end_line = i
     if add_end:
         start_lines.append(i)
     return start_lines
