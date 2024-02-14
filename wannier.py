@@ -152,6 +152,8 @@ def store_wannier(wannier_dir_path, centers, centers_pinned, wan_special_cmds):
         out_str += str(centers_pinned) + "\n"
         out_str += str(wan_special_cmds) + "\n"
         f.write(out_str)
+    cp(opj(wannier_dir_path, "out"), opj(store_dir, "out"))
+    cp(opj(wannier_dir_path, "in"), opj(store_dir, "in"))
 
 
 def get_el_idx(atoms, aidx):
