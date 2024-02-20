@@ -369,7 +369,7 @@ def main():
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
         run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol,log_fn=opt_log)
-    copy_result_files(opt_dir, work_dir)
+    # copy_result_files(opt_dir, work_dir)
 
 from sys import exc_info
 
