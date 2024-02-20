@@ -22,14 +22,14 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "fmax: 0.04 # Max force for convergence criteria",
                 "max_steps: 100 # Max number of steps before exit",
                 "gpu: True # Whether or not to use GPU (much faster)",
-                "restart: False # Whether to get structure from lat/opt dirs or from input structure",
-                "pbc: False False False # Periodic boundary conditions for unit cell",
+                "restart: True # Whether to get structure from lat/opt dirs or from input structure",
+                "pbc: True True False # Periodic boundary conditions for unit cell",
                 "lattice steps: 0 # Number of steps for lattice optimization (0 = no lattice optimization)",
                 "opt program: jdft # Which program to use for ionic optimization, options are 'jdft' and 'ase'",
                 "freeze base: False # Whether to freeze lower atoms (don't use for bulk calcs)",
                 "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base",
                 "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)",
-                "bias: -1.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file"]
+                "bias: 0.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file"]
 
 
 def read_opt_inputs(fname = "opt_input"):
