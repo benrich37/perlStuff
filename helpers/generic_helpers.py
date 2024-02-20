@@ -873,6 +873,12 @@ def cmds_dict_to_list(cmds_dict):
         cmds_list.append([k, cmds_dict[k]])
     return cmds_list
 
+def add_wannier_minimize_cmds(cmds, wannier_minimize_cmds):
+    key = "wannier_minimize"
+    val = " ".join([c.strip() for c in wannier_minimize_cmds])
+    cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
+    return cmds
+
 def add_wannier_centers(cmds, centers, pin=False, debug_dens=False):
     rest_pairs = [
         ["wannier-initial-state", "$VAR"],

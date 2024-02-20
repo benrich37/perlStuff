@@ -7,7 +7,7 @@ from helpers.generic_helpers import get_inputs_list, fix_work_dir, remove_dir_re
 from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_wannier_calc, get_wannier_exe_cmd
 from helpers.generic_helpers import check_submit, add_cohp_cmds, get_atoms_from_out, add_sp_cmds, append_key_val_to_cmds_list
-from helpers.generic_helpers import get_ionic_opt_cmds_list, check_for_restart, add_wannier_centers
+from helpers.generic_helpers import get_ionic_opt_cmds_list, check_for_restart, add_wannier_centers, add_wannier_minimize_cmds
 from helpers.generic_helpers import log_def, check_structure, log_and_abort, cmds_dict_to_list, get_int_dirs
 from sys import exit, stderr
 from shutil import copy as cp, move as mv
@@ -42,6 +42,7 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
     centers = []
     centers_pinned = []
     wannier_cmds = []
+    wannier_minimize_cmds = []
     for input in inputs:
         key, val = input[0], input[1]
         if "center" in key:
@@ -50,7 +51,10 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
             else:
                 centers.append(val)
         elif "wannier" in key:
-            wannier_cmds.append(val)
+            if "min" in key:
+                wannier_minimize_cmds.append(val)
+            else:
+                wannier_cmds.append(val)
         if "pseudo" in key:
             pseudoset = val.strip()
         if "structure" in key:
@@ -70,7 +74,7 @@ def read_opt_inputs(fname = f"{job_type_name}_input"):
         if ("skip" in key) and (("sp" in key) or ("single" in key)):
             skip_sp = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias, skip_sp, centers, centers_pinned, wannier_cmds
+    return work_dir, structure, gpu, pbc, ortho, save_state, pseudoset, bias, skip_sp, centers, centers_pinned, wannier_cmds, wannier_minimize_cmds
 
 
 def finished(dir_path):
@@ -196,7 +200,7 @@ def parse_centers(centers, atoms):
 
 
 def main():
-    work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias, skip_sp, centers, centers_pinned, wan_special_cmds = read_opt_inputs()
+    work_dir, structure, gpu, pbc, ortho, save_state, pseudoSet, bias, skip_sp, centers, centers_pinned, wan_special_cmds, wannier_minimize_cmds = read_opt_inputs()
     os.chdir(work_dir)
     wannier_dir = opj(work_dir, job_type_name)
     if not ope(wannier_dir):
@@ -224,6 +228,7 @@ def main():
     wannier_cmds = cmds_dict_to_list(wannier_cmds)
     wannier_cmds = add_wannier_centers(wannier_cmds, centers, debug_dens=True)
     wannier_cmds = add_wannier_centers(wannier_cmds, centers_pinned, pin=True)
+    wannier_cmds = add_wannier_minimize_cmds(wannier_cmds, wannier_minimize_cmds)
     if len(wan_special_cmds):
         wannier_cmds = append_key_val_to_cmds_list(wannier_cmds, "wannier", " ".join(wan_special_cmds), allow_duplicates=False)
     get_wannier_calc = lambda root:_get_wannier_calc(wannier_exe_cmd, wannier_cmds, root, pseudoSet=pseudoSet, log_fn=wannier_log)
