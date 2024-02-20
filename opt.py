@@ -129,8 +129,8 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
             if ope(outfile):
                 try:
                     atoms_obj = get_atoms_from_out(outfile)
-                    write(structure, atoms_obj, format="vasp")
                     structure = opj(opt_dir, "POSCAR")
+                    write(structure, atoms_obj, format="vasp")
                 except:
                     no_opt_struc = True
     else:
