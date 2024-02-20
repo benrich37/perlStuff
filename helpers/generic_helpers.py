@@ -536,7 +536,7 @@ def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None)
             msg = "No inputs or in file found - dumping template inputs"
             log_and_abort(msg, log_fn)
     else:
-        return read_inputs_dict(work_dir, ref_struct=ref_struct)
+        return read_inputs_dict(work_dir, ref_struct=ref_struct, bias=bias)
 
 
 def read_line_generic(line):
