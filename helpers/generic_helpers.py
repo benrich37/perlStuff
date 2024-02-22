@@ -807,10 +807,15 @@ def get_ionic_opt_cmds_dict(cmds, lat_iters):
     return lat_cmds
 
 
-def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False):
+def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False, append_duplicates = False):
     keys = [cmd[0] for cmd in cmds]
-    if allow_duplicates or (not key in keys):
+    if not key in keys:
         cmds.append((key, val))
+    elif allow_duplicates:
+        if append_duplicates:
+            cmds[keys.index(key)][1] += f" {val}"
+        else:
+            cmds.append(key, val)
     else:
         cmds[keys.index(key)] = (key, val)
     return cmds
@@ -953,12 +958,8 @@ def add_sp_cmds(cmds, ortho=True):
 
 def add_cohp_cmds(cmds, ortho=True):
     is_dict = (type(cmds) == dict)
-    dump_pairs = [
-        ["dump", "End BandProjections"],
-        ["dump", "End Fillings"],
-        # ["dump", "End Gvectors"],
-        ["dump", "End Kpoints"],
-        ["dump", "End BandEigs"]
+    dump_ends = [
+        "BandProjections", "Fillings", "Kpoints", "BandEigs"
     ]
     rest_pairs = [
         ["band-projection-params"]
@@ -967,10 +968,10 @@ def add_cohp_cmds(cmds, ortho=True):
         rest_pairs[0].append("yes no")
     else:
         rest_pairs[0].append("no no")
-    for dp in dump_pairs:
-        key = dp[0]
-        val = dp[1]
-        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True)
+    for dp in dump_ends:
+        key = "dump End"
+        val = dp
+        cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=True, append_duplicates=True)
     for rp in rest_pairs:
         key = rp[0]
         val = rp[1]
