@@ -874,7 +874,7 @@ def cmds_dict_to_list(cmds_dict):
     return cmds_list
 
 def add_wannier_minimize_cmds(cmds, wannier_minimize_cmds):
-    key = "wannier_minimize"
+    key = "wannier-minimize"
     val = " ".join([c.strip() for c in wannier_minimize_cmds])
     cmds = append_key_val_to_cmds_list(cmds, key, val, allow_duplicates=False)
     return cmds
