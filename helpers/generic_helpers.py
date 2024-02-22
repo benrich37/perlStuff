@@ -216,6 +216,18 @@ def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
             input_cmds[biaskey] = str(bias_to_mu(bias))
     return input_cmds
 
+def fix_dump_cmds_list(cmds):
+    for i, cmd in enumerate(cmds):
+        key = cmd[0]
+        val = cmd[1]
+        if ("dump" in key) and (len(key) > len("dump")):
+            _k = key.split(" ")[0]
+            _v = " ".join(key.split(" ")[1:])
+            _val = _v + " " + val
+            cmds[i] = (_k, _val)
+    return cmds
+
+
 
 def read_inputs_list(work_dir, ref_struct=None):
     inpfname = opj(work_dir, "inputs")

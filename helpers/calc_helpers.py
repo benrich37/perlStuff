@@ -1,6 +1,6 @@
 from os import getcwd as getcwd, environ as env_vars_dict
 from JDFTx import JDFTx, Wannier
-from helpers.generic_helpers import log_def
+from helpers.generic_helpers import log_def, fix_dump_cmds_list
 
 
 def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
@@ -29,6 +29,7 @@ def _get_wannier_calc(exe_cmd, cmds, root, pseudoSet="GBRV", gpu=False, log_fn=l
     )
 
 def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def):
+    cmds = fix_dump_cmds_list(cmds)
     if debug:
         log_fn("Setting calc to debug calc")
         return debug_fn()
