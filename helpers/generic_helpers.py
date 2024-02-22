@@ -163,10 +163,10 @@ def insert_el(filename):
 def read_inputs_dict_helper(work_dir):
     inpfname = opj(work_dir, "inputs")
     if ope("inputs"):
-        ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "dump", "initial-state",
+        ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "initial-state",
                   "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
-        input_cmds = {"dump": "End State"}
+        input_cmds = {"dump End": "State"}
         with open(inpfname) as f:
             for i, line in enumerate(f):
                 if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
@@ -182,7 +182,18 @@ def read_inputs_dict_helper(work_dir):
                         cmd = line[:line.index(" ")]
                         rest = line.rstrip("\n")[line.index(" ") + 1:]
                         if cmd not in ignore:
-                            input_cmds[cmd] = rest
+                            if not "dump" in cmd:
+                                input_cmds[cmd] = rest
+                            else:
+                                freq = rest.split(" ")[0]
+                                if freq == "End":
+                                    input_cmds["dump End"] += " ".join(rest.split(" ")[1:])
+                                else:
+                                    dump_cmd = f"dump {freq}"
+                                    if not dump_cmd in input_cmds:
+                                        input_cmds[dump_cmd] = " ".join(rest.split(" ")[1:])
+                                    else:
+                                        input_cmds[dump_cmd] += " ".join(rest.split(" ")[1:])
         return input_cmds
     else:
         return None
