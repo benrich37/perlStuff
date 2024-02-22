@@ -186,14 +186,15 @@ def read_inputs_dict_helper(work_dir):
                                 input_cmds[cmd] = rest
                             else:
                                 freq = rest.split(" ")[0]
+                                vars = " " + " ".join(rest.split(" ")[1:])
                                 if freq == "End":
-                                    input_cmds["dump End"] += " ".join(rest.split(" ")[1:])
+                                    input_cmds["dump End"] += vars
                                 else:
                                     dump_cmd = f"dump {freq}"
                                     if not dump_cmd in input_cmds:
-                                        input_cmds[dump_cmd] = " ".join(rest.split(" ")[1:])
+                                        input_cmds[dump_cmd] = vars
                                     else:
-                                        input_cmds[dump_cmd] += " ".join(rest.split(" ")[1:])
+                                        input_cmds[dump_cmd] += vars
         return input_cmds
     else:
         return None
