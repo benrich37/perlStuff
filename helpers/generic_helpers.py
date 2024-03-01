@@ -828,7 +828,7 @@ def append_key_val_to_cmds_list(cmds, key, val, allow_duplicates = False, append
         if append_duplicates:
             cmds[keys.index(key)][1] += f" {val}"
         else:
-            cmds.append(key, val)
+            cmds.append((key, val))
     else:
         cmds[keys.index(key)] = (key, val)
     return cmds
