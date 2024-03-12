@@ -38,19 +38,7 @@ def add_redun_layer(d, axis):
         d_new[:,-1,:] += d[:,0,:]
     elif axis == 2:
         d_new[:,:,-1] += d[:,:,0]
-    print(f"{S_old} -> {S_new}")
     return d_new, S_new
-
-def remove_redun_layer(d, axis):
-    S_new = list(np.shape(d))
-    S_new[axis] -= 1
-    d_new = np.zeros(S_new)
-    for i in range(S_new[0]):
-        for j in range(S_new[1]):
-            for k in range(S_new[2]):
-                d_new[i, j, k] += d[i, j, k]
-    return d_new, S_new
-
 
 def sum_d_periodic_grid(d, pbc):
     S_sum = list(np.shape(d))
@@ -60,33 +48,64 @@ def sum_d_periodic_grid(d, pbc):
     sum_d = np.sum(d[:S_sum[0], :S_sum[1], :S_sum[2]])
     return sum_d
 
-
-
-
-def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddnfname="n_dn", data_fname="density", pbc=None, a_d_path=None, max_space=0.03):
+def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddnfname="n_dn", data_fname="density", pbc=None, a_d_path=None, max_space=None):
+    """
+    :param calc_dir: Path to directory containing calc output files needed for ddec6
+    :param outname: file name for out file
+    :param dfname: file name for total density array
+    :param dupfname: file name for spin up density array
+    :param ddnfname: file name for spin down density array
+    :param data_fname: string to assign XSF and job name (arbitrary)
+    :param pbc: List of bools indicating axes which using periodic boundary conition
+    :param a_d_path: Path to atomic_densities directory
+    :param max_space: Max spacing (in A) between adjacent points on density grid (density grid adjusted via linear interpolation)
+    :return:
+    """
     if pbc is None:
         pbc = pbc_default
+        # TODO: Get PBC bool list from output file instead of using a default
     if a_d_path is None:
         a_d_path = a_d_default
     outfile = opj(calc_dir, outname)
-    non_col = True
+    non_col = True # Non_col means spin up and down are separated
     if ope(opj(calc_dir, dfname)):
         non_col = False
     elif not ope(opj(calc_dir, dupfname)):
         raise ValueError("Could not find electron density files")
+    if non_col:
+        write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_fname, a_d_path, max_space)
+    else:
+        write_ddec6_inputs_col(calc_dir, outfile, dfname, pbc, data_fname, a_d_path, max_space)
+
+def write_ddec6_inputs_col(calc_dir, outfile, dfname, pbc, data_fname, a_d_path, max_space):
     atoms = get_atoms(calc_dir)
     _S = get_density_shape(outfile)
-    d = get_density_array(calc_dir, _S, non_col, dfname, dupfname, ddnfname)
+    d = get_density_array(calc_dir, _S, dfname)
+    if not max_space is None:
+        d, S = check_grid(d, atoms, max_space)
     for i in range(3):
         d, S = add_redun_layer(d, i)
     d = get_normed_d(d, atoms, outfile, pbc, S, _S)
     write_xsf(calc_dir, atoms, S, d, data_fname=data_fname)
     write_job_control(calc_dir, atoms, f"{data_fname}.XSF", outfile, pbc, a_d_path)
 
+def write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_fname, a_d_path, max_space):
+    atoms = get_atoms(calc_dir)
+    _S = get_density_shape(outfile)
+    d_up, d_dn = get_density_arrays(calc_dir, _S, dupfname, ddnfname)
+    if not max_space is None:
+        d_up, S = check_grid(d_up, atoms, max_space)
+        d_dn, S = check_grid(d_dn, atoms, max_space)
+    for i in range(3):
+        d_up, S = add_redun_layer(d_up, i)
+        d_dn, S = add_redun_layer(d_dn, i)
+    d_up, d_dn = get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S)
+    write_xsf(calc_dir, atoms, S, d_up, d_dn=d_dn, data_fname=data_fname)
+    write_job_control(calc_dir, atoms, f"{data_fname}.XSF", outfile, pbc, a_d_path)
+
 def run_ddec6(calc_dir):
     chdir(calc_dir)
     run(f"{exe_path}", shell=True, check=True)
-
 
 def get_atoms(path):
     if ope(opj(path, "CONTCAR.gjf")):
@@ -111,32 +130,17 @@ def get_density_shape(outfile):
     else:
         raise ValueError(f"Issue finding density array shape 'S' from out file {outfile}")
 
-def get_density_array(calc_dir, S, non_col, dfname, dupfname, ddnfname):
-    if non_col:
-        d = np.fromfile(opj(calc_dir, dupfname))
-        d += np.fromfile(opj(calc_dir, ddnfname))
-    else:
-        d = np.fromfile(opj(calc_dir, dfname))
+def get_density_array(calc_dir, S, dfname):
+    d = np.fromfile(opj(calc_dir, dfname))
     d = d.reshape(S)
     return d
 
-
-def print_all_factors(factors, exponents, base=1.0):
-    nf = len(factors)
-    ne = len(exponents)
-    ni = ne**(nf)
-    for i in range(ni):
-        exps = []
-        for f in range(nf):
-            exp_f = int(np.floor((i % (ne**(f+1)))/(ne**f)))
-            exps.append(exp_f)
-        exps = [exponents[exp] for exp in exps]
-        convs = [float(factors[f])**(exps[f]) for f in range(nf)]
-        conv = np.prod(convs)*base
-        print(str(conv) + ": [" + ", ".join([str(exp) for exp in exps]) + "]")
-
-
-
+def get_density_arrays(calc_dir, S, dupfname, ddnfname):
+    d_up = np.fromfile(opj(calc_dir, dupfname))
+    d_dn = np.fromfile(opj(calc_dir, ddnfname))
+    d_up = d_up.reshape(S)
+    d_dn = d_dn.reshape(S)
+    return d_up, d_dn
 
 def interp_3d_array(array_in, S_want):
     S_cur = np.shape(array_in)
@@ -166,7 +170,6 @@ def interp_3d_array(array_in, S_want):
     print(f"interpolating: {end - start}")
     return new_array
 
-
 def adjust_grid(d, atoms, maxspace, adjust_bools):
     S_cur = np.shape(d)
     S_want = []
@@ -178,8 +181,6 @@ def adjust_grid(d, atoms, maxspace, adjust_bools):
     d = interp_3d_array(d, S_want)
     return d, S_want
 
-
-
 def check_grid(d, atoms, maxspace=0.09):
     S = np.shape(d)
     spacings = [np.linalg.norm(atoms.cell[i])/np.shape(d)[i] for i in range(3)]
@@ -189,7 +190,6 @@ def check_grid(d, atoms, maxspace=0.09):
         d, S = adjust_grid(d, atoms, maxspace, adjusts)
         print(f"New spacings: {[np.linalg.norm(atoms.cell[i])/np.shape(d)[i] for i in range(3)]}")
     return d, S
-
 
 def get_normed_d(d, atoms, outfile, pbc, S, _S):
     """
@@ -208,14 +208,24 @@ def get_normed_d(d, atoms, outfile, pbc, S, _S):
     d_new = (d*tot_zval/(pix_vol*sum_d*(np.prod(S)/np.prod(_S))))
     return d_new
 
-def write_xsf(calc_dir, atoms, S, d, data_fname="density"):
-    xsf_str = make_xsf_str(atoms, S, d, data_fname)
+def get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S):
+    tot_zval = get_target_tot_zval(atoms, outfile)
+    pix_vol = atoms.get_volume() / (np.prod(np.shape(d_up)) * (Bohr ** 3))
+    sum_d_up = sum_d_periodic_grid(d_up, pbc)
+    sum_d_dn = sum_d_periodic_grid(d_dn, pbc)
+    sum_d = sum_d_up + sum_d_dn
+    coef = (tot_zval / (pix_vol * sum_d * (np.prod(S) / np.prod(_S))))
+    d_up_new = d_up*coef
+    d_dn_new = d_dn*coef
+    return d_up_new, d_dn_new
+
+def write_xsf(calc_dir, atoms, S, d_up, d_dn = None, data_fname="density"):
+    xsf_str = make_xsf_str(atoms, S, d_up, d_dn, data_fname)
     xsf_fname = f"{data_fname}.XSF"
     xsf_file = opj(calc_dir, xsf_fname)
     with open(xsf_file, "w") as f:
         f.write(xsf_str)
     f.close()
-
 
 def write_job_control(calc_dir, atoms, xsf_fname, outfile, pbc, a_d_path):
     nelecs = get_n_elecs(outfile)
@@ -230,19 +240,7 @@ def write_job_control(calc_dir, atoms, xsf_fname, outfile, pbc, a_d_path):
         f.write(job_control_str)
     f.close()
 
-
 #####################
-
-def get_target_tot_zval(atoms, outfile):
-    atom_type_count_dict = get_atom_type_count_dict(atoms)
-    atom_types = list(atom_type_count_dict.keys())
-    Z_vals = [get_Z_val(el, outfile) for el in atom_types]
-    tot_zval = 0
-    for i, el in enumerate(atom_types):
-        tot_zval += atom_type_count_dict[el]*Z_vals[i]
-    return tot_zval
-
-
 
 def get_job_control_str(net_charge, pbc, xsf_fname, atom_type_core_elecs_dict, a_d_path):
     dump_str = ""
@@ -253,6 +251,15 @@ def get_job_control_str(net_charge, pbc, xsf_fname, atom_type_core_elecs_dict, a
     dump_str += get_charge_type_str("DDEC6")
     dump_str += get_n_core_elecs_str(atom_type_core_elecs_dict)
     return dump_str
+
+def get_target_tot_zval(atoms, outfile):
+    atom_type_count_dict = get_atom_type_count_dict(atoms)
+    atom_types = list(atom_type_count_dict.keys())
+    Z_vals = [get_Z_val(el, outfile) for el in atom_types]
+    tot_zval = 0
+    for i, el in enumerate(atom_types):
+        tot_zval += atom_type_count_dict[el]*Z_vals[i]
+    return tot_zval
 
 def get_n_core_elecs_str(atom_type_core_elecs_dict):
     title = "number of core electrons"
@@ -287,7 +294,6 @@ def get_periodicity_str(pbc):
         contents += f".{vstr}.\n"
     return get_job_control_piece_str(title, contents)
 
-
 def get_net_charge_str(net_charge):
     title = "net charge"
     contents = str(net_charge)
@@ -314,14 +320,11 @@ def get_elecs_per_atom_type_for_neutral_dict(atom_type_core_elecs_dict):
         elecs_per_atom_type_for_neutral_dict[el] = req_elecs
     return elecs_per_atom_type_for_neutral_dict
 
-
 def get_atom_type_core_elecs_dict(atom_types, outfile):
     atom_type_core_elecs_dict = {}
     for el in atom_types:
         atom_type_core_elecs_dict[el] = get_atom_type_core_elecs(el, outfile)
     return atom_type_core_elecs_dict
-
-
 
 def get_atom_type_core_elecs(el, outfile):
     Z_val = get_Z_val(el, outfile)
@@ -365,7 +368,6 @@ def get_n_elecs(outfile):
     nelecs = float(v)
     return nelecs
 
-
 def get_atom_type_count_dict(atoms):
     count_dict = {}
     for el in atoms.get_chemical_symbols():
@@ -383,6 +385,14 @@ def get_start_lines(outfname, add_end=False):
     if add_end:
         start_lines.append(end_line)
     return start_lines
+
+def get_start_line(outfile):
+    start_lines = get_start_lines(outfile, add_end=False)
+    return start_lines[-1]
+
+def get_atoms_from_out(outfile):
+    atoms_list = get_atoms_list_from_out(outfile)
+    return atoms_list[-1]
 
 def get_atoms_list_from_out(outfile):
     start_lines = get_start_lines(outfile, add_end=True)
@@ -545,31 +555,19 @@ def get_input_coord_vars_from_outfile(outfname):
                         break
     return names, posns, R
 
-def get_atoms_from_out(outfile):
-    atoms_list = get_atoms_list_from_out(outfile)
-    return atoms_list[-1]
-
-##
-
-
-def get_start_line(outfile):
-    start_lines = get_start_lines(outfile, add_end=False)
-    return start_lines[-1]
-
-
-
-def make_xsf_str(atoms, S, d, data_fname):
+def make_xsf_str(atoms, S, d_up, d_dn, data_fname):
     dump_str = "CRYSTAL\n"
     dump_str += make_primvec_str(atoms)
     dump_str += make_primcoord_str(atoms)
-    dump_str += make_datagrid_str(atoms, d, S, data_fname)
+    dump_str += make_datagrid_str(atoms, d_up, S, data_fname, spin="1")
+    if not d_dn is None:
+        dump_str += make_datagrid_str(atoms, d_dn, S, data_fname, spin="2")
     return dump_str
 
-
-def make_datagrid_str(atoms, d, S, data_fname):
+def make_datagrid_str(atoms, d, S, data_fname, spin="1"):
     dump_str = "BEGIN_BLOCK_DATAGRID_3D\n"
     dump_str += f" DATA_from:{data_fname}.RHO\n"
-    dump_str += " BEGIN_DATAGRID_3D_RHO:spin_1\n"
+    dump_str += f" BEGIN_DATAGRID_3D_RHO:spin_{spin}\n"
     _S = [str(s) for s in S]
     for i in range(3):
         dump_str += " "*(6-len(_S[i])) + _S[i]
@@ -578,7 +576,6 @@ def make_datagrid_str(atoms, d, S, data_fname):
     dump_str += make_datagrid_str_dens(d, S)
     dump_str += " END_DATAGRID_3D\nEND_BLOCK_DATAGRID_3D\n"
     return dump_str
-
 
 def make_datagrid_str_dens(d, S):
     dump_str = ""
@@ -607,7 +604,6 @@ def make_datagrid_str_lattice(atoms):
             dump_str += num_str
         dump_str += "\n"
     return dump_str
-
 
 def make_primvec_str(atoms):
     dump_str = "PRIMVEC\n"
@@ -639,9 +635,41 @@ def make_primcoord_str(atoms):
         dump_str += "\n"
     return dump_str
 
+
+########## FUNCTION GRAVEYARD ##########
+#
+# def remove_redun_layer(d, axis):
+#     S_new = list(np.shape(d))
+#     S_new[axis] -= 1
+#     d_new = np.zeros(S_new)
+#     for i in range(S_new[0]):
+#         for j in range(S_new[1]):
+#             for k in range(S_new[2]):
+#                 d_new[i, j, k] += d[i, j, k]
+#     return d_new, S_new
+#
+# def print_all_factors(factors, exponents, base=1.0):
+#     nf = len(factors)
+#     ne = len(exponents)
+#     ni = ne**(nf)
+#     for i in range(ni):
+#         exps = []
+#         for f in range(nf):
+#             exp_f = int(np.floor((i % (ne**(f+1)))/(ne**f)))
+#             exps.append(exp_f)
+#         exps = [exponents[exp] for exp in exps]
+#         convs = [float(factors[f])**(exps[f]) for f in range(nf)]
+#         conv = np.prod(convs)*base
+#         print(str(conv) + ": [" + ", ".join([str(exp) for exp in exps]) + "]")
+#
+########################################
+
+
 def main():
     calc_dir = getcwd()
-    write_ddec6_inputs(calc_dir , max_space=0.05)
+    # If your fftbox is too coarse, adding max_space=0.1 can force ddec6 to work with a linear interpolation onto
+    # a finer density grid.
+    write_ddec6_inputs(calc_dir , max_space=None)
     run_ddec6(calc_dir)
 
 main()
