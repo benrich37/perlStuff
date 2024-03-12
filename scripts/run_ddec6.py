@@ -9,7 +9,7 @@ from subprocess import run
 from scipy.interpolate import RegularGridInterpolator
 from time import time
 
-pbc_default = [False, False, False]
+pbc_default = [True, True, True]
 a_d_default = "/global/cfs/cdirs/m4025/Software/Perlmutter/ddec6/chargemol_09_26_2017/atomic_densities/"
 exe_path = "/global/cfs/cdirs/m4025/Software/Perlmutter/ddec6/chargemol_09_26_2017/chargemol_FORTRAN_09_26_2017/compiled_binaries/linux/Chargemol_09_26_2017_linux_parallel"
 
@@ -196,11 +196,20 @@ def check_grid(d, atoms, maxspace=0.09):
 
 
 def get_normed_d(d, atoms, outfile, pbc, S, _S):
+    """
+    :param d:  Density array
+    :param atoms: ASE atoms object
+    :param outfile: path to out file
+    :param pbc: List of bools indicating periodic boundary conditions
+    :param S: Current shape of d (after adding redundant layers)
+    :param _S: Shape of fftbox from JDFTx calculation
+    :return:
+    """
     tot_zval = get_target_tot_zval(atoms, outfile)
     pix_vol = atoms.get_volume()/(np.prod(np.shape(d))*(Bohr**3))
-    sum_d = sum_d_periodic_grid(d, pbc)
+    sum_d = sum_d_periodic_grid(d, pbc) # excludes final layer for each axis that is periodic (pbc = list of bools)
     # sum_d = np.sum(d)
-    d_new = (d*tot_zval/(pix_vol*sum_d*((np.prod(S))/(np.prod(_S)))))
+    d_new = (d*tot_zval/(pix_vol*sum_d*(np.prod(S)/np.prod(_S))))
     return d_new
 
 def write_xsf(calc_dir, atoms, S, d, data_fname="density"):
@@ -349,22 +358,6 @@ def get_Z_val(el, outfile):
                         else:
                             reading = False
     return Z_val
-
-
-
-
-# readable_pseudo_types = ["upf"]
-#
-# def get_el_pseudo_file(el, pseudo_dir):
-#     fs = listdir(pseudo_dir)
-#     pseudo_file = None
-#     for f in fs:
-#         prefix = f.split(".")[0].lower()
-#         if el.lower() in prefix.split("_"):
-#             suffix = f.split(".")[-1]
-#             if suffix in readable_pseudo_types:
-#                 pseudo_file = f
-#     return pseudo_file
 
 def get_n_elecs(outfile):
     nelecs_key = "nElectrons: "
