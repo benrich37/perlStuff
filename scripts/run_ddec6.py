@@ -79,11 +79,7 @@ def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddn
     d = get_density_array(calc_dir, _S, non_col, dfname, dupfname, ddnfname)
     for i in range(3):
         d, S = add_redun_layer(d, i)
-    # d, S = check_grid(d, atoms, maxspace=max_space)
     d = get_normed_d(d, atoms, outfile, pbc, S, _S)
-    factors = [atoms.get_volume(), np.prod(S), np.prod(_S)]
-    exps = [-1, 0, 1]
-    print_all_factors(factors, exps, base=sum_d_periodic_grid(d, [True, True, True]))
     write_xsf(calc_dir, atoms, S, d, data_fname=data_fname)
     write_job_control(calc_dir, atoms, f"{data_fname}.XSF", outfile, pbc, a_d_path)
 
