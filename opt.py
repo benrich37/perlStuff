@@ -376,7 +376,9 @@ def main():
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
         run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol,log_fn=opt_log)
+    opt_log("Optimization finished.")
     if ddec6:
+        opt_log("Running DDEC6 analysis")
         run_ddec6(opt_dir)
     # copy_result_files(opt_dir, work_dir)
 
