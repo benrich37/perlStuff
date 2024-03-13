@@ -103,10 +103,12 @@ def write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_f
     write_xsf(calc_dir, atoms, S, d_up, d_dn=d_dn, data_fname=data_fname)
     write_job_control(calc_dir, atoms, f"{data_fname}.XSF", outfile, pbc, a_d_path)
 
-def run_ddec6(calc_dir):
+def run_ddec6(calc_dir, _exe_path=None):
+    if _exe_path is None:
+        _exe_path = exe_path
     chdir(calc_dir)
     print(f"Running ddec6 in {calc_dir}")
-    run(f"{exe_path}", shell=True, check=True)
+    run(f"{_exe_path}", shell=True, check=True)
 
 def get_atoms(path):
     if ope(opj(path, "CONTCAR.gjf")):
@@ -666,14 +668,23 @@ def make_primcoord_str(atoms):
 #
 ########################################
 
+a_d_key = "DDEC6_AD_PATH"
+exe_key = "DDEC6_EXE_PATH"
+
 
 def main(calc_dir=None):
     if calc_dir is None:
         calc_dir = getcwd()
+    a_d_env_path = None
+    exe_env_path = None
+    if a_d_key in environ:
+        a_d_env_path = environ[a_d_key]
+    if exe_key in environ:
+        exe_env_path = environ[exe_key]
     # If your fftbox is too coarse, adding max_space=0.1 can force ddec6 to work with a linear interpolation onto
     # a finer density grid.
-    write_ddec6_inputs(calc_dir , max_space=None)
-    run_ddec6(calc_dir)
+    write_ddec6_inputs(calc_dir , max_space=None, a_d_path=a_d_env_path)
+    run_ddec6(calc_dir, _exe_path=exe_env_path)
 
 if __name__ == "__main__":
     main()

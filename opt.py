@@ -29,7 +29,8 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "freeze base: False # Whether to freeze lower atoms (don't use for bulk calcs)",
                 "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base",
                 "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)",
-                "bias: 0.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file"]
+                "bias: 0.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file",
+                "ddec6: True # Dump Elec Density and perform DDEC6 analysis on it"]
 
 
 def read_opt_inputs(fname = "opt_input"):
@@ -52,6 +53,7 @@ def read_opt_inputs(fname = "opt_input"):
     ortho = True
     pseudoset = "GBRV"
     bias = 0.0
+    ddec6 = False
     for input in inputs:
         key, val = input[0], input[1]
         if "pseudo" in key:
