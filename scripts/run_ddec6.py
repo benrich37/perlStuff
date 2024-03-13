@@ -667,11 +667,13 @@ def make_primcoord_str(atoms):
 ########################################
 
 
-def main():
-    calc_dir = getcwd()
+def main(calc_dir=None):
+    if calc_dir is None:
+        calc_dir = getcwd()
     # If your fftbox is too coarse, adding max_space=0.1 can force ddec6 to work with a linear interpolation onto
     # a finer density grid.
     write_ddec6_inputs(calc_dir , max_space=None)
     run_ddec6(calc_dir)
 
-main()
+if __name__ == "__main__":
+    main()
