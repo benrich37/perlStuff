@@ -853,6 +853,12 @@ def get_ionic_opt_cmds_list(cmds, ion_iters):
     ion_cmds = append_key_val_to_cmds_list(ion_cmds, key, val, allow_duplicates = False)
     return ion_cmds
 
+def add_elec_density_dump(cmds_list):
+    key = "dump"
+    val = "end ElecDensity"
+    cmds_list = append_key_val_to_cmds_list(cmds_list, key, val, allow_duplicates=True)
+    return cmds_list
+
 has_subshells = {
     1: "s",
     3: "p",

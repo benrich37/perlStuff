@@ -9,10 +9,11 @@ from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir
     get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint, get_cmds_dict
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
 from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out
+from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out, add_elec_density_dump
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort, cmds_dict_to_list
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
+from scripts.run_ddec6 import main as run_ddec6
 from sys import exit, stderr
 from shutil import copy as cp
 import numpy as np
@@ -53,7 +54,7 @@ def read_opt_inputs(fname = "opt_input"):
     ortho = True
     pseudoset = "GBRV"
     bias = 0.0
-    ddec6 = False
+    ddec6 = True
     for input in inputs:
         key, val = input[0], input[1]
         if "pseudo" in key:
@@ -97,8 +98,10 @@ def read_opt_inputs(fname = "opt_input"):
             save_state = "true" in val.lower()
         if "bias" in key:
             bias = float(val.strip().rstrip("V"))
+        if "ddec6" in key:
+            ddec6 = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, bias
+    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, bias, ddec6
 
 
 def finished(dirname):
@@ -324,7 +327,7 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias = read_opt_inputs()
+    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
@@ -341,6 +344,8 @@ def main():
     cmds = add_cohp_cmds(cmds, ortho=ortho)
     lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
     ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
+    if ddec6:
+        ion_cmds = add_elec_density_dump(ion_cmds)
     opt_log(f"Setting {structure} to atoms object")
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
     get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
@@ -371,6 +376,8 @@ def main():
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
         run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol,log_fn=opt_log)
+    if ddec6:
+        run_ddec6(opt_dir)
     # copy_result_files(opt_dir, work_dir)
 
 from sys import exc_info
