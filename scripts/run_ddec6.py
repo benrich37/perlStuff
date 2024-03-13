@@ -254,13 +254,14 @@ def get_job_control_str(net_charge, pbc, xsf_fname, atom_type_core_elecs_dict, a
     return dump_str
 
 def get_target_tot_zval(atoms, outfile):
-    atom_type_count_dict = get_atom_type_count_dict(atoms)
-    atom_types = list(atom_type_count_dict.keys())
-    Z_vals = [get_Z_val(el, outfile) for el in atom_types]
-    tot_zval = 0
-    for i, el in enumerate(atom_types):
-        tot_zval += atom_type_count_dict[el]*Z_vals[i]
-    return tot_zval
+    nelecs = get_n_elecs(outfile)
+    # atom_type_count_dict = get_atom_type_count_dict(atoms)
+    # atom_types = list(atom_type_count_dict.keys())
+    # Z_vals = [get_Z_val(el, outfile) for el in atom_types]
+    # tot_zval = 0
+    # for i, el in enumerate(atom_types):
+    #     tot_zval += atom_type_count_dict[el]*Z_vals[i]
+    return nelecs
 
 def get_n_core_elecs_str(atom_type_core_elecs_dict):
     title = "number of core electrons"
