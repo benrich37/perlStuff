@@ -105,6 +105,7 @@ def write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_f
 
 def run_ddec6(calc_dir):
     chdir(calc_dir)
+    print(f"Running ddec6 in {calc_dir}")
     run(f"{exe_path}", shell=True, check=True)
 
 def get_atoms(path):
