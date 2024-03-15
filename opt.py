@@ -206,7 +206,7 @@ def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = F
     pbc = atoms.pbc
     atoms = get_atoms_from_coords_out(ionpos, lattice)
     atoms.pbc = pbc
-    structure = opj(root, structure + "_lat_opted")
+    structure = opj(lat_dir, "CONTCAR")
     write(structure, atoms, format="vasp")
     log_fn(f"Finished lattice optimization")
     finished(lat_dir)
