@@ -106,6 +106,8 @@ jdftx_solv_params = {
     "fluid-anion": "F- 0.5"
 }
 
+SHE_work_val_Ha = 4.66/Hartree
+
 
 def copy_file(file, tgt_dir, log_fn=log_def):
     cp(file, tgt_dir)
@@ -1652,3 +1654,12 @@ def get_poscar_atoms(work_dir, log_fn):
     else:
         raise ValueError("No POSCAR found")
     return atoms
+
+def get_mu(outfile):
+    mu = 0
+    lookkey = "FillingsUpdate:  mu:"
+    with open(outfile, "r") as f:
+        for line in f:
+            if lookkey in line:
+                mu = float(line.split(lookkey)[1].strip().split()[0])
+    return mu
