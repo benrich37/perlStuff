@@ -156,6 +156,7 @@ def define_dir(root, dirname):
     dirpath = opj(root, dirname)
     if not ope(dirname):
         mkdir(dirpath)
+    return dirpath
 
 def get_mu_range(bmin, bmax, bsteps, brefval, bscale):
     ev_to_mu = (-1/Hartree)
