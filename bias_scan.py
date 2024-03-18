@@ -445,13 +445,15 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
 
 def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
     log_fn("Setting up bias scan")
+    log_fn(f"Bias range is {brange} in abs Hartree")
     init_dir = opj(scan_dir, init_dir_name)
     init_mu = get_init_mu(scan_dir)
     step_dirs, completed = make_scan_dirs(scan_dir, brange)
     bdifs = [abs(b - init_mu) for b in brange]
     idcs = np.argsort(bdifs)
-    log_fn(f"Bias scan steps will be run in order {[list(range(len(brange)))[idx] for idx in idcs]}")
-    for i, idx in enumerate([range(len(bdifs))[_idx] for _idx in idcs]):
+    run_order = [list(range(len(brange)))[idx] for idx in idcs]
+    log_fn(f"Bias scan steps will be run in order {run_order}")
+    for i, idx in enumerate(run_order):
         log_fn(f"Setting up scan step {idx}")
         cmds = append_key_val_to_cmds_list(cmds, "target-mu", str(brange[idx]), allow_duplicates=False, log_fn=log_fn)
         scan_step_runner = lambda calc_dir, ref_dir: _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_fn)
