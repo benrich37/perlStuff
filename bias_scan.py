@@ -428,7 +428,7 @@ def get_ref_dir(mu_eval, murange, stepdirs, completed_bools, init_dir, log_fn=lo
     else:
         for idx in idcs:
             if completed_bools[idx]:
-                log_fn(f"Closest mu to {mu_eval} of finished calcs found to be {[abs(mu_eval - mu) for mu in murange][idx]} in {stepdirs[idx]}")
+                log_fn(f"Closest mu to {mu_eval} of finished calcs found to be {murange[idx]} in {stepdirs[idx]}")
                 return stepdirs[idx]
 
 
