@@ -436,6 +436,7 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
             copy_best_state_files([ref_dir_calc_dir], ion_dir, log_fn)
         ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
         get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoset, log_fn=log_fn)
+        write(opj(ion_dir, "POSCAR.gjf"), atoms, format="gaussian-in")
         run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_fn)
         if ddec6:
             log_fn(f"Running DDEC6 analysis in {ion_dir}")
