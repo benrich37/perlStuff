@@ -436,8 +436,6 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
     ref_dir_calc_dir = opj(ref_dir, "ion_opt")
     atoms = get_atoms_from_out(opj(ref_dir_calc_dir, "out"))
     atoms.pbc = True in pbc
-    log_fn(f"Ref atoms: {atoms}")
-    log_fn(f"Ref atoms cell: {atoms.cell}")
     write(opj(step_dir, "POSCAR.gjf"), atoms, format="gaussian-in")
     ion_dir = define_dir(step_dir, "ion_opt")
     if not is_finished(ion_dir):
