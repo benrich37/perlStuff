@@ -130,7 +130,16 @@ def read_bias_scan_inputs(fname ="bias_scan_input"):
             ddec6 = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
     brange = get_mu_range(bmin, bmax, bsteps, brefval, bscale)
+    init_bias = get_init_bias(init_bias, brefval, bscale)
     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, save_state, pseudoset, ddec6, brange, init_pzc, init_bias, init_ion_opt, init_lat_opt
+
+
+def get_init_bias(init_bias, bref, bscale):
+    if not init_bias is None:
+        if bscale == "V":
+            init_bias *= (-1)*Hartree
+        init_bias -= bref
+    return init_bias
 
 
 def read_bref_val(val):
@@ -484,6 +493,7 @@ def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset,
 def main():
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, \
         save_state, pseudoset, ddec6, brange, init_pzc, init_bias, init_ion_opt, init_lat_opt = read_bias_scan_inputs()
+    print(init_bias)
     os.chdir(work_dir)
     scan_dir = define_dir(work_dir, "bias_scan")
     init_dir = define_dir(scan_dir, init_dir_name)
