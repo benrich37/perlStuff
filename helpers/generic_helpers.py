@@ -1262,10 +1262,45 @@ def get_atoms_list_from_out(outfile):
     erstr = "Failed getting atoms list from out file"
     raise ValueError(erstr)
 
+def get_init_atoms_for_out_slice(outfile, i_start, i_end):
+    names = []
+    posns = []
+    R = np.zeros([3, 3])
+    R_active = False
+    lat_row = 0
+    coords_type = "cartesian"
+    end_key = "Initializing the Grid"
+    for i, line in enumerate(open(outfile)):
+        if i > i_start and i < i_end:
+            if R_active:
+                if lat_row < 3:
+                    R[lat_row, :] = [float(x) for x in line.split()[:3]]
+                    lat_row += 1
+                else:
+                    R_active = False
+                    lat_row = 0
+            elif line.startswith("coords-type"):
+                coords_type = line.split()[1].lower()
+            elif line.startswith("ion "):
+                _, name, x, y, z, opt = line.split()
+                names.append(name)
+                posns.append(np.array([float(x), float(y), float(z)]))
+            elif line.startswith("lattice  "):
+                R_active = True
+                lat_row = 0
+            elif end_key in line:
+                posns = np.array(posns)
+                if not 'cartesian' in coords_type:
+                    posns = np.dot(posns, R)
+                atoms = get_atoms_from_outfile_data(names, posns, R)
+                return atoms
+
+
+
 
 def get_atoms_list_from_out_slice(outfile, i_start, i_end):
     charge_key = "oxidation-state"
-    opts = []
+    opts = [get_init_atoms_for_out_slice(outfile, i_start, i_end)]
     nAtoms = None
     R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
         new_posn, log_vars, E, charges, forces, active_forces, coords_forces = get_atoms_list_from_out_reset_vars()
