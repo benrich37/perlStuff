@@ -496,6 +496,7 @@ def main():
     cmds = add_cohp_cmds(cmds, ortho=ortho)
     if ddec6:
         cmds = add_elec_density_dump(cmds)
+    scan_log(f"overarching commands: {cmds}")
     check_submit(gpu, os.getcwd(), "bias_scan", log_fn=scan_log)
     run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoset, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
     run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
