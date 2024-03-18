@@ -144,7 +144,7 @@ def read_bref_val(val):
     ref_val = None
     read_float = False
     for k in ref_strs:
-        if k.lower() in val:
+        if k.lower() in val.lower():
             ref_val = ref_strs[k]
         else:
             break
