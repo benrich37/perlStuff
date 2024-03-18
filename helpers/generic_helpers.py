@@ -1693,8 +1693,10 @@ def get_poscar_atoms(work_dir, log_fn):
 def get_mu(outfile):
     mu = 0
     lookkey = "FillingsUpdate:  mu:"
+    last_line = None
     with open(outfile, "r") as f:
         for line in f:
             if lookkey in line:
                 mu = float(line.split(lookkey)[1].strip().split()[0])
+                last_line = line
     return mu

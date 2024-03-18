@@ -426,7 +426,7 @@ def get_ref_dir(mu_eval, murange, stepdirs, completed_bools, init_dir, log_fn=lo
 def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
     ref_dir_calc_dir = opj(ref_dir, "ion_opt")
     atoms = get_atoms_from_out(opj(ref_dir_calc_dir, "out"))
-    atoms.pbc = pbc
+    atoms.pbc = True in pbc
     log_fn(f"Ref atoms: {atoms}")
     log_fn(f"Ref atoms cell: {atoms.cell}")
     write(opj(step_dir, "POSCAR.gjf"), atoms, format="gaussian-in")
