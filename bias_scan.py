@@ -376,7 +376,7 @@ def run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_
         ion_cmds = get_ionic_opt_cmds_list(cmds, 0)
     ion_dir = define_dir(init_dir, "ion_opt")
     get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
-    run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_def)
+    run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
 
 
 def get_init_mu(scan_dir):
@@ -434,7 +434,7 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
             copy_best_state_files([ref_dir_calc_dir], ion_dir, log_fn)
         ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
         get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoset, log_fn=log_fn)
-        run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_def)
+        run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_fn)
         if ddec6:
             log_fn(f"Running DDEC6 analysis in {ion_dir}")
             run_ddec6(ion_dir)
@@ -475,7 +475,7 @@ def main():
     cmds = make_pzc_cmds(cmds)
     cmds = add_cohp_cmds(cmds, ortho=ortho)
     check_submit(gpu, os.getcwd(), "bias_scan", log_fn=scan_log)
-    run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoset, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_def)
+    run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoset, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
     run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
 
 from sys import exc_info
