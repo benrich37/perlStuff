@@ -358,27 +358,31 @@ def make_pzc_cmds(cmds):
 
 
 def run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoSet, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
-    log_fn("Setting up initialization calc")
-    if not init_pzc:
-        cmds = append_key_val_to_cmds_list(cmds, "target-mu", str(init_bias), allow_duplicates = False)
-    if init_lat_opt:
-        log_fn("Setting up lattice optimization of initialization calc")
-        lat_cmds = get_lattice_cmds_list(cmds, 100, pbc)
-        lat_dir = define_dir(init_dir, "lat_opt")
-        get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
-        log_fn("Running lattice optimization of initialization calc")
-        run_lat_opt(atoms, None, lat_dir, None, get_lat_calc, log_fn=log_fn)
-    if init_ion_opt:
-        log_fn("Setting up ionic optimization of initialization calc")
-        ion_cmds = get_ionic_opt_cmds_list(cmds, 100)
+    if not is_finished(init_dir):
+        log_fn("Setting up initialization calc")
+        if not init_pzc:
+            cmds = append_key_val_to_cmds_list(cmds, "target-mu", str(init_bias), allow_duplicates = False)
+        if init_lat_opt:
+            log_fn("Setting up lattice optimization of initialization calc")
+            lat_cmds = get_lattice_cmds_list(cmds, 100, pbc)
+            lat_dir = define_dir(init_dir, "lat_opt")
+            get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
+            log_fn("Running lattice optimization of initialization calc")
+            run_lat_opt(atoms, None, lat_dir, None, get_lat_calc, log_fn=log_fn)
+        if init_ion_opt:
+            log_fn("Setting up ionic optimization of initialization calc")
+            ion_cmds = get_ionic_opt_cmds_list(cmds, 100)
+        else:
+            log_fn("Setting up single point calculation for initialization")
+            ion_cmds = get_ionic_opt_cmds_list(cmds, 0)
+        ion_dir = define_dir(init_dir, "ion_opt")
+        get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
+        log_fn("Running initialization calc")
+        run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
+        log_fn("Initialization calc finished")
+        finished(init_dir)
     else:
-        log_fn("Setting up single point calculation for initialization")
-        ion_cmds = get_ionic_opt_cmds_list(cmds, 0)
-    ion_dir = define_dir(init_dir, "ion_opt")
-    get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
-    log_fn("Running initialization calc")
-    run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
-    log_fn("Initialization calc finished")
+        log_fn("Initiliazation already completed - skipping")
 
 
 def get_init_mu(scan_dir):
