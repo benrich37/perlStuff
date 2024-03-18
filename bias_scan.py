@@ -32,7 +32,6 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "freeze base: False # Whether to freeze lower atoms (don't use for bulk calcs)",
                 "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base",
                 "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)",
-                "bias: 0.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file",
                 "ddec6: True # Dump Elec Density and perform DDEC6 analysis on it",
                 "bmin: -1.0 # Min point of bias scan",
                 "bmax: 1.0 # Max point of bias scan",
@@ -62,7 +61,6 @@ def read_bias_scan_inputs(fname ="bias_scan_input"):
     save_state = False
     ortho = True
     pseudoset = "GBRV"
-    bias = 0.0
     ddec6 = True
     bmin = -1
     bmax = 1
@@ -75,9 +73,15 @@ def read_bias_scan_inputs(fname ="bias_scan_input"):
     init_lat_opt = False
     for input in inputs:
         key, val = input[0], input[1]
-        if "bref" in key:
+        if "bmin" in key:
+            bmin = float(val)
+        elif "bmax" in key:
+            bmax = float(val)
+        elif "bstep" in key:
+            bsteps = int(val)
+        elif "bref" in key:
             brefval = read_bref_val(val)
-        if "init" in key:
+        elif "init" in key:
             if "bias" in key:
                 if "pzc" in val.lower():
                     init_pzc = True
@@ -90,48 +94,39 @@ def read_bias_scan_inputs(fname ="bias_scan_input"):
                     init_lat_opt = "true" in val.lower()
                 else:
                     print(f"Error reading {key}. Currently {init_ion_opt} for init ion opt and {init_lat_opt} for init lat opt")
-        if "pseudo" in key:
+        elif "pseudo" in key:
             pseudoset = val.strip()
-        if "structure" in key:
+        elif "structure" in key:
             structure = val.strip()
-        if "work" in key:
+        elif "work" in key:
             work_dir = val
-        if "gpu" in key:
+        elif "gpu" in key:
             gpu = "true" in val.lower()
-        if "restart" in key:
+        elif "restart" in key:
             restart = "true" in val.lower()
-        if "max" in key:
+        elif "max" in key:
             if "fmax" in key:
                 fmax = float(val)
             elif "step" in key:
                 max_steps = int(val)
-        if "pbc" in key:
+        elif "pbc" in key:
             pbc = read_pbc_val(val)
-        if "lat" in key:
+        elif "lat" in key:
             try:
                 n_iters = int(val)
                 lat_iters = n_iters
             except:
                 pass
-        if ("opt" in key) and ("progr" in key):
-            if "jdft" in val:
-                use_jdft = True
-            if "ase" in val:
-                use_jdft = False
-            else:
-                pass
-        if ("freeze" in key):
+        elif ("freeze" in key):
             if ("base" in key):
                 freeze_base = "true" in val.lower()
             elif ("tol" in key):
                 freeze_tol = float(val)
-        if ("ortho" in key):
+        elif ("ortho" in key):
             ortho = "true" in val.lower()
-        if ("save" in key) and ("state" in key):
+        elif ("save" in key) and ("state" in key):
             save_state = "true" in val.lower()
-        if "bias" in key:
-            bias = float(val.strip().rstrip("V"))
-        if "ddec6" in key:
+        elif "ddec6" in key:
             ddec6 = "true" in val.lower()
     work_dir = fix_work_dir(work_dir)
     brange = get_mu_range(bmin, bmax, bsteps, brefval, bscale)
