@@ -383,6 +383,7 @@ def run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_
     get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
     log_fn("Running initialization calc")
     run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
+    log_fn("Initialization calc finished")
 
 
 def get_init_mu(scan_dir):
@@ -450,7 +451,7 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
 def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
     log_fn("Setting up bias scan")
     init_dir = opj(scan_dir, init_dir_name)
-    init_mu = get_init_mu(init_dir)
+    init_mu = get_init_mu(scan_dir)
     step_dirs, completed = make_scan_dirs(scan_dir, brange)
     bdifs = [abs(b - init_mu) for b in brange]
     idcs = np.argsort(bdifs)
