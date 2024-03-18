@@ -451,7 +451,7 @@ def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset,
     bdifs = [abs(b - init_mu) for b in brange]
     idcs = np.argsort(bdifs)
     log_fn(f"Bias scan steps will be run in order {[list(range(len(brange)))[idx] for idx in idcs]}")
-    for i, idx in idcs:
+    for i, idx in enumerate([range(len(bdifs))[_idx] for _idx in idcs]):
         log_fn(f"Setting up scan step {idx}")
         cmds = append_key_val_to_cmds_list(cmds, "target-mu", str(brange[idx]), allow_duplicates=False, log_fn=log_fn)
         scan_step_runner = lambda calc_dir, ref_dir: _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_fn)
