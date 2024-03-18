@@ -152,6 +152,10 @@ def read_bref_val(val):
         ref_val = float(val)
     return ref_val
 
+def define_dir(root, dirname):
+    dirpath = opj(root, dirname)
+    if not ope(dirname):
+        mkdir(dirpath)
 
 def get_mu_range(bmin, bmax, bsteps, brefval, bscale):
     ev_to_mu = (-1/Hartree)
@@ -362,18 +366,14 @@ def run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_
         cmds = append_key_val_to_cmds_list(cmds, "target-mu", str(init_bias), allow_duplicates = False)
     if init_lat_opt:
         lat_cmds = get_lattice_cmds_list(cmds, 100, pbc)
-        lat_dir = opj(init_dir, "lat_opt")
-        if not ope(lat_dir):
-            mkdir(lat_dir)
+        lat_dir = define_dir(init_dir, "lat_opt")
         get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
         run_lat_opt(atoms, None, lat_dir, None, get_lat_calc, log_fn=log_fn)
     if init_ion_opt:
         ion_cmds = get_ionic_opt_cmds_list(cmds, 100)
     else:
         ion_cmds = get_ionic_opt_cmds_list(cmds, 0)
-    ion_dir = opj(init_dir, "ion_opt")
-    if not ope(ion_dir):
-        mkdir(ion_dir)
+    ion_dir = define_dir(init_dir, "ion_opt")
     get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
     run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_def)
 
@@ -389,9 +389,7 @@ def make_scan_dirs(scan_dir, brange):
     stepdirs = []
     completed = []
     for i in range(nsteps):
-        stepdir = opj(scan_dir, str(i))
-        if not ope(stepdir):
-            mkdir(stepdir)
+        stepdir = define_dir(scan_dir, str(i))
         stepdirs.append(stepdir)
         completed.append(False)
     return stepdirs, completed
@@ -421,14 +419,10 @@ def get_ref_dir(mu_eval, murange, stepdirs, completed_bools, init_dir, log_fn=lo
 def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
     ref_dir_calc_dir = opj(ref_dir, "ion_opt")
     atoms = get_atoms_from_out(opj(ref_dir_calc_dir, "out"))
-    ion_dir = opj(step_dir, "ion_opt")
-    if not ope(ion_dir):
-        mkdir(ion_dir)
+    ion_dir = define_dir(step_dir, "ion_opt")
     if not is_finished(ion_dir):
         if lat_iters > 0:
-            lat_dir = opj(step_dir, "lat_opt")
-            if not ope(lat_dir):
-                mkdir(lat_dir)
+            lat_dir = define_dir(step_dir, "lat_opt")
             if not is_finished(lat_dir):
                 copy_best_state_files([ref_dir_calc_dir], lat_dir, log_fn)
                 lat_cmds = get_lattice_cmds_list(cmds, 100, pbc)
@@ -463,12 +457,13 @@ def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset,
 
 
 
+
 def main():
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, \
         save_state, pseudoset, ddec6, brange, init_pzc, init_bias, init_ion_opt, init_lat_opt = read_bias_scan_inputs()
     os.chdir(work_dir)
-    scan_dir = opj(work_dir, "bias_scan")
-    init_dir = opj(scan_dir, init_dir_name)
+    scan_dir = define_dir(work_dir, "bias_scan")
+    init_dir = define_dir(scan_dir, init_dir_name)
     structure = opj(work_dir, structure)
     scan_log = get_log_fn(work_dir, "bias_scan", False, restart=restart)
     structure = check_structure(structure, work_dir, log_fn=scan_log)
@@ -480,7 +475,7 @@ def main():
     cmds = add_cohp_cmds(cmds, ortho=ortho)
     check_submit(gpu, os.getcwd(), "bias_scan", log_fn=scan_log)
     run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoset, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_def)
-    run_scan()
+    run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
 
 from sys import exc_info
 
