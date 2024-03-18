@@ -449,6 +449,7 @@ def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset,
     init_dir = opj(scan_dir, init_dir_name)
     init_mu = get_init_mu(scan_dir)
     step_dirs, completed = make_scan_dirs(scan_dir, brange)
+    log_fn(f"Sorting scan steps w.r.t. initialization mu (= {init_mu:.4f} in abs Ha)")
     bdifs = [abs(b - init_mu) for b in brange]
     idcs = np.argsort(bdifs)
     run_order = [list(range(len(brange)))[idx] for idx in idcs]
