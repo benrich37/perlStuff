@@ -501,6 +501,24 @@ def run_all_ddec6(scan_dir, log_fn = log_def):
                 log_fn(f"Issue running ddec6 for {calc_dir} ({e})")
 
 
+def check_elec_min(cmds_dict, log_fn=log_def):
+    if "electronic-minimize" in cmds_dict:
+        val = cmds_dict["electronic-minimize"]
+        its = int(val.split()[val.split().index("nIterations") + 1])
+        if its < 500:
+            log_fn(f"WARNING: electronic-minimize steps currently set at {its} for a single point scan. To improve convergence, I recommend at least 500.")
+    else:
+        log_fn("electronic-minimize parameters not explicitly specified. This will default to only 100 steps which will likely not converge for a single point calculation.")
+
+
+def check_cmds_dict(cmds_dict, max_steps, lat_steps, log_fn=log_def):
+    if lat_steps < 2:
+        if max_steps < 2:
+            check_elec_min(cmds_dict, log_fn=log_fn)
+
+
+
+
 
 def main():
     work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, \
