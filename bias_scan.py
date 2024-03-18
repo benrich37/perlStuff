@@ -154,7 +154,7 @@ def read_bref_val(val):
 
 def define_dir(root, dirname):
     dirpath = opj(root, dirname)
-    if not ope(dirname):
+    if not ope(dirpath):
         mkdir(dirpath)
     return dirpath
 
