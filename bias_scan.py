@@ -1,6 +1,6 @@
 import os
-from os.path import exists as ope, join as opj
-from os import mkdir
+from os.path import exists as ope, join as opj, isdir
+from os import mkdir, listdir
 from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
@@ -487,6 +487,20 @@ def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset,
     log_fn("Bias scan completed.")
 
 
+def run_all_ddec6(scan_dir, log_fn = log_def):
+    fs = listdir(scan_dir)
+    for f in fs:
+        calc_dir = opj(scan_dir, opj(f, "ion_opt"))
+        if ope(opj(calc_dir, "density.XSF")):
+            ran = False
+            reason = None
+            log_fn(f"Running ddec6 for {calc_dir}")
+            try:
+                run_ddec6(calc_dir)
+                ran = True
+            except Exception as e:
+                reason = e
+                log_fn(f"Issue running ddec6 for {calc_dir} ({e})")
 
 
 
@@ -511,6 +525,8 @@ def main():
     check_submit(gpu, os.getcwd(), "bias_scan", log_fn=scan_log)
     run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoset, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
     run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
+    if ddec6:
+        run_all_ddec6(scan_dir, log_fn = scan_log)
 
 from sys import exc_info
 
