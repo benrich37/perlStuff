@@ -456,7 +456,7 @@ def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset,
     log_fn(f"Bias scan steps will be run in order {run_order}")
     for i, idx in enumerate(run_order):
         log_fn(f"Setting up scan step {idx}")
-        cmds = append_key_val_to_cmds_list(cmds, "target-mu", str(brange[idx]), allow_duplicates=False, log_fn=log_fn)
+        cmds = append_key_val_to_cmds_list(cmds, "target-mu", str(brange[idx]), allow_duplicates=False)
         scan_step_runner = lambda calc_dir, ref_dir: _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_fn)
         step_dir = step_dirs[idx]
         ref_dir = get_ref_dir(brange[idx], brange, step_dirs, completed, init_dir, log_fn=log_fn)
