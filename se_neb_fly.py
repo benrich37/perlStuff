@@ -8,7 +8,7 @@ from ase.neb import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
-from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def
+from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
 from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit
@@ -81,8 +81,15 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     gpu = False
     carry_dict = {}
     pseudoset = "GBRV"
+    freeze_base = False
+    freeze_tol = 3.
     for input in inputs:
         key, val = input[0], input[1]
+        if ("freeze" in key):
+            if ("base" in key):
+                freeze_base = "true" in val.lower()
+            elif ("tol" in key):
+                freeze_tol = float(val)
         if "pseudo" in key:
             pseudoset = val.strip()
         if "gpu" in key:
@@ -138,7 +145,8 @@ def read_se_neb_inputs(fname="se_neb_inputs"):
     if schedule:
         scan_steps = count_scan_steps(work_dir)
     return atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method,\
-        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, carry_dict, pseudoset
+        k, neb_max_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, jdft_steps, schedule, gpu, \
+        carry_dict, pseudoset, freeze_base, freeze_tol
 
 
 def parse_lookline(lookline):
@@ -236,10 +244,11 @@ def read_instructions_run_step(instructions):
 
 
 def run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
-             fmax_float=0.1, max_steps_int=50, log_fn=log_def, _failed_before_bool=False):
+             fmax_float=0.1, max_steps_int=50, freeze_base=False, freeze_tol=1.0, log_fn=log_def, _failed_before_bool=False):
     freeze_list, j_steps = read_instructions_run_step(instructions)
     run_again = False
     add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
+    add_freeze_surf_base_constraint(atoms_obj, freeze_base=freeze_base, ztol=freeze_tol, log_fn=log_def)
     try:
         run_step_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, j_steps, get_jdft_opt_calc_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
     except Exception as e:
@@ -394,7 +403,8 @@ def is_kink(step, scan_dir, thresh = 0.001, log_fn=log_def):
 
 def main():
     atom_idcs, scan_steps, step_length, restart_at, restart_neb, work_dir, max_steps, fmax, neb_method, \
-        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, carry_dict, pseudoSet = read_se_neb_inputs()
+        k, neb_steps, pbc, relax_start, relax_end, guess_type, target, safe_mode, j_steps, schedule, gpu, \
+        carry_dict, pseudoSet, freeze_base, freeze_tol = read_se_neb_inputs()
     #work_dir = "D:\\scratch_backup\\perl\\deepdive\\TiC_GBRV\\calcs\\neb\\hex_-111_a_trv1\\N2\\0.00V\\dis1"
     chdir(work_dir)
     if not schedule:
@@ -452,7 +462,7 @@ def main():
             atoms = get_atoms(step_dir, pbc, restart_bool=restart_step, log_fn=se_log)
             check_submit(gpu, getcwd(), "se_neb", log_fn=se_log)
             run_step(atoms, step_dir, schedule[str(step)], get_ionopt_calc, get_calc, FIRE,
-                     fmax_float=fmax, max_steps_int=max_steps, log_fn=se_log)
+                     fmax_float=fmax, max_steps_int=max_steps, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=se_log)
             write_scan_logx(scan_dir, log_fn=se_log)
             update_results_to_schedule(schedule, scan_dir, work_dir, log_fn=se_log)
             # if just_passed_max(step, scan_dir, log_fn=se_log):
@@ -493,4 +503,5 @@ if __name__ == '__main__':
         work_dir = "D:\\scratch_backup\\perl\\deepdive\\TiC_GBRV\\calcs\\neb\\hex_-111_a_trv1\\N2\\0.00V\\dis1\\"
         chdir(work_dir)
     main()
+
 

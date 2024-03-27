@@ -27,12 +27,14 @@ def init_images(_initial, _final, nImages, root, log_fn):
     images = [initial]
     images += [initial.copy() for i in range(nImages - 2)]
     images += [final]
+    image_dirs = [opj(root, str(i)) for i in range(nImages)]
     for i in range(nImages):
-        if ope(opj(root, str(i))) and isdir(opj(root, str(i))):
+        image_dir = image_dirs[i]
+        if ope(image_dir) and isdir(image_dir):
             log_fn("resetting directory for image " + str(i))
-            shutil.rmtree(opj(root, str(i)))
-        mkdir(opj(root, str(i)))
-    return images
+            shutil.rmtree(image_dir)
+        mkdir(image_dir)
+    return images, image_dirs
 
 
 def read_images(nImages, root):
@@ -46,13 +48,13 @@ def read_images(nImages, root):
     return images
 
 
-def prep_neb(neb, images, root, set_calc_fn, pbc, method="idpp", restart=False):
+def prep_neb(neb, images, neb_path, set_calc_fn, pbc, image_dirs, method="idpp", restart=False):
     if not restart:
         neb.interpolate(apply_constraint=True, method=method)
         for i in range(len(images)):
-            write(opj(opj(root, str(i)), "POSCAR"), images[i], format="vasp")
+            write(opj(image_dirs[i], "POSCAR"), images[i], format="vasp")
     for i in range(len(images)):
-        images[i].set_calculator(set_calc_fn(opj(root, str(i))))
+        images[i].set_calculator(set_calc_fn(opj(neb_path, str(i))))
         images[i].pbc = pbc
 
 
