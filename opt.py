@@ -380,7 +380,7 @@ def main():
     opt_log("Optimization finished.")
     if ddec6:
         opt_log("Running DDEC6 analysis")
-        run_ddec6(opt_dir)
+        run_ddec6(opt_dir, pbc=pbc)
     # copy_result_files(opt_dir, work_dir)
 
 from sys import exc_info
