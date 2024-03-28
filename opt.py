@@ -339,6 +339,7 @@ def main():
     cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=opt_log)
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
     atoms = read(structure, format="vasp")
+    atoms.pbc = pbc
     # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
     cmds = cmds_dict_to_list(cmds)
     cmds = add_cohp_cmds(cmds, ortho=ortho)
