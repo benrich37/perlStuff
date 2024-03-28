@@ -159,7 +159,7 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
             write(structure, atoms, format="vasp")
     else:
         no_lat_struc = True
-    if no_lat_struc:
+    if no_lat_struc and no_opt_struc:
         make_dir(lat_dir)
         make_dir(opt_dir)
         log_fn(f"Could not gather restart structure from {work_dir}")
@@ -304,11 +304,16 @@ def copy_result_files(opt_dir, work_dir):
 
 def append_out_to_logx(outfile, logx, log_fn=log_def):
     log_fn(f"Gathering minimization structures from existing out file")
-    atoms_list = get_atoms_list_from_out(outfile)
-    log_fn(f"{len(atoms_list)} found from out file")
-    do_cell = get_do_cell(atoms_list[-1].pbc)
+    _atoms_list = get_atoms_list_from_out(outfile)
+    atoms_list = []
     for atoms in atoms_list:
-        _write_logx(atoms, logx, do_cell=do_cell)
+        if not atoms is None:
+            atoms_list.append(atoms)
+    log_fn(f"{len(atoms_list)} found from out file")
+    if len(atoms_list):
+        do_cell = get_do_cell(atoms_list[-1].pbc)
+        for atoms in atoms_list:
+            _write_logx(atoms, logx, do_cell=do_cell)
 
 def make_jdft_logx(opt_dir, log_fn=log_def):
     outfile = opj(opt_dir, "out")
