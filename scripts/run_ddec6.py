@@ -48,6 +48,33 @@ def sum_d_periodic_grid(d, pbc):
     sum_d = np.sum(d[:S_sum[0], :S_sum[1], :S_sum[2]])
     return sum_d
 
+def get_pbc(calc_dir):
+    infname = opj(calc_dir, "in")
+    lookkey = "coulomb-interaction"
+    tokens = None
+    with open(infname, "r") as f:
+        for line in f:
+            if lookkey in line:
+                tokens = line.strip().split()
+    if not tokens is None:
+        ctype = tokens[1].lower()
+        if ctype == "periodic":
+            return [True, True, True]
+        elif ctype == "isolated":
+            return [False, False, False]
+        else:
+            direction = tokens[2]
+            pbc = [v == "0" for v in direction]
+            if ctype == "slab":
+                return pbc
+            elif ctype == "wire":
+                pbc = [not v for v in pbc]
+                return pbc
+            else:
+                raise ValueError(f"Coulomb type {ctype} as found from {tokens} not yet supported for pbc detection.")
+
+
+
 def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddnfname="n_dn", data_fname="density", pbc=None, a_d_path=None, max_space=None):
     """
     :param calc_dir: Path to directory containing calc output files needed for ddec6
@@ -62,8 +89,7 @@ def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddn
     :return:
     """
     if pbc is None:
-        pbc = pbc_default
-        # TODO: Get PBC bool list from output file instead of using a default
+        pbc = get_pbc(calc_dir)
     if a_d_path is None:
         a_d_path = a_d_default
     outfile = opj(calc_dir, outname)
