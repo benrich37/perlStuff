@@ -1,6 +1,6 @@
 import os
 from os.path import exists as ope, join as opj
-from ase.io import read, write
+from ase.io import read, write as _write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from ase.constraints import FixAtoms
@@ -17,6 +17,12 @@ from scripts.run_ddec6 import main as run_ddec6
 from sys import exit, stderr
 from shutil import copy as cp
 import numpy as np
+
+def write(fname, _atoms, format="vasp"):
+    atoms = _atoms.copy()
+    atoms.pbc = [True,True,True]
+    _write(fname, atoms, format=format)
+
 
 
 opt_template = ["structure: POSCAR # Structure for optimization",
