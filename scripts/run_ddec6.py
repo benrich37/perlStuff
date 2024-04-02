@@ -698,7 +698,7 @@ a_d_key = "DDEC6_AD_PATH"
 exe_key = "DDEC6_EXE_PATH"
 
 
-def main(calc_dir=None):
+def main(calc_dir=None, pbc=None):
     if calc_dir is None:
         calc_dir = getcwd()
     a_d_env_path = None
@@ -709,7 +709,7 @@ def main(calc_dir=None):
         exe_env_path = environ[exe_key]
     # If your fftbox is too coarse, adding max_space=0.1 can force ddec6 to work with a linear interpolation onto
     # a finer density grid.
-    write_ddec6_inputs(calc_dir , max_space=None, a_d_path=a_d_env_path)
+    write_ddec6_inputs(calc_dir , max_space=None, a_d_path=a_d_env_path, pbc=pbc)
     run_ddec6(calc_dir, _exe_path=exe_env_path)
 
 if __name__ == "__main__":
