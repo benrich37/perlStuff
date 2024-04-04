@@ -456,6 +456,7 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
         if ddec6:
             log_fn(f"Running DDEC6 analysis in {ion_dir}")
             run_ddec6(ion_dir)
+    elif not ope(opj(ion_dir))
 
 
 
@@ -531,6 +532,7 @@ def main():
     structure = check_structure(structure, work_dir, log_fn=scan_log)
     exe_cmd = get_exe_cmd(gpu, scan_log)
     atoms = read(structure, format="vasp")
+    atoms.pbc = pbc
     cmds = get_cmds_dict(work_dir, ref_struct=structure, pbc=pbc, log_fn=scan_log)
     cmds = cmds_dict_to_list(cmds)
     cmds = make_pzc_cmds(cmds)

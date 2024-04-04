@@ -161,15 +161,28 @@ def get_density_shape(outfile):
 
 def get_density_array(calc_dir, S, dfname):
     d = np.fromfile(opj(calc_dir, dfname))
+    for i, v in enumerate(d):
+        d[i] = max(v, float(0))
     d = d.reshape(S)
     return d
 
+# def get_density_arrays(calc_dir, S, dupfname, ddnfname):
+#     d_up = np.fromfile(opj(calc_dir, dupfname))
+#     d_dn = np.fromfile(opj(calc_dir, ddnfname))
+#     d_up = d_up.reshape(S)
+#     d_dn = d_dn.reshape(S)
+#     return d_up, d_dn
+
 def get_density_arrays(calc_dir, S, dupfname, ddnfname):
-    d_up = np.fromfile(opj(calc_dir, dupfname))
-    d_dn = np.fromfile(opj(calc_dir, ddnfname))
-    d_up = d_up.reshape(S)
-    d_dn = d_dn.reshape(S)
-    return d_up, d_dn
+    d_arrs = [
+        np.fromfile(opj(calc_dir, dupfname)),
+        np.fromfile(opj(calc_dir, ddnfname))
+    ]
+    for i, d_arr in enumerate(d_arrs):
+        for j, v in enumerate(d_arr):
+            d_arr[j] = max(v, float(0))
+        d_arrs[i] = d_arrs[i].reshape(S)
+    return d_arrs
 
 def interp_3d_array(array_in, S_want):
     S_cur = np.shape(array_in)
