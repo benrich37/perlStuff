@@ -456,7 +456,8 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
         if ddec6:
             log_fn(f"Running DDEC6 analysis in {ion_dir}")
             run_ddec6(ion_dir)
-    elif not ope(opj(ion_dir))
+    elif not ope(opj(ion_dir)):
+        log_fn("Unfinished section - I forget what this was supposed to do")
 
 
 
