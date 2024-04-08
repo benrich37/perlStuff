@@ -1,7 +1,7 @@
 import os
 from os.path import exists as ope, join as opj, isdir
 from os import mkdir, listdir
-from ase.io import read, write
+from ase.io import read, write as _write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from ase.units import Hartree
@@ -132,6 +132,12 @@ def read_bias_scan_inputs(fname ="bias_scan_input"):
     brange = get_mu_range(bmin, bmax, bsteps, brefval, bscale)
     init_bias = get_init_bias(init_bias, brefval, bscale)
     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, save_state, pseudoset, ddec6, brange, init_pzc, init_bias, init_ion_opt, init_lat_opt
+
+
+def write(fname, _atoms, format="vasp"):
+    atoms = _atoms.copy()
+    atoms.pbc = [True,True,True]
+    _write(fname, atoms, format=format)
 
 
 def get_init_bias(init_bias, bref, bscale):
@@ -435,7 +441,7 @@ def get_ref_dir(mu_eval, murange, stepdirs, completed_bools, init_dir, log_fn=lo
 def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
     ref_dir_calc_dir = opj(ref_dir, "ion_opt")
     atoms = get_atoms_from_out(opj(ref_dir_calc_dir, "out"))
-    atoms.pbc = True in pbc
+    atoms.pbc = pbc
     write(opj(step_dir, "POSCAR.gjf"), atoms, format="gaussian-in")
     ion_dir = define_dir(step_dir, "ion_opt")
     if not is_finished(ion_dir):
