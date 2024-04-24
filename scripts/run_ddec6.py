@@ -251,6 +251,7 @@ def get_normed_d(d, atoms, outfile, pbc, S, _S):
     return d_new
 
 def get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S):
+    pbc = [True, True, True] # Override in accordance to how density XSF is written
     tot_zval = get_target_tot_zval(atoms, outfile)
     # pix_vol = atoms.get_volume() / (np.prod(np.shape(d_up)) * (Bohr ** 3))
     pix_vol = atoms.get_volume() / (np.prod(_S) * (Bohr ** 3))
