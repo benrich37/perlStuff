@@ -714,6 +714,7 @@ exe_key = "DDEC6_EXE_PATH"
 
 
 def main(calc_dir=None, pbc=None):
+    pbc = [True, True, True] # override
     if calc_dir is None:
         calc_dir = getcwd()
     a_d_env_path = None
