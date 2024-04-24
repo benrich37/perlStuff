@@ -125,7 +125,7 @@ def write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_f
     for i in range(3):
         d_up, S = add_redun_layer(d_up, i)
         d_dn, S = add_redun_layer(d_dn, i)
-    d_up, d_dn = get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S)
+    # d_up, d_dn = get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S)
     write_xsf(calc_dir, atoms, S, d_up, d_dn=d_dn, data_fname=data_fname)
     write_job_control(calc_dir, atoms, f"{data_fname}.XSF", outfile, pbc, a_d_path)
 
@@ -714,7 +714,7 @@ exe_key = "DDEC6_EXE_PATH"
 
 
 def main(calc_dir=None, pbc=None):
-    pbc = [True, True, True] # override
+    # pbc = [True, True, True] # override
     if calc_dir is None:
         calc_dir = getcwd()
     a_d_env_path = None
