@@ -252,7 +252,8 @@ def get_normed_d(d, atoms, outfile, pbc, S, _S):
 
 def get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S):
     tot_zval = get_target_tot_zval(atoms, outfile)
-    pix_vol = atoms.get_volume() / (np.prod(np.shape(d_up)) * (Bohr ** 3))
+    # pix_vol = atoms.get_volume() / (np.prod(np.shape(d_up)) * (Bohr ** 3))
+    pix_vol = atoms.get_volume() / (np.prod(_S) * (Bohr ** 3))
     sum_d_up = sum_d_periodic_grid(d_up, pbc)
     sum_d_dn = sum_d_periodic_grid(d_dn, pbc)
     sum_d = sum_d_up + sum_d_dn
