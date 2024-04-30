@@ -350,7 +350,6 @@ def main():
     exe_cmd = get_exe_cmd(gpu, opt_log)
     print("d1")
     cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=opt_log)
-    print("d2")
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
     atoms = read(structure, format="vasp")
     atoms.pbc = pbc
