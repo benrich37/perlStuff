@@ -516,10 +516,10 @@ def bias_to_mu(bias_str, v0 = 4.66):
 
 def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, pbc=None, bias=0.0):
     input_cmds = jdftx_calc_params
-    print("d2")
-    print(input_cmds)
     if input_cmds["elec-n-bands"] == "*":
+        print("d2")
         nbands = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
+        print("d3")
         log_fn(f"Default nbands for {ref_struct} set to {nbands}")
         input_cmds["elec-n-bands"] = nbands
     if input_cmds["kpoint-folding"] == "*":
