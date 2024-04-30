@@ -282,6 +282,8 @@ def get_zval(el, ps_set):
     fs = listdir(ps_dir)
     file = None
     for f in fs:
+        print("d4")
+        print(f)
         if f.split(".")[1].lower() == "upf":
             _el = f.split(".")[0].lower()
             if "_" in _el:
@@ -291,8 +293,6 @@ def get_zval(el, ps_set):
                 break
             else:
                 continue
-    print("d4")
-    print(file)
     with open(opj(ps_dir, file), "r") as f:
         for line in f:
             if "z_valence" in line.lower():
