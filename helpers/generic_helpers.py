@@ -311,15 +311,14 @@ def get_kfolding(poscar_fname, kpt_density=24):
 def get_nbands(poscar_fname, pseudoSet="GBRV"):
     atoms = read(poscar_fname)
     count_dict = {}
-    print("d3")
-    print(poscar_fname)
     for a in atoms.get_chemical_symbols():
         if a.lower() not in count_dict.keys():
             count_dict[a.lower()] = 0
         count_dict[a.lower()] += 1
-        print("d4")
     nval = 0
     for a in count_dict.keys():
+        print("d3")
+        print(a)
         val = get_zval(a, pseudoSet)
         count = count_dict[a]
         nval += int(val) * int(count)
