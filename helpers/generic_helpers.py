@@ -282,8 +282,6 @@ def get_zval(el, ps_set):
     fs = listdir(ps_dir)
     file = None
     for f in fs:
-        print("d4")
-        print(f)
         if "." in f:
             if f.split(".")[1].lower() == "upf":
                 _el = f.split(".")[0].lower()
@@ -320,8 +318,6 @@ def get_nbands(poscar_fname, pseudoSet="GBRV"):
         count_dict[a.lower()] += 1
     nval = 0
     for a in count_dict.keys():
-        print("d3")
-        print(a)
         val = get_zval(a, pseudoSet)
         count = count_dict[a]
         nval += int(val) * int(count)
@@ -522,7 +518,6 @@ def bias_to_mu(bias_str, v0 = 4.66):
 def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, pbc=None, bias=0.0):
     input_cmds = jdftx_calc_params
     if input_cmds["elec-n-bands"] == "*":
-        print("d2")
         nbands = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
         log_fn(f"Default nbands for {ref_struct} set to {nbands}")
         input_cmds["elec-n-bands"] = nbands
