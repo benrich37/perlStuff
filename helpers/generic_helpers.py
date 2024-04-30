@@ -291,6 +291,8 @@ def get_zval(el, ps_set):
                 break
             else:
                 continue
+    print("d4")
+    print(file)
     with open(opj(ps_dir, file), "r") as f:
         for line in f:
             if "z_valence" in line.lower():
