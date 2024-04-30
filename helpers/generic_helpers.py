@@ -311,10 +311,13 @@ def get_kfolding(poscar_fname, kpt_density=24):
 def get_nbands(poscar_fname, pseudoSet="GBRV"):
     atoms = read(poscar_fname)
     count_dict = {}
+    print("d3")
+    print(poscar_fname)
     for a in atoms.get_chemical_symbols():
         if a.lower() not in count_dict.keys():
             count_dict[a.lower()] = 0
         count_dict[a.lower()] += 1
+        print("d4")
     nval = 0
     for a in count_dict.keys():
         val = get_zval(a, pseudoSet)
@@ -519,7 +522,6 @@ def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, 
     if input_cmds["elec-n-bands"] == "*":
         print("d2")
         nbands = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
-        print("d3")
         log_fn(f"Default nbands for {ref_struct} set to {nbands}")
         input_cmds["elec-n-bands"] = nbands
     if input_cmds["kpoint-folding"] == "*":
