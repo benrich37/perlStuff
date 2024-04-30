@@ -554,12 +554,11 @@ def get_cmds_list(work_dir, ref_struct=None, log_fn=log_def):
 
 def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None):
     chdir(work_dir)
-    print("d2")
-    print(work_dir)
     if not ope(opj(work_dir, "inputs")):
         if ope(opj(work_dir, "in")):
             return dup_cmds_list(opj(work_dir, "in"))
         else:
+            print("d2")
             dump_default_inputs(work_dir, ref_struct, log_fn=log_fn, pbc=pbc, bias=bias)
             msg = "No inputs or in file found - dumping template inputs"
             log_and_abort(msg, log_fn)
