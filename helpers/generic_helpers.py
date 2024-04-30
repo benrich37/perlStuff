@@ -516,6 +516,8 @@ def bias_to_mu(bias_str, v0 = 4.66):
 
 def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, pbc=None, bias=0.0):
     input_cmds = jdftx_calc_params
+    print("d2")
+    print(input_cmds)
     if input_cmds["elec-n-bands"] == "*":
         nbands = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
         log_fn(f"Default nbands for {ref_struct} set to {nbands}")
@@ -558,7 +560,6 @@ def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None)
         if ope(opj(work_dir, "in")):
             return dup_cmds_list(opj(work_dir, "in"))
         else:
-            print("d2")
             dump_default_inputs(work_dir, ref_struct, log_fn=log_fn, pbc=pbc, bias=bias)
             msg = "No inputs or in file found - dumping template inputs"
             log_and_abort(msg, log_fn)
