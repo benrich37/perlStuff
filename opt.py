@@ -348,7 +348,9 @@ def main():
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft)
     exe_cmd = get_exe_cmd(gpu, opt_log)
+    print("d1")
     cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=opt_log)
+    print("d2")
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
     atoms = read(structure, format="vasp")
     atoms.pbc = pbc
