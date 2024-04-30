@@ -284,15 +284,16 @@ def get_zval(el, ps_set):
     for f in fs:
         print("d4")
         print(f)
-        if f.split(".")[1].lower() == "upf":
-            _el = f.split(".")[0].lower()
-            if "_" in _el:
-                _el = _el.split("_")[0]
-            if el.lower() == _el:
-                file = f
-                break
-            else:
-                continue
+        if "." in f:
+            if f.split(".")[1].lower() == "upf":
+                _el = f.split(".")[0].lower()
+                if "_" in _el:
+                    _el = _el.split("_")[0]
+                if el.lower() == _el:
+                    file = f
+                    break
+                else:
+                    continue
     with open(opj(ps_dir, file), "r") as f:
         for line in f:
             if "z_valence" in line.lower():
