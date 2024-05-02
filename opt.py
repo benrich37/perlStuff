@@ -361,7 +361,7 @@ def main():
         ion_cmds = add_elec_density_dump(ion_cmds)
     opt_log(f"Setting {structure} to atoms object")
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
-    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
+    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log, direct_coords=True)
     get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
     do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
