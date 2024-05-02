@@ -26,7 +26,7 @@ def replaceVariable(var, varName):
 class JDFTx(Calculator):
 
         def __init__(self, executable=None, pseudoDir=None, pseudoSet='GBRV', commands=None, outfile=None,
-                     ionic_steps = False, ignoreStress=True):
+                     ionic_steps = False, ignoreStress=True, direct_coords=False):
                 #Valid pseudopotential sets (mapping to path and suffix):
                 pseudoSetMap = {
                         'SG15' : 'SG15/$ID_ONCV_PBE.upf',
@@ -38,7 +38,7 @@ class JDFTx(Calculator):
                         'kjpaw': 'kjpaw/$ID_pbe-n-kjpaw_psl.1.0.0.upf',
                         'dojo': 'dojo/$ID.upf',
                 }
-
+                self.direct = direct_coords
                 #Get default values from environment:
                 self.executable = replaceVariable(executable, 'JDFTx')      #Path to the jdftx executable (cpu or gpu)
                 self.pseudoDir = replaceVariable(pseudoDir, 'JDFTx_pseudo') #Path to the pseudopotentials folder
@@ -285,20 +285,24 @@ class JDFTx(Calculator):
                         inputfile += vc + '\n'
 
                 # Add ion info
-                atomPos = [x / Bohr for x in list(atoms.get_positions())]  # Also convert to bohr
                 atomNames = atoms.get_chemical_symbols()   # Get element names in a list
                 try:
                     fixed_atom_inds = atoms.constraints[0].get_indices()
                 except:
                     fixed_atom_inds = []
                 fixPos = []
-                for i in range(len(atomPos)):
+                for i in range(len(atomNames)):
                     if i in fixed_atom_inds:
                         fixPos.append(0)
                     else:
                         fixPos.append(1)
-                inputfile += '\ncoords-type cartesian\n'
-                for i in range(len(atomPos)):
+                if self.direct:
+                        atomsPos = [x for x in list(atoms.get_scaled_positions())]
+                        inputfile += '\ncoords-type lattice\n'
+                else:
+                        atomPos = [x / Bohr for x in list(atoms.get_positions())]  # Also convert to bohr
+                        inputfile += '\ncoords-type cartesian\n'
+                for i in range(len(atomNames)):
                         inputfile += 'ion %s %f %f %f \t %i\n' % (atomNames[i], atomPos[i][0], atomPos[i][1], atomPos[i][2], fixPos[i])
                 del i
 
