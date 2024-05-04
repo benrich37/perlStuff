@@ -35,80 +35,160 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "opt program: jdft # Which program to use for ionic optimization, options are 'jdft' and 'ase'",
                 "freeze base: False # Whether to freeze lower atoms (don't use for bulk calcs)",
                 "freeze tol: 3. # Distance from topmost atom to impose freeze cutoff for freeze base",
+                "freeze count: 0 # freeze the lowest n atoms - overrides freeze tol if greater than 0"
                 "pseudoset: GBRV # directory name containing pseudopotentials you wish to use (top directory must be assigned to 'JDFTx_pseudo' environmental variable)",
                 "bias: 0.00V # Bias relative to SHE (is only used if 'target-mu *' in inputs file",
-                "ddec6: True # Dump Elec Density and perform DDEC6 analysis on it",
-                "#set mass: 3 2.014 # Sets the mass of the 4th atom "]
+                "ddec6: True # Dump Elec Density and perform DDEC6 analysis on it"]
+
+
+# def read_opt_inputs(fname = "opt_input"):
+#     work_dir = None
+#     structure = None
+#     if not ope(fname):
+#         dump_template_input(fname, opt_template, os.getcwd())
+#         raise ValueError(f"No opt input supplied: dumping template {fname}")
+#     inputs = get_inputs_list(fname, auto_lower=False)
+#     fmax = 0.01
+#     max_steps = 100
+#     gpu = True
+#     restart = False
+#     pbc = [True, True, False]
+#     lat_iters = 0
+#     use_jdft = True
+#     freeze_base = False
+#     freeze_tol = 3.
+#     save_state = False
+#     ortho = True
+#     pseudoset = "GBRV"
+#     bias = 0.0
+#     ddec6 = True
+#     freeze_count = 0
+#     for input in inputs:
+#         key, val = input[0], input[1]
+#         if "pseudo" in key:
+#             pseudoset = val.strip()
+#         if "structure" in key:
+#             structure = val.strip()
+#         if "work" in key:
+#             work_dir = val
+#         if "gpu" in key:
+#             gpu = "true" in val.lower()
+#         if "restart" in key:
+#             restart = "true" in val.lower()
+#         if "max" in key:
+#             if "fmax" in key:
+#                 fmax = float(val)
+#             elif "step" in key:
+#                 max_steps = int(val)
+#         if "pbc" in key:
+#             pbc = read_pbc_val(val)
+#         if "lat" in key:
+#             try:
+#                 n_iters = int(val)
+#                 lat_iters = n_iters
+#             except:
+#                 pass
+#         if ("opt" in key) and ("progr" in key):
+#             if "jdft" in val:
+#                 use_jdft = True
+#             if "ase" in val:
+#                 use_jdft = False
+#             else:
+#                 pass
+#         if ("freeze" in key):
+#             if ("base" in key):
+#                 freeze_base = "true" in val.lower()
+#             elif ("tol" in key):
+#                 freeze_tol = float(val)
+#             elif ("count" in key):
+#                 freeze_count = int(val)
+#         if ("ortho" in key):
+#             ortho = "true" in val.lower()
+#         if ("save" in key) and ("state" in key):
+#             save_state = "true" in val.lower()
+#         if "bias" in key:
+#             bias = float(val.strip().rstrip("V"))
+#         if "ddec6" in key:
+#             ddec6 = "true" in val.lower()
+#     work_dir = fix_work_dir(work_dir)
+#     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, bias, ddec6, freeze_count
+
 
 
 def read_opt_inputs(fname = "opt_input"):
-    work_dir = None
-    structure = None
     if not ope(fname):
         dump_template_input(fname, opt_template, os.getcwd())
         raise ValueError(f"No opt input supplied: dumping template {fname}")
     inputs = get_inputs_list(fname, auto_lower=False)
-    fmax = 0.01
-    max_steps = 100
-    gpu = True
-    restart = False
-    pbc = [True, True, False]
-    lat_iters = 0
-    use_jdft = True
-    freeze_base = False
-    freeze_tol = 3.
-    save_state = False
-    ortho = True
-    pseudoset = "GBRV"
-    bias = 0.0
-    ddec6 = True
+    opt_inputs_dict = {
+        "work_dir": None,
+        "structure": None,
+        "fmax": 0.01,
+        "max_steps": 100,
+        "gpu": True,
+        "restart": False,
+        "pbc": [True, True, False],
+        "lat_iters": 0,
+        "use_jdft": True,
+        "freeze_base": False,
+        "freeze_tol": 3.,
+        "ortho": True,
+        "save_state": False,
+        "pseudoSet": "GBRV",
+        "bias": 0.0,
+        "ddec6": True,
+        "freeze_count": 0,
+    }
     for input in inputs:
         key, val = input[0], input[1]
         if "pseudo" in key:
-            pseudoset = val.strip()
+            opt_inputs_dict["pseudoSet"] = val.strip()
         if "structure" in key:
-            structure = val.strip()
+            opt_inputs_dict["structure"] = val.strip()
         if "work" in key:
-            work_dir = val
+            opt_inputs_dict["work_dir"] = val
         if "gpu" in key:
-            gpu = "true" in val.lower()
+            opt_inputs_dict["gpu"] = "true" in val.lower()
         if "restart" in key:
-            restart = "true" in val.lower()
+            opt_inputs_dict["restart"] = "true" in val.lower()
         if "max" in key:
             if "fmax" in key:
-                fmax = float(val)
+                opt_inputs_dict["fmax"] = float(val)
             elif "step" in key:
-                max_steps = int(val)
+                opt_inputs_dict["max_steps"] = int(val)
         if "pbc" in key:
-            pbc = read_pbc_val(val)
+            opt_inputs_dict["pbc"] = read_pbc_val(val)
         if "lat" in key:
             try:
-                n_iters = int(val)
-                lat_iters = n_iters
+                opt_inputs_dict["n_iters"] = int(val)
+                opt_inputs_dict["lat_iters"] = opt_inputs_dict["n_iters"]
             except:
                 pass
         if ("opt" in key) and ("progr" in key):
             if "jdft" in val:
-                use_jdft = True
+                opt_inputs_dict["use_jdft"] = True
             if "ase" in val:
-                use_jdft = False
+                opt_inputs_dict["use_jdft"] = False
             else:
                 pass
         if ("freeze" in key):
             if ("base" in key):
-                freeze_base = "true" in val.lower()
+                opt_inputs_dict["freeze_base"] = "true" in val.lower()
             elif ("tol" in key):
-                freeze_tol = float(val)
+                opt_inputs_dict["freeze_tol"] = float(val)
+            elif ("count" in key):
+                opt_inputs_dict["freeze_count"] = int(val)
         if ("ortho" in key):
-            ortho = "true" in val.lower()
+            opt_inputs_dict["ortho"] = "true" in val.lower()
         if ("save" in key) and ("state" in key):
-            save_state = "true" in val.lower()
+            opt_inputs_dict["save_state"] = "true" in val.lower()
         if "bias" in key:
-            bias = float(val.strip().rstrip("V"))
+            opt_inputs_dict["bias"] = float(val.strip().rstrip("V"))
         if "ddec6" in key:
-            ddec6 = "true" in val.lower()
-    work_dir = fix_work_dir(work_dir)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, bias, ddec6
+            opt_inputs_dict["ddec6"] = "true" in val.lower()
+    opt_inputs_dict["work_dir"] = fix_work_dir(opt_inputs_dict["work_dir"])
+    return opt_inputs_dict
+    # return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, bias, ddec6, freeze_count
 
 
 def finished(dirname):
@@ -339,7 +419,24 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
+    # work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
+    oid = read_opt_inputs()
+    work_dir = oid["work_dir"]
+    structure = oid["structure"]
+    restart = oid["restart"]
+    lat_iters = oid["lat_iters"]
+    use_jdft = oid["use_jdft"]
+    gpu = oid["gpu"]
+    pbc = oid["pbc"]
+    bias = oid["bias"]
+    ortho = oid["ortho"]
+    max_steps = oid["max_steps"]
+    ddec6 = oid["ddec6"]
+    pseudoSet = oid["pseudoSet"]
+    freeze_base = oid["freeze_base"]
+    freeze_tol = oid["freeze_tol"]
+    freeze_count = oid["freeze_count"]
+    fmax = oid["fmax"]
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
     lat_dir = opj(work_dir, "lat_opt")
