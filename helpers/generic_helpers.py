@@ -595,7 +595,8 @@ def add_constraint(atoms, constraint, log_fn=log_def):
         consts.append(constraint)
         atoms.set_constraint(consts)
 
-def get_freeze_surf_base_constraint(atoms, ztol = 3., log_fn=log_def):
+
+def get_freeze_surf_base_constraint_by_dist(atoms, ztol = 3., log_fn=log_def):
     direct_posns = np.dot(atoms.positions, np.linalg.inv(atoms.cell))
     for i in range(3):
         direct_posns[:, i] *= np.linalg.norm(atoms.cell[i])
@@ -606,13 +607,37 @@ def get_freeze_surf_base_constraint(atoms, ztol = 3., log_fn=log_def):
     for i, m in enumerate(mask):
         if m:
             log_str += f"{get_atom_str(atoms, i)}, "
-    log_fn(f"freezing {log_fn}")
-    c = FixAtoms(mask = mask)
+    log_fn(f"freezing {log_str}")
+    c = FixAtoms(mask=mask)
     return c
 
-def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0, log_fn=log_def):
+def get_freeze_surf_base_constraint_by_count(atoms, freeze_count=1, log_fn=log_def):
+    direct_posns = atoms.get_scaled_coordinates()
+    idcs = np.argsort(direct_posns[:,2])
+    mask = []
+    for a in atoms:
+        mask.append(False)
+    for i in range(freeze_count):
+        mask[idcs[i]] = True
+    log_fn(f"Imposing atom freezing for bottom {freeze_count} atoms")
+    log_str = ""
+    for i, m in enumerate(mask):
+        if m:
+            log_str += f"{get_atom_str(atoms, i)}, "
+    log_fn(f"freezing {log_str}")
+    c = FixAtoms(mask=mask)
+    return c
+
+
+def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, log_fn=log_def):
+    if freeze_count > 0:
+        return get_freeze_surf_base_constraint_by_count(atoms, freeze_count=freeze_count, log_fn=log_fn)
+    else:
+        return get_freeze_surf_base_constraint_by_dist(atoms, ztol = ztol, log_fn=log_fn)
+
+def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0, freeze_count = 0, log_fn=log_def):
     if freeze_base:
-        c = get_freeze_surf_base_constraint(atoms, ztol=ztol, log_fn=log_fn)
+        c = get_freeze_surf_base_constraint(atoms, ztol=ztol, freeze_count = freeze_count, log_fn=log_fn)
         add_constraint(atoms, c)
 
 
