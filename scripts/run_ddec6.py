@@ -75,7 +75,7 @@ def get_pbc(calc_dir):
 
 
 
-def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddnfname="n_dn", data_fname="density", pbc=None, a_d_path=None, max_space=None):
+def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddnfname="n_dn", data_fname="density", pbc=None, a_d_path=None, max_space=None, norm_density=False, offset=0):
     """
     :param calc_dir: Path to directory containing calc output files needed for ddec6
     :param outname: file name for out file
@@ -86,6 +86,7 @@ def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddn
     :param pbc: List of bools indicating axes which using periodic boundary conition
     :param a_d_path: Path to atomic_densities directory
     :param max_space: Max spacing (in A) between adjacent points on density grid (density grid adjusted via linear interpolation)
+    :param norm_density: Normalize to expected electron count
     :return:
     """
     if pbc is None:
@@ -99,7 +100,7 @@ def write_ddec6_inputs(calc_dir, outname="out", dfname="n", dupfname="n_up", ddn
     elif not ope(opj(calc_dir, dupfname)):
         raise ValueError("Could not find electron density files")
     if non_col:
-        write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_fname, a_d_path, max_space)
+        write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_fname, a_d_path, max_space, norm_density=norm_density, offset=offset)
     else:
         write_ddec6_inputs_col(calc_dir, outfile, dfname, pbc, data_fname, a_d_path, max_space)
 
@@ -115,7 +116,7 @@ def write_ddec6_inputs_col(calc_dir, outfile, dfname, pbc, data_fname, a_d_path,
     write_xsf(calc_dir, atoms, S, d, data_fname=data_fname)
     write_job_control(calc_dir, atoms, f"{data_fname}.XSF", outfile, pbc, a_d_path)
 
-def write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_fname, a_d_path, max_space):
+def write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_fname, a_d_path, max_space, norm_density=False, offset=0):
     atoms = get_atoms(calc_dir)
     _S = get_density_shape(outfile)
     d_up, d_dn = get_density_arrays(calc_dir, _S, dupfname, ddnfname)
@@ -125,7 +126,8 @@ def write_ddec6_inputs_noncol(calc_dir, outfile, dupfname, ddnfname, pbc, data_f
     for i in range(3):
         d_up, S = add_redun_layer(d_up, i)
         d_dn, S = add_redun_layer(d_dn, i)
-    # d_up, d_dn = get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S)
+    if norm_density:
+        d_up, d_dn = get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S, offset_count=offset)
     write_xsf(calc_dir, atoms, S, d_up, d_dn=d_dn, data_fname=data_fname)
     write_job_control(calc_dir, atoms, f"{data_fname}.XSF", outfile, pbc, a_d_path)
 
@@ -179,8 +181,8 @@ def get_density_arrays(calc_dir, S, dupfname, ddnfname):
         np.fromfile(opj(calc_dir, ddnfname))
     ]
     for i, d_arr in enumerate(d_arrs):
-        # for j, v in enumerate(d_arr):
-        #     d_arr[j] = max(v, float(0))
+        for j, v in enumerate(d_arr):
+            d_arr[j] = max(v, float(0))
         d_arrs[i] = d_arrs[i].reshape(S)
     return d_arrs
 
@@ -250,9 +252,9 @@ def get_normed_d(d, atoms, outfile, pbc, S, _S):
     d_new = (d*tot_zval/(pix_vol*sum_d*(np.prod(S)/np.prod(_S))))
     return d_new
 
-def get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S):
+def get_normed_ds(d_up, d_dn, atoms, outfile, pbc, S, _S, offset_count=0):
     pbc = [True, True, True] # Override in accordance to how density XSF is written
-    tot_zval = get_target_tot_zval(atoms, outfile)
+    tot_zval = get_target_tot_zval(atoms, outfile) + offset_count
     # pix_vol = atoms.get_volume() / (np.prod(np.shape(d_up)) * (Bohr ** 3))
     pix_vol = atoms.get_volume() / (np.prod(_S) * (Bohr ** 3))
     sum_d_up = sum_d_periodic_grid(d_up, pbc)
@@ -709,6 +711,66 @@ def make_primcoord_str(atoms):
 #
 ########################################
 
+def ran_successfully(calc_dir):
+    return ope(opj(calc_dir, "DDEC6_even_tempered_net_atomic_charges.xyz"))
+
+
+def run_ddec6_runner(calc_dir, a_d_env_path, pbc, exe_env_path, norm=False, offset=0):
+    write_ddec6_inputs(calc_dir, max_space=None, a_d_path=a_d_env_path, pbc=pbc, norm_density=norm, offset=offset)
+    run_ddec6(calc_dir, _exe_path=exe_env_path)
+
+
+def get_ddec6_output_nvalence(density_output):
+    key = "nvalence ="
+    with open(density_output, "r") as f:
+        for line in f:
+            if key in line:
+                val = float(line.split("=")[1].strip())
+                return val
+
+def get_ddec6_output_integ_valence(density_output):
+    key = "numerically integrated valence density ="
+    with open(density_output, "r") as f:
+        for line in f:
+            if key in line:
+                val = float(line.split("=")[1].strip())
+                return val
+
+
+def get_checkme(calc_dir):
+    density_output = opj(calc_dir, "density.output")
+    nvalance = get_ddec6_output_nvalence(density_output)
+    integrated = get_ddec6_output_integ_valence(density_output)
+    checkme = integrated - nvalance
+    return checkme
+
+
+def adjust_offset(offset, calc_dir):
+    checkme = get_checkme(calc_dir)
+    offset -= checkme
+    return offset
+
+
+def run_ddec6_looper(calc_dir, a_d_env_path, pbc, exe_env_path):
+    success = False
+    run_ddec6_runner(calc_dir, a_d_env_path, pbc, exe_env_path)
+    success = ran_successfully(calc_dir)
+    if success:
+        return None
+    else:
+        offset = 0
+        print(f"Run without norm unsuccessful. Attempting with norm offset by {offset}")
+        for i in range(3):
+            run_ddec6_runner(calc_dir, a_d_env_path, pbc, exe_env_path, norm=True, offset=offset)
+            success = ran_successfully(calc_dir)
+            if success:
+                return None
+            else:
+                print(f"Run unsuccessful. Attempting with norm offset by {offset}")
+                offset = adjust_offset(offset, calc_dir)
+
+
+
 a_d_key = "DDEC6_AD_PATH"
 exe_key = "DDEC6_EXE_PATH"
 
@@ -725,8 +787,8 @@ def main(calc_dir=None, pbc=None):
         exe_env_path = environ[exe_key]
     # If your fftbox is too coarse, adding max_space=0.1 can force ddec6 to work with a linear interpolation onto
     # a finer density grid.
-    write_ddec6_inputs(calc_dir , max_space=None, a_d_path=a_d_env_path, pbc=pbc)
-    run_ddec6(calc_dir, _exe_path=exe_env_path)
+    run_ddec6_looper(calc_dir, a_d_env_path, pbc, exe_env_path)
+
 
 if __name__ == "__main__":
     main()
