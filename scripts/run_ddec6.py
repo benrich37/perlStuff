@@ -741,6 +741,8 @@ def get_checkme(calc_dir):
     density_output = opj(calc_dir, "density.output")
     nvalance = get_ddec6_output_nvalence(density_output)
     integrated = get_ddec6_output_integ_valence(density_output)
+    print(f"nval: {nvalance}")
+    print(f"integ: {integrated}")
     checkme = integrated - nvalance
     return checkme
 
