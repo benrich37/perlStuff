@@ -768,8 +768,10 @@ def run_ddec6_looper(calc_dir, a_d_env_path, pbc, exe_env_path):
             if success:
                 return None
             else:
-                print(f"Run unsuccessful. Attempting with norm offset by {offset}")
+                print(f"Run unsuccessful with offset={offset}. Re-evaluating offset")
                 offset = adjust_offset(offset, calc_dir)
+                print(f"Rerunning with offset={offset}")
+
 
 
 
