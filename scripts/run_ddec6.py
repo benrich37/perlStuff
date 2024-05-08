@@ -179,8 +179,8 @@ def get_density_arrays(calc_dir, S, dupfname, ddnfname):
         np.fromfile(opj(calc_dir, ddnfname))
     ]
     for i, d_arr in enumerate(d_arrs):
-        for j, v in enumerate(d_arr):
-            d_arr[j] = max(v, float(0))
+        # for j, v in enumerate(d_arr):
+        #     d_arr[j] = max(v, float(0))
         d_arrs[i] = d_arrs[i].reshape(S)
     return d_arrs
 
