@@ -612,7 +612,7 @@ def get_freeze_surf_base_constraint_by_dist(atoms, ztol = 3., log_fn=log_def):
     return c
 
 def get_freeze_surf_base_constraint_by_count(atoms, freeze_count=1, log_fn=log_def):
-    direct_posns = atoms.get_scaled_coordinates()
+    direct_posns = atoms.get_scaled_positions()
     idcs = np.argsort(direct_posns[:,2])
     mask = []
     for a in atoms:
