@@ -266,8 +266,11 @@ class JDFTx(Calculator):
                 fp.close()
                 #Run jdftx:
                 shell('cd %s && %s -i in -o out' % (self.runDir, self.executable))
+                print("reading energy")
                 self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
+                print("reading forces")
                 self.Forces = self.__readForces('%s/force' % (self.runDir))
+                print("reading charges")
                 self.Charges = self.__readCharges('%s/out' % (self.runDir))
 
         def constructInput(self, atoms):
