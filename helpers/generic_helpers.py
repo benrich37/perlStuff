@@ -1202,76 +1202,6 @@ def check_structure(structure, work, log_fn=log_def):
     return structure
 
 
-
-# def get_atoms_list_from_out(outfile):
-#     start = get_start_line(outfile)
-#     charge_key = "oxidation-state"
-#     opts = []
-#     nAtoms = None
-#     R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
-#         new_posn, log_vars, E, charges = get_atoms_list_from_out_reset_vars()
-#     for i, line in enumerate(open(outfile)):
-#         if i > start:
-#             if new_posn:
-#                 if "Lowdin population analysis " in line:
-#                     active_lowdin = True
-#                 if "R =" in line:
-#                     active_lattice = True
-#                 elif line.find('# Ionic positions in') >= 0:
-#                     coords = line.split()[4]
-#                     active_posns = True
-#                 elif active_lattice:
-#                     if lat_row < 3:
-#                         R[lat_row, :] = [float(x) for x in line.split()[1:-1]]
-#                         lat_row += 1
-#                     else:
-#                         active_lattice = False
-#                         lat_row = 0
-#                 elif active_posns:
-#                     tokens = line.split()
-#                     if len(tokens) and tokens[0] == 'ion':
-#                         names.append(tokens[1])
-#                         posns.append(np.array([float(tokens[2]), float(tokens[3]), float(tokens[4])]))
-#                         if tokens[1] not in idxMap:
-#                                 idxMap[tokens[1]] = []
-#                         idxMap[tokens[1]].append(j)
-#                         j += 1
-#                     else:
-#                         posns=np.array(posns)
-#                         active_posns = False
-#                         nAtoms = len(names)
-#                         if len(charges) < nAtoms:
-#                             charges=np.zeros(nAtoms)
-#                 elif "Minimize: Iter:" in line:
-#                     if "F: " in line:
-#                         E = float(line[line.index("F: "):].split(' ')[1])
-#                     elif "G: " in line:
-#                         E = float(line[line.index("G: "):].split(' ')[1])
-#                 elif active_lowdin:
-#                     if charge_key in line:
-#                         look = line.rstrip('\n')[line.index(charge_key):].split(' ')
-#                         symbol = str(look[1])
-#                         line_charges = [float(val) for val in look[2:]]
-#                         chargeDir[symbol] = line_charges
-#                         for atom in list(chargeDir.keys()):
-#                             for k, idx in enumerate(idxMap[atom]):
-#                                 charges[idx] += chargeDir[atom][k]
-#                     elif "#" not in line:
-#                         active_lowdin = False
-#                         log_vars = True
-#                 elif log_vars:
-#                     if np.sum(R) == 0.0:
-#                         R = get_input_coord_vars_from_outfile(outfile)[2]
-#                     if coords != 'cartesian':
-#                         posns = np.dot(posns, R)
-#                     opts.append(get_atoms_from_outfile_data(names, posns, R, charges=charges, E=E))
-#                     R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
-#                         new_posn, log_vars, E, charges = get_atoms_list_from_out_reset_vars(nAtoms=nAtoms)
-#             elif "Computing DFT-D3 correction:" in line:
-#                 new_posn = True
-#     return opts
-#
-
 def get_atoms_from_out(outfile):
     atoms_list = get_atoms_list_from_out(outfile)
     return atoms_list[-1]
@@ -1474,28 +1404,6 @@ def get_input_coord_vars_from_outfile(outfname, log_fn=log_def):
     if np.sum(R) == 0:
         log_and_abort("No lattice matrix found", log_fn=log_fn)
     return names, posns, R
-
-
-# def get_atoms_list_from_out_reset_vars(nAtoms=100, _def=100):
-#     R = np.zeros([3, 3])
-#     posns = []
-#     names = []
-#     chargeDir = {}
-#     active_lattice = False
-#     lat_row = 0
-#     active_posns = False
-#     log_vars = False
-#     coords = None
-#     new_posn = False
-#     active_lowdin = False
-#     idxMap = {}
-#     j = 0
-#     E = 0
-#     if nAtoms is None:
-#         nAtoms = _def
-#     charges = np.zeros(nAtoms, dtype=float)
-#     return R, posns, names, chargeDir, active_posns, active_lowdin, active_lattice, posns, coords, idxMap, j, lat_row, \
-#         new_posn, log_vars, E, charges
 
 
 def get_atoms_list_from_out_reset_vars(nAtoms=100, _def=100):

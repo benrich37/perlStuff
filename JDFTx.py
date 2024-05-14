@@ -12,9 +12,16 @@ from ase.units import Bohr, Hartree
 from os import environ as env_vars_dict
 from os.path import join as opj
 
+
+def debugging_override():
+        return env_vars_dict["debugging_jdftx_for_perl"] == "True"
+
+
+
 #Run shell command and return output as a string:
 def shell(cmd):
-        return subprocess.check_output(cmd, shell=True)
+        if not debugging_override():
+                return subprocess.check_output(cmd, shell=True)
 
 #Return var, replacing it with environment variable varName if it is None
 def replaceVariable(var, varName):
@@ -135,7 +142,8 @@ class JDFTx(Calculator):
                         return
 
                 if(not self.validCommand(cmd)):
-                        raise IOError('%s is not a valid JDFTx command!\nLook at the input file template (jdftx -t) for a list of commands.' % (cmd))
+                        if not debugging_override():
+                                raise IOError('%s is not a valid JDFTx command!\nLook at the input file template (jdftx -t) for a list of commands.' % (cmd))
                 self.input.append((cmd, v))
 
         def addDump(self, when, what):
