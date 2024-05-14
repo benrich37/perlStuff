@@ -14,7 +14,9 @@ from os.path import join as opj
 
 
 def debugging_override():
-        return env_vars_dict["debugging_jdftx_for_perl"] == "True"
+        return False
+        # return env_vars_dict["debugging_jdftx_for_perl"] == "True"
+
 
 
 
