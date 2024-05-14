@@ -41,79 +41,6 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "ddec6: True # Dump Elec Density and perform DDEC6 analysis on it"]
 
 
-# def read_opt_inputs(fname = "opt_input"):
-#     work_dir = None
-#     structure = None
-#     if not ope(fname):
-#         dump_template_input(fname, opt_template, os.getcwd())
-#         raise ValueError(f"No opt input supplied: dumping template {fname}")
-#     inputs = get_inputs_list(fname, auto_lower=False)
-#     fmax = 0.01
-#     max_steps = 100
-#     gpu = True
-#     restart = False
-#     pbc = [True, True, False]
-#     lat_iters = 0
-#     use_jdft = True
-#     freeze_base = False
-#     freeze_tol = 3.
-#     save_state = False
-#     ortho = True
-#     pseudoset = "GBRV"
-#     bias = 0.0
-#     ddec6 = True
-#     freeze_count = 0
-#     for input in inputs:
-#         key, val = input[0], input[1]
-#         if "pseudo" in key:
-#             pseudoset = val.strip()
-#         if "structure" in key:
-#             structure = val.strip()
-#         if "work" in key:
-#             work_dir = val
-#         if "gpu" in key:
-#             gpu = "true" in val.lower()
-#         if "restart" in key:
-#             restart = "true" in val.lower()
-#         if "max" in key:
-#             if "fmax" in key:
-#                 fmax = float(val)
-#             elif "step" in key:
-#                 max_steps = int(val)
-#         if "pbc" in key:
-#             pbc = read_pbc_val(val)
-#         if "lat" in key:
-#             try:
-#                 n_iters = int(val)
-#                 lat_iters = n_iters
-#             except:
-#                 pass
-#         if ("opt" in key) and ("progr" in key):
-#             if "jdft" in val:
-#                 use_jdft = True
-#             if "ase" in val:
-#                 use_jdft = False
-#             else:
-#                 pass
-#         if ("freeze" in key):
-#             if ("base" in key):
-#                 freeze_base = "true" in val.lower()
-#             elif ("tol" in key):
-#                 freeze_tol = float(val)
-#             elif ("count" in key):
-#                 freeze_count = int(val)
-#         if ("ortho" in key):
-#             ortho = "true" in val.lower()
-#         if ("save" in key) and ("state" in key):
-#             save_state = "true" in val.lower()
-#         if "bias" in key:
-#             bias = float(val.strip().rstrip("V"))
-#         if "ddec6" in key:
-#             ddec6 = "true" in val.lower()
-#     work_dir = fix_work_dir(work_dir)
-#     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoset, bias, ddec6, freeze_count
-
-
 
 def read_opt_inputs(fname = "opt_input"):
     if not ope(fname):
@@ -315,10 +242,12 @@ def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, f
 
 def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def):
     add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base,  freeze_count = freeze_count)
-    atoms_obj.set_calculator(calc_fn(ion_dir_path))
+    calculator_object = calc_fn(ion_dir_path)
+    atoms_obj.set_calculator(calculator_object)
     log_fn("ionic optimization starting")
     pbc = atoms_obj.pbc
     atoms_obj.get_forces()
+    log_fn("ionic optimization finished - organizing output data")
     outfile = opj(ion_dir_path, "out")
     if ope(outfile):
         atoms_obj_list = get_atoms_list_from_out(outfile)
