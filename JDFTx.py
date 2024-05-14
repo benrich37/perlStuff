@@ -271,7 +271,12 @@ class JDFTx(Calculator):
                 print("reading forces")
                 self.Forces = self.__readForces('%s/force' % (self.runDir))
                 print("reading charges")
-                self.Charges = self.__readCharges('%s/out' % (self.runDir))
+                try:
+                        self.Charges = self.__readCharges('%s/out' % (self.runDir))
+                except Exception as e:
+                        print("The following error arose while trying to parse the charges;")
+                        print(e)
+                        pass
 
         def constructInput(self, atoms):
                 """ Constructs a JDFTx input string using the input atoms and the input file arguments (kwargs) in self.input """
