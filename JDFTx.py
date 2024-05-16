@@ -267,8 +267,7 @@ class JDFTx(Calculator):
                 #Run jdftx:
                 shell('cd %s && %s -i in -o out' % (self.runDir, self.executable))
                 print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
-                subprocess.run("sed -i '/fluid-ex-corr/d' out", shell=True, check=True)
-                shell(f"sed -i '/fluid-ex-corr/d' {opj(self.runDir, 'out')}")
+                subprocess.run(f"sed -i '/fluid-ex-corr/d' {opj(self.runDir, 'out')}", shell=True, check=True)
                 print("reading energy")
                 self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
                 print("reading forces")
