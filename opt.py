@@ -17,6 +17,7 @@ from scripts.run_ddec6 import main as run_ddec6
 from sys import exit, stderr
 from shutil import copy as cp
 import numpy as np
+import subprocess
 
 def write(fname, _atoms, format="vasp"):
     atoms = _atoms.copy()
@@ -344,7 +345,13 @@ def make_jdft_logx(opt_dir, log_fn=log_def):
 
 
 
-
+def outfile_protect(work_dir):
+    calc_dirs = [opj(work_dir, t) for t in ["ion_opt", "lat_opt"]]
+    outfiles = [opj(c, "out") for c in calc_dirs]
+    for o in outfiles:
+        if ope(o):
+            print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
+            subprocess.run(f"sed -i '/fluid-ex-corr/d' {o}", shell=True, check=True)
 
 
 
@@ -352,6 +359,7 @@ def main():
     # work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
     oid = read_opt_inputs()
     work_dir = oid["work_dir"]
+    outfile_protect(work_dir)
     structure = oid["structure"]
     restart = oid["restart"]
     lat_iters = oid["lat_iters"]
