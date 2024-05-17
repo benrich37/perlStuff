@@ -317,7 +317,7 @@ class JDFTx(Calculator):
                     else:
                         fixPos.append(1)
                 if self.direct:
-                        atomsPos = [x for x in list(atoms.get_scaled_positions())]
+                        atomPos = [x for x in list(atoms.get_scaled_positions())]
                         inputfile += '\ncoords-type lattice\n'
                 else:
                         atomPos = [x / Bohr for x in list(atoms.get_positions())]  # Also convert to bohr
