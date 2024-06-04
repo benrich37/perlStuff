@@ -111,7 +111,18 @@ def read_opt_inputs(fname = "opt_input"):
         if ("save" in key) and ("state" in key):
             opt_inputs_dict["save_state"] = "true" in val.lower()
         if "bias" in key:
-            opt_inputs_dict["bias"] = float(val.strip().rstrip("V"))
+            v= val.strip()
+            if "V" in v:
+                v = v.rstrip("V")
+            if "none" in v.lower() or "no" in v.lower():
+                opt_inputs_dict["bias"] = None
+            else:
+                try:
+                    opt_inputs_dict["bias"] = float(v)
+                except Exception as e:
+                    print(e)
+                    print("Assigning no bias")
+                    opt_inputs_dict["bias"] = None
         if "ddec6" in key:
             opt_inputs_dict["ddec6"] = "true" in val.lower()
     opt_inputs_dict["work_dir"] = fix_work_dir(opt_inputs_dict["work_dir"])

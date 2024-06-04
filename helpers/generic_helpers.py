@@ -215,7 +215,10 @@ def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
             input_cmds[kfoldkey] = str(get_kfolding(ref_struct))
         biaskey = "target-mu"
         if biaskey in input_cmds and input_cmds[biaskey] == "*":
-            input_cmds[biaskey] = str(bias_to_mu(bias))
+            if not bias is None:
+                input_cmds[biaskey] = str(bias_to_mu(bias))
+            else:
+                del input_cmds[biaskey]
     return input_cmds
 
 def fix_dump_cmds_list(cmds):
@@ -527,7 +530,10 @@ def dump_default_inputs(work_dir, ref_struct, pseudoSet="GBRV", log_fn=log_def, 
         input_cmds["kpoint-folding"] = kfold
     if "target-mu" in input_cmds:
         if input_cmds["target-mu"] == "*":
-            input_cmds["target-mu"] = str(bias_to_mu(bias))
+            if not bias is None:
+                input_cmds["target-mu"] = str(bias_to_mu(bias))
+            else:
+                del input_cmds["target-mu"]
     inputs_str = ""
     for k in input_cmds:
         inputs_str += f"{k} {input_cmds[k]}\n"
