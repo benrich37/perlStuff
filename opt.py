@@ -364,7 +364,12 @@ def outfile_protect(work_dir):
             print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
             subprocess.run(f"sed -i '/fluid-ex-corr/d' {o}", shell=True, check=True)
 
-
+def fix_restart_bug(work_dir, restart):
+    outfile = opj(opj(work_dir, "ion_opt"), "out")
+    if restart:
+        if ope(outfile):
+            subprocess.run(f"sed -i '/fluid-ex-corr/d' {outfile}", shell=True, check=True)
+            subprocess.run(f"sed -i '/lda-PZ/d' {outfile}", shell=True, check=True)
 
 def main():
     # work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
