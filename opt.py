@@ -378,6 +378,7 @@ def main():
     outfile_protect(work_dir)
     structure = oid["structure"]
     restart = oid["restart"]
+    fix_restart_bug(work_dir, restart)
     lat_iters = oid["lat_iters"]
     use_jdft = oid["use_jdft"]
     gpu = oid["gpu"]
