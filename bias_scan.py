@@ -43,95 +43,208 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "init lat opt: False # Whether to optimize lattice alongside initialization step"]
 
 
-def read_bias_scan_inputs(fname ="bias_scan_input"):
-    work_dir = None
-    structure = None
+# def read_bias_scan_inputs(fname ="bias_scan_input"):
+#     work_dir = None
+#     structure = None
+#     if not ope(fname):
+#         dump_template_input(fname, opt_template, os.getcwd())
+#         raise ValueError(f"No bias scan input supplied: dumping template {fname}")
+#     inputs = get_inputs_list(fname, auto_lower=False)
+#     fmax = 0.01
+#     max_steps = 100
+#     gpu = True
+#     restart = False
+#     pbc = [True, True, False]
+#     lat_iters = 0
+#     freeze_base = False
+#     freeze_tol = 3.
+#     save_state = False
+#     ortho = True
+#     pseudoset = "GBRV"
+#     ddec6 = True
+#     bmin = -1
+#     bmax = 1
+#     bsteps = 10
+#     brefval = SHE_work_val_Ha
+#     bscale = "V"
+#     init_pzc = False
+#     init_bias = None
+#     init_ion_opt = True
+#     init_lat_opt = False
+#     for input in inputs:
+#         key, val = input[0], input[1]
+#         if "bmin" in key:
+#             bmin = float(val)
+#         elif "bmax" in key:
+#             bmax = float(val)
+#         elif "bstep" in key:
+#             bsteps = int(val)
+#         elif "bref" in key:
+#             brefval = read_bref_val(val)
+#         elif "init" in key:
+#             if "bias" in key:
+#                 if "pzc" in val.lower():
+#                     init_pzc = True
+#                 else:
+#                     init_bias = float(val)
+#             elif "opt" in key:
+#                 if "ion" in key:
+#                     init_ion_opt = "true" in val.lower()
+#                 elif "lat" in key:
+#                     init_lat_opt = "true" in val.lower()
+#                 else:
+#                     print(f"Error reading {key}. Currently {init_ion_opt} for init ion opt and {init_lat_opt} for init lat opt")
+#         elif "pseudo" in key:
+#             pseudoset = val.strip()
+#         elif "structure" in key:
+#             structure = val.strip()
+#         elif "work" in key:
+#             work_dir = val
+#         elif "gpu" in key:
+#             gpu = "true" in val.lower()
+#         elif "restart" in key:
+#             restart = "true" in val.lower()
+#         elif "max" in key:
+#             if "fmax" in key:
+#                 fmax = float(val)
+#             elif "step" in key:
+#                 max_steps = int(val)
+#         elif "pbc" in key:
+#             pbc = read_pbc_val(val)
+#         elif "lat" in key:
+#             try:
+#                 n_iters = int(val)
+#                 lat_iters = n_iters
+#             except:
+#                 pass
+#         elif ("freeze" in key):
+#             if ("base" in key):
+#                 freeze_base = "true" in val.lower()
+#             elif ("tol" in key):
+#                 freeze_tol = float(val)
+#         elif ("ortho" in key):
+#             ortho = "true" in val.lower()
+#         elif ("save" in key) and ("state" in key):
+#             save_state = "true" in val.lower()
+#         elif "ddec6" in key:
+#             ddec6 = "true" in val.lower()
+#     work_dir = fix_work_dir(work_dir)
+#     brange = get_mu_range(bmin, bmax, bsteps, brefval, bscale)
+#     init_bias = get_init_bias(init_bias, brefval, bscale)
+#     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, save_state, pseudoset, ddec6, brange, init_pzc, init_bias, init_ion_opt, init_lat_opt
+
+def read_bias_scan_inputs(fname = "bias_scan_input"):
     if not ope(fname):
         dump_template_input(fname, opt_template, os.getcwd())
         raise ValueError(f"No bias scan input supplied: dumping template {fname}")
     inputs = get_inputs_list(fname, auto_lower=False)
-    fmax = 0.01
-    max_steps = 100
-    gpu = True
-    restart = False
-    pbc = [True, True, False]
-    lat_iters = 0
-    freeze_base = False
-    freeze_tol = 3.
-    save_state = False
-    ortho = True
-    pseudoset = "GBRV"
-    ddec6 = True
-    bmin = -1
-    bmax = 1
-    bsteps = 10
-    brefval = SHE_work_val_Ha
-    bscale = "V"
-    init_pzc = False
-    init_bias = None
-    init_ion_opt = True
-    init_lat_opt = False
+    opt_inputs_dict = {
+        "work_dir": None,
+        "structure": None,
+        "fmax": 0.01,
+        "max_steps": 100,
+        "gpu": True,
+        "restart": False,
+        "pbc": [True, True, False],
+        "lat_iters": 0,
+        "freeze_base": False,
+        "freeze_tol": 3.,
+        "freeze_count": 0,
+        "ortho": True,
+        "save_state": False,
+        "pseudoSet": "GBRV",
+        "ddec6": True,
+        "bmin": -1,
+        "bmax": 1,
+        "bsteps": 10,
+        "brefval": SHE_work_val_Ha,
+        "bscale": "V",
+        "init_pzc": False,
+        "init_bias": None,
+        "init_ion_opt": True,
+        "init_lat_opt": False
+    }
     for input in inputs:
         key, val = input[0], input[1]
         if "bmin" in key:
-            bmin = float(val)
+            opt_inputs_dict["bmin"] = float(val)
         elif "bmax" in key:
-            bmax = float(val)
+            opt_inputs_dict["bmax"] = float(val)
         elif "bstep" in key:
-            bsteps = int(val)
+            opt_inputs_dict["bsteps"] = int(val)
         elif "bref" in key:
-            brefval = read_bref_val(val)
+            opt_inputs_dict["brefval"] = read_bref_val(val)
         elif "init" in key:
             if "bias" in key:
                 if "pzc" in val.lower():
-                    init_pzc = True
+                    opt_inputs_dict["init_pzc"] = True
                 else:
-                    init_bias = float(val)
+                    opt_inputs_dict["init_bias"] = float(val)
             elif "opt" in key:
                 if "ion" in key:
-                    init_ion_opt = "true" in val.lower()
+                    opt_inputs_dict["init_ion_opt"] = "true" in val.lower()
                 elif "lat" in key:
-                    init_lat_opt = "true" in val.lower()
+                    opt_inputs_dict["init_lat_opt"] = "true" in val.lower()
                 else:
-                    print(f"Error reading {key}. Currently {init_ion_opt} for init ion opt and {init_lat_opt} for init lat opt")
-        elif "pseudo" in key:
-            pseudoset = val.strip()
-        elif "structure" in key:
-            structure = val.strip()
-        elif "work" in key:
-            work_dir = val
-        elif "gpu" in key:
-            gpu = "true" in val.lower()
-        elif "restart" in key:
-            restart = "true" in val.lower()
-        elif "max" in key:
+                    print(f"Error reading {key}. Currently {opt_inputs_dict['init_ion_opt']} for init ion opt and {opt_inputs_dict['init_lat_opt']} for init lat opt")
+        if "pseudo" in key:
+            opt_inputs_dict["pseudoSet"] = val.strip()
+        if "structure" in key:
+            opt_inputs_dict["structure"] = val.strip()
+        if "work" in key:
+            opt_inputs_dict["work_dir"] = val
+        if "gpu" in key:
+            opt_inputs_dict["gpu"] = "true" in val.lower()
+        if "restart" in key:
+            opt_inputs_dict["restart"] = "true" in val.lower()
+        if "max" in key:
             if "fmax" in key:
-                fmax = float(val)
+                opt_inputs_dict["fmax"] = float(val)
             elif "step" in key:
-                max_steps = int(val)
-        elif "pbc" in key:
-            pbc = read_pbc_val(val)
-        elif "lat" in key:
+                opt_inputs_dict["max_steps"] = int(val)
+        if "pbc" in key:
+            opt_inputs_dict["pbc"] = read_pbc_val(val)
+        if "lat" in key:
             try:
-                n_iters = int(val)
-                lat_iters = n_iters
+                opt_inputs_dict["n_iters"] = int(val)
+                opt_inputs_dict["lat_iters"] = opt_inputs_dict["n_iters"]
             except:
                 pass
-        elif ("freeze" in key):
+        if ("opt" in key) and ("progr" in key):
+            if "jdft" in val:
+                opt_inputs_dict["use_jdft"] = True
+            if "ase" in val:
+                opt_inputs_dict["use_jdft"] = False
+            else:
+                pass
+        if ("freeze" in key):
             if ("base" in key):
-                freeze_base = "true" in val.lower()
+                opt_inputs_dict["freeze_base"] = "true" in val.lower()
             elif ("tol" in key):
-                freeze_tol = float(val)
-        elif ("ortho" in key):
-            ortho = "true" in val.lower()
-        elif ("save" in key) and ("state" in key):
-            save_state = "true" in val.lower()
-        elif "ddec6" in key:
-            ddec6 = "true" in val.lower()
-    work_dir = fix_work_dir(work_dir)
-    brange = get_mu_range(bmin, bmax, bsteps, brefval, bscale)
-    init_bias = get_init_bias(init_bias, brefval, bscale)
-    return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, save_state, pseudoset, ddec6, brange, init_pzc, init_bias, init_ion_opt, init_lat_opt
+                opt_inputs_dict["freeze_tol"] = float(val)
+            elif ("count" in key):
+                opt_inputs_dict["freeze_count"] = int(val)
+        if ("ortho" in key):
+            opt_inputs_dict["ortho"] = "true" in val.lower()
+        if ("save" in key) and ("state" in key):
+            opt_inputs_dict["save_state"] = "true" in val.lower()
+        if "bias" in key:
+            v= val.strip()
+            if "V" in v:
+                v = v.rstrip("V")
+            if "none" in v.lower() or "no" in v.lower():
+                opt_inputs_dict["bias"] = None
+            else:
+                try:
+                    opt_inputs_dict["bias"] = float(v)
+                except Exception as e:
+                    print(e)
+                    print("Assigning no bias")
+                    opt_inputs_dict["bias"] = None
+        if "ddec6" in key:
+            opt_inputs_dict["ddec6"] = "true" in val.lower()
+    opt_inputs_dict["work_dir"] = fix_work_dir(opt_inputs_dict["work_dir"])
+    return opt_inputs_dict
 
 
 def write(fname, _atoms, format="vasp"):
@@ -305,8 +418,8 @@ def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, log_fn=log_def, _faile
     return atoms, structure
 
 
-def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., log_fn=log_def):
-    add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base)
+def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def):
+    add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base, freeze_count = freeze_count)
     atoms_obj.set_calculator(calc_fn(ion_dir_path))
     log_fn("ionic optimization starting")
     pbc = atoms_obj.pbc
@@ -326,16 +439,16 @@ def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, fr
     return atoms_obj
 
 
-def run_ion_opt(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., _failed_before=False, log_fn=log_def):
+def run_ion_opt(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, _failed_before=False, log_fn=log_def):
     run_again = False
     try:
-        atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
+        atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=log_fn)
     except Exception as e:
         check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
-        atoms_obj = run_ion_opt(atoms_obj, ion_dir_path, calc_fn, _failed_before=True, log_fn=log_fn)
+        atoms_obj = run_ion_opt(atoms_obj, ion_dir_path, calc_fn, freeze_count = freeze_count, _failed_before=True, log_fn=log_fn)
     return atoms_obj
 
 def copy_result_files(opt_dir, work_dir):
@@ -372,7 +485,7 @@ def make_pzc_cmds(cmds):
     return cmds_new
 
 
-def run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoSet, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
+def run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoSet, freeze_base=False, freeze_tol=0.0, freeze_count = 0, log_fn=log_def):
     if not is_finished(init_dir):
         log_fn("Setting up initialization calc")
         if not init_pzc:
@@ -393,7 +506,7 @@ def run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_
         ion_dir = define_dir(init_dir, "ion_opt")
         get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=log_fn)
         log_fn("Running initialization calc")
-        run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, log_fn=log_fn)
+        run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=log_fn)
         log_fn("Initialization calc finished")
         finished(init_dir)
     else:
@@ -438,7 +551,7 @@ def get_ref_dir(mu_eval, murange, stepdirs, completed_bools, init_dir, log_fn=lo
                 return stepdirs[idx]
 
 
-def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
+def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, freeze_count = 0, log_fn=log_def):
     ref_dir_calc_dir = opj(ref_dir, "ion_opt")
     atoms = get_atoms_from_out(opj(ref_dir_calc_dir, "out"))
     atoms.pbc = pbc
@@ -458,7 +571,7 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
         ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
         get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoset, log_fn=log_fn)
         write(opj(ion_dir, "POSCAR.gjf"), atoms, format="gaussian-in")
-        run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_fn)
+        run_ion_opt(atoms, ion_dir, get_ion_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count = freeze_count, log_fn=log_fn)
         if ddec6:
             log_fn(f"Running DDEC6 analysis in {ion_dir}")
             run_ddec6(ion_dir)
@@ -467,7 +580,7 @@ def _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudo
 
 
 
-def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, log_fn=log_def):
+def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=False, freeze_tol=0.0, freeze_count = 0, log_fn=log_def):
     log_fn("Setting up bias scan")
     log_fn(f"Bias range is {brange} in abs Hartree")
     init_dir = opj(scan_dir, init_dir_name)
@@ -481,7 +594,7 @@ def run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset,
     for i, idx in enumerate(run_order):
         log_fn(f"Setting up scan step {idx}")
         cmds = append_key_val_to_cmds_list(cmds, "target-mu", str(brange[idx]), allow_duplicates=False)
-        scan_step_runner = lambda calc_dir, ref_dir: _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=log_fn)
+        scan_step_runner = lambda calc_dir, ref_dir: _scan_step_runner(step_dir, ref_dir, fmax, max_steps, pbc, lat_iters, pseudoset, cmds, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count = freeze_count, log_fn=log_fn)
         step_dir = step_dirs[idx]
         ref_dir = get_ref_dir(brange[idx], brange, step_dirs, completed, init_dir, log_fn=log_fn)
         log_fn(f"Running step {idx} ({step_dir})")
@@ -529,8 +642,26 @@ def check_cmds_dict(cmds_dict, max_steps, lat_steps, log_fn=log_def):
 
 
 def main():
-    work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, \
-        save_state, pseudoset, ddec6, brange, init_pzc, init_bias, init_ion_opt, init_lat_opt = read_bias_scan_inputs()
+    binp = read_bias_scan_inputs()
+    work_dir = binp["work_dir"]
+    structure = binp["structure"]
+    restart = binp["restart"]
+    gpu = binp["gpu"]
+    pbc = binp["pbc"]
+    ortho = binp["ortho"]
+    ddec6 = binp["ddec6"]
+    init_pzc= binp["init_pzc"]
+    init_bias= binp["init_bias"]
+    init_ion_opt= binp["init_ion_opt"]
+    init_lat_opt= binp["init_lat_opt"]
+    pseudoset= binp["pseudoset"]
+    freeze_base= binp["freeze_base"]
+    freeze_tol= binp["freeze_tol"]
+    freeze_count= binp["freeze_count"]
+    brange= binp["brange"]
+    fmax= binp["fmax"]
+    max_steps= binp["max_steps"]
+    lat_iters= binp["lat_iters"]
     os.chdir(work_dir)
     scan_dir = define_dir(work_dir, "bias_scan")
     init_dir = define_dir(scan_dir, init_dir_name)
@@ -548,8 +679,8 @@ def main():
         cmds = add_elec_density_dump(cmds)
     scan_log(f"overarching commands: {cmds}")
     check_submit(gpu, os.getcwd(), "bias_scan", log_fn=scan_log)
-    run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoset, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
-    run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, log_fn=scan_log)
+    run_init(init_dir, atoms, cmds, init_pzc, init_bias, init_ion_opt, init_lat_opt, pbc, exe_cmd, pseudoset, freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count = freeze_count, log_fn=scan_log)
+    run_scan(scan_dir, brange, cmds, fmax, max_steps, pbc, lat_iters, pseudoset, exe_cmd, ddec6, freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count = freeze_count, log_fn=scan_log)
     if ddec6:
         run_all_ddec6(scan_dir, log_fn = scan_log)
 
