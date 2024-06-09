@@ -43,96 +43,6 @@ opt_template = ["structure: POSCAR # Structure for optimization",
                 "init lat opt: False # Whether to optimize lattice alongside initialization step"]
 
 
-# def read_bias_scan_inputs(fname ="bias_scan_input"):
-#     work_dir = None
-#     structure = None
-#     if not ope(fname):
-#         dump_template_input(fname, opt_template, os.getcwd())
-#         raise ValueError(f"No bias scan input supplied: dumping template {fname}")
-#     inputs = get_inputs_list(fname, auto_lower=False)
-#     fmax = 0.01
-#     max_steps = 100
-#     gpu = True
-#     restart = False
-#     pbc = [True, True, False]
-#     lat_iters = 0
-#     freeze_base = False
-#     freeze_tol = 3.
-#     save_state = False
-#     ortho = True
-#     pseudoset = "GBRV"
-#     ddec6 = True
-#     bmin = -1
-#     bmax = 1
-#     bsteps = 10
-#     brefval = SHE_work_val_Ha
-#     bscale = "V"
-#     init_pzc = False
-#     init_bias = None
-#     init_ion_opt = True
-#     init_lat_opt = False
-#     for input in inputs:
-#         key, val = input[0], input[1]
-#         if "bmin" in key:
-#             bmin = float(val)
-#         elif "bmax" in key:
-#             bmax = float(val)
-#         elif "bstep" in key:
-#             bsteps = int(val)
-#         elif "bref" in key:
-#             brefval = read_bref_val(val)
-#         elif "init" in key:
-#             if "bias" in key:
-#                 if "pzc" in val.lower():
-#                     init_pzc = True
-#                 else:
-#                     init_bias = float(val)
-#             elif "opt" in key:
-#                 if "ion" in key:
-#                     init_ion_opt = "true" in val.lower()
-#                 elif "lat" in key:
-#                     init_lat_opt = "true" in val.lower()
-#                 else:
-#                     print(f"Error reading {key}. Currently {init_ion_opt} for init ion opt and {init_lat_opt} for init lat opt")
-#         elif "pseudo" in key:
-#             pseudoset = val.strip()
-#         elif "structure" in key:
-#             structure = val.strip()
-#         elif "work" in key:
-#             work_dir = val
-#         elif "gpu" in key:
-#             gpu = "true" in val.lower()
-#         elif "restart" in key:
-#             restart = "true" in val.lower()
-#         elif "max" in key:
-#             if "fmax" in key:
-#                 fmax = float(val)
-#             elif "step" in key:
-#                 max_steps = int(val)
-#         elif "pbc" in key:
-#             pbc = read_pbc_val(val)
-#         elif "lat" in key:
-#             try:
-#                 n_iters = int(val)
-#                 lat_iters = n_iters
-#             except:
-#                 pass
-#         elif ("freeze" in key):
-#             if ("base" in key):
-#                 freeze_base = "true" in val.lower()
-#             elif ("tol" in key):
-#                 freeze_tol = float(val)
-#         elif ("ortho" in key):
-#             ortho = "true" in val.lower()
-#         elif ("save" in key) and ("state" in key):
-#             save_state = "true" in val.lower()
-#         elif "ddec6" in key:
-#             ddec6 = "true" in val.lower()
-#     work_dir = fix_work_dir(work_dir)
-#     brange = get_mu_range(bmin, bmax, bsteps, brefval, bscale)
-#     init_bias = get_init_bias(init_bias, brefval, bscale)
-#     return work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, freeze_base, freeze_tol, ortho, save_state, pseudoset, ddec6, brange, init_pzc, init_bias, init_ion_opt, init_lat_opt
-
 def read_bias_scan_inputs(fname = "bias_scan_input"):
     if not ope(fname):
         dump_template_input(fname, opt_template, os.getcwd())
@@ -244,6 +154,11 @@ def read_bias_scan_inputs(fname = "bias_scan_input"):
         if "ddec6" in key:
             opt_inputs_dict["ddec6"] = "true" in val.lower()
     opt_inputs_dict["work_dir"] = fix_work_dir(opt_inputs_dict["work_dir"])
+    opt_inputs_dict["brange"] = get_mu_range(opt_inputs_dict["bmin"],
+                                             opt_inputs_dict["bmax"],
+                                             opt_inputs_dict["bsteps"],
+                                             opt_inputs_dict["brefval"],
+                                             opt_inputs_dict["bscale"])
     return opt_inputs_dict
 
 
