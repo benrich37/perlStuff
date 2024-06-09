@@ -654,7 +654,7 @@ def main():
     init_bias= binp["init_bias"]
     init_ion_opt= binp["init_ion_opt"]
     init_lat_opt= binp["init_lat_opt"]
-    pseudoset= binp["pseudoset"]
+    pseudoset= binp["pseudoSet"]
     freeze_base= binp["freeze_base"]
     freeze_tol= binp["freeze_tol"]
     freeze_count= binp["freeze_count"]
