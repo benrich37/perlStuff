@@ -308,13 +308,14 @@ def writing_bounding_images(start_struc, end_struc, images, neb_path):
 
 
 
-def setup_neb(start_struc, end_struc, images, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str,
+def setup_neb(start_struc, end_struc, images, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
               opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def):
     if restart_bool:
         if not ope(opj(neb_path,"hessian.pckl")):
             log_fn(f"Restart NEB requested but no hessian pckl found - ignoring restart request")
             restart_bool = False
     log_fn(f"Setting up image directories in {neb_path}")
+    check_submit(gpu, getcwd(), "neb", log_fn=log_fn)
     img_dirs, restart_bool = setup_img_dirs(neb_path, images, restart_bool=restart_bool, log_fn=log_fn)
     log_fn("Writing bounding images")
     writing_bounding_images(start_struc, end_struc, images, neb_path)
@@ -373,9 +374,8 @@ def main():
         neb_log("No NEB dir found - setting restart to False for NEB")
         restart = False
         mkdir(neb_dir)
-    dyn_neb, skip_to_neb = setup_neb(start_struc, end_struc, images, pbc, get_calc, neb_dir, k, neb_method, interp_method,
+    dyn_neb, skip_to_neb = setup_neb(start_struc, end_struc, images, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
                                      opter_ase_fn=FIRE, restart_bool=restart, use_ci_bool=use_ci, log_fn=neb_log)
-    check_submit(gpu, getcwd(), "se_neb", log_fn=neb_log)
     neb_log("Running NEB now")
     dyn_neb.run(fmax=fmax, steps=max_steps)
     neb_log(f"finished neb in {dyn_neb.nsteps}/{max_steps} steps")
