@@ -35,7 +35,7 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "end struc: POSCAR_end",
                    "bias: No_bias"]
 
-debug = False
+debug = True
 if debug:
     from os import environ
     environ["JDFTx_pseudo"] = "E:\\volD\\scratch_backup\\pseudopotentials"
@@ -253,9 +253,9 @@ def run_relax_opt(atoms_obj, opt_path, opter_ase_fn, get_calc_fn,
                       fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 
-def setup_img_dirs(neb_path, images, restart_bool=False, log_fn=log_def):
+def setup_img_dirs(neb_path, nImages, restart_bool=False, log_fn=log_def):
     img_dirs = []
-    for j in range(images):
+    for j in range(nImages):
         img_dir_str = opj(neb_path, str(j))
         img_dirs.append(img_dir_str)
         if restart_bool:
@@ -308,7 +308,7 @@ def writing_bounding_images(start_struc, end_struc, images, neb_path):
 
 
 
-def setup_neb(start_struc, end_struc, images, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
+def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
               opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def):
     if restart_bool:
         if not ope(opj(neb_path,"hessian.pckl")):
@@ -316,16 +316,16 @@ def setup_neb(start_struc, end_struc, images, pbc, get_calc_fn, neb_path, k_floa
             restart_bool = False
     log_fn(f"Setting up image directories in {neb_path}")
     check_submit(gpu, getcwd(), "neb", log_fn=log_fn)
-    img_dirs, restart_bool = setup_img_dirs(neb_path, images, restart_bool=restart_bool, log_fn=log_fn)
+    img_dirs, restart_bool = setup_img_dirs(neb_path, nImages, restart_bool=restart_bool, log_fn=log_fn)
     log_fn("Writing bounding images")
-    writing_bounding_images(start_struc, end_struc, images, neb_path)
+    writing_bounding_images(start_struc, end_struc, nImages, neb_path)
     log_fn(f"Creating image objects")
     imgs_atoms_list, interpolate = setup_neb_imgs(img_dirs, pbc, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
     neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
     if interpolate:
         neb.interpolate(apply_constraint=True, method=inter_method_str)
-        for i in range(len(images)):
-            write(opj(neb.images[i], "POSCAR"), images[i], format="vasp")
+        for i in range(nImages):
+            write(opj(neb.images[i], "POSCAR"), nImages[i], format="vasp")
     log_fn(f"Creating optimizer object")
     dyn = neb_optimizer(neb, neb_path, opter=opter_ase_fn)
     log_fn(f"Attaching log functions to optimizer object")
@@ -349,7 +349,7 @@ def main():
     gpu = nid["gpu"]
     pseudoSet = nid["pseudoSet"]
     pbc = nid["pbc"]
-    images = nid["images"]
+    nImages = nid["images"]
     use_ci = nid["ci"]
     k = nid["k"]
     neb_method = nid["neb_method"]
@@ -375,7 +375,7 @@ def main():
         neb_log("No NEB dir found - setting restart to False for NEB")
         restart = False
         mkdir(neb_dir)
-    dyn_neb, skip_to_neb = setup_neb(start_struc, end_struc, images, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
+    dyn_neb, skip_to_neb = setup_neb(start_struc, end_struc, nImages, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
                                      opter_ase_fn=FIRE, restart_bool=restart, use_ci_bool=use_ci, log_fn=neb_log)
     neb_log("Running NEB now")
     dyn_neb.run(fmax=fmax, steps=max_steps)
