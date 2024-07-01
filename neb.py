@@ -11,7 +11,7 @@ from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list,
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, cmds_dict_to_list
 from helpers.geom_helpers import get_property
 from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan, check_structure, _check_structure
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
@@ -365,6 +365,7 @@ def main():
     ####################################################################################################################
     neb_log(f"Reading JDFTx commands")
     cmds = get_cmds_dict(work_dir, ref_struct=start_struc, log_fn=neb_log, pbc=pbc, bias=bias)
+    cmds = cmds_dict_to_list(cmds)
     exe_cmd = get_exe_cmd(gpu, neb_log)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=False, log_fn=neb_log)
     ####################################################################################################################
