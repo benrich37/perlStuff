@@ -356,6 +356,7 @@ def main():
     max_steps = nid["max_steps"]
     fmax = nid["fmax"]
     bias = nid["bias"]
+    work_dir = nid["work_dir"]
     chdir(work_dir)
     neb_log = get_log_fn(work_dir, "neb", False, restart=restart)
     start_struc = _check_structure(nid["start_struc"], work_dir, log_fn=neb_log)
