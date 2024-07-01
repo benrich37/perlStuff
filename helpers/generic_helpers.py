@@ -11,6 +11,7 @@ from ase.units import Bohr, Hartree
 from pathlib import Path
 from subprocess import run as run
 from copy import copy as duplicate
+from copy import copy
 import __main__
 
 
@@ -1179,7 +1180,48 @@ def check_structure(structure, work, log_fn=log_def):
         log_fn(f"Could not find {structure} - checking if gaussian input")
         for s in suffixes:
             gauss_struct = structure + "." + s
-            if ope(opj(work, gauss_struct)):
+            fpath = opj(work, gauss_struct)
+            if ope(fpath):
+                log_fn(f"Found matching gaussian input ({gauss_struct})")
+                have_gauss = True
+        if not have_gauss:
+            err_str = f"Could not find {structure} - aborting"
+            log_fn(err_str)
+            raise ValueError(err_str)
+        else:
+            structure = gauss_struct
+            use_fmt = "gaussian-in"
+    elif "." in structure:
+        log_fn(f"Checking if gave gaussian structure")
+        suffix = structure.split(".")[1]
+        if suffix in suffixes:
+            use_fmt = "gaussian-in"
+        else:
+            log_fn(f"Not sure which format {structure} is in - setting format for reader to None")
+            use_fmt = None
+    structure = opj(work, structure)
+    try:
+        atoms_obj = read(structure, format=use_fmt)
+    except Exception as e:
+        log_fn(e)
+    log_fn(f"Saving found structure {structure} as {opj(work, fname_out)}")
+    structure = opj(work, fname_out)
+    write(structure, atoms_obj, format="vasp")
+    return structure
+
+
+def _check_structure(_structure, work, log_fn=log_def):
+    use_fmt = "vasp"
+    suffixes = ["com", "gjf"]
+    fname_out = opj(work, _structure)
+    have_gauss = False
+    structure = copy(_structure)
+    if not ope(opj(work, structure)):
+        log_fn(f"Could not find {structure} - checking if gaussian input")
+        for s in suffixes:
+            gauss_struct = structure + "." + s
+            fpath = opj(work, gauss_struct)
+            if ope(fpath):
                 log_fn(f"Found matching gaussian input ({gauss_struct})")
                 have_gauss = True
         if not have_gauss:
