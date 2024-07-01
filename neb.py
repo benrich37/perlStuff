@@ -325,7 +325,7 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
     if interpolate:
         neb.interpolate(apply_constraint=True, method=inter_method_str)
         for i in range(nImages):
-            write(opj(neb.images[i], "POSCAR"), nImages[i], format="vasp")
+            write(opj(img_dirs[i], "POSCAR"), neb.images[i], format="vasp")
     log_fn(f"Creating optimizer object")
     dyn = neb_optimizer(neb, neb_path, opter=opter_ase_fn)
     log_fn(f"Attaching log functions to optimizer object")
