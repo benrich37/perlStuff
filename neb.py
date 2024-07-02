@@ -11,7 +11,7 @@ from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list,
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint
 from helpers.calc_helpers import _get_calc, get_exe_cmd
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, cmds_dict_to_list
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, cmds_dict_to_list, add_freeze_surf_base_constraint
 from helpers.geom_helpers import get_property
 from helpers.generic_helpers import death_by_nan, reset_atoms_death_by_nan, check_structure, _check_structure
 from helpers.logx_helpers import write_scan_logx, out_to_logx, _write_logx, finished_logx, sp_logx
@@ -21,7 +21,7 @@ from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freez
     get_step_list, energy_key, properties_key, get_prop_idcs_list, append_results_as_comments, \
     get_scan_steps_list_for_neb, get_neb_options, insert_finer_steps, write_schedule_to_text
 
-se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
+neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
                    "restart: True",
                    "max_steps: 100 # max number of steps for scan opts",
@@ -32,8 +32,8 @@ se_neb_template = ["k: 0.1 # Spring constant for band forces in NEB step",
                    "climbing image: True",
                    "images: 10",
                    "start struc: POSCAR_start",
-                   "end struc: POSCAR_end",
-                   "bias: No_bias"]
+                "end struc: POSCAR_end",
+                "bias: No_bias"]
 
 debug = False
 if debug:
@@ -42,18 +42,17 @@ if debug:
     environ["JDFTx_GPU"] = "None"
     environ["JDFTx"] = "None"
 
-def read_se_neb_inputs(fname="neb_inputs"):
+def read_neb_inputs(fname="neb_inputs"):
     """ Reads
     :param fname:
     :return:
     """
     if not ope(fname):
-        dump_template_input(fname, se_neb_template, getcwd())
+        dump_template_input(fname, neb_template, getcwd())
         raise ValueError(f"No se neb input supplied: dumping template {fname}")
     nid = {}
     nid["k"] = 1.0
     nid["neb_method"] = "spline"
-    nid["lookline"] = None
     nid["restart"] = True
     nid["max_steps"] = 100
     nid["fmax"] = 0.01
@@ -93,8 +92,8 @@ def read_se_neb_inputs(fname="neb_inputs"):
                 nid["neb_method"] = val.strip()
             elif ("interp" in key):
                 nid["interp_method"] = val.strip()
-        if key.lower()[0] == "k":
-            nid["k"] = float(val.strip())
+        if key.lower() == "kval":
+            nid["kval"] = float(val.strip())
         if "max" in key:
             if "steps" in key:
                 nid["max_steps"] = int(val.strip())
@@ -309,7 +308,8 @@ def writing_bounding_images(start_struc, end_struc, images, neb_path):
 
 
 def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
-              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def):
+              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def,
+              freeze_base=False, freeze_tol=0, freeze_count=0):
     if restart_bool:
         if not ope(opj(neb_path,"hessian.pckl")):
             log_fn(f"Restart NEB requested but no hessian pckl found - ignoring restart request")
@@ -326,6 +326,9 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
         neb.interpolate(apply_constraint=True, method=inter_method_str)
         for i in range(nImages):
             write(opj(img_dirs[i], "POSCAR"), neb.images[i], format="vasp")
+    if freeze_base:
+        for i in range(nImages):
+            add_freeze_surf_base_constraint(neb.images[i], freeze_base=freeze_base, ztol=freeze_tol, freeze_count=freeze_count, log_fn=log_fn)
     log_fn(f"Creating optimizer object")
     dyn = neb_optimizer(neb, neb_path, opter=opter_ase_fn)
     log_fn(f"Attaching log functions to optimizer object")
@@ -344,7 +347,7 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
 
 
 def main():
-    nid = read_se_neb_inputs()
+    nid = read_neb_inputs()
     restart = nid["restart"]
     gpu = nid["gpu"]
     pseudoSet = nid["pseudoSet"]
@@ -358,6 +361,9 @@ def main():
     fmax = nid["fmax"]
     bias = nid["bias"]
     work_dir = nid["work_dir"]
+    freeze_base = nid["freeze_base"]
+    freeze_tol = nid["freeze_tol"]
+    freeze_count = nid["freeze_count"]
     chdir(work_dir)
     neb_log = get_log_fn(work_dir, "neb", False, restart=restart)
     start_struc = _check_structure(nid["start_struc"], work_dir, log_fn=neb_log)
