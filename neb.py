@@ -42,7 +42,7 @@ if debug:
     environ["JDFTx_GPU"] = "None"
     environ["JDFTx"] = "None"
 
-def read_neb_inputs(fname="neb_inputs"):
+def read_neb_inputs(fname="neb_input"):
     """ Reads
     :param fname:
     :return:
