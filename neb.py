@@ -72,6 +72,8 @@ def read_neb_inputs(fname="neb_input"):
     nid["images"] = 10
     nid["interp_method"] = "linear"
     nid["bias"] = "No_bias"
+    nid["start_struc"] = "POSCAR_start"
+    nid["end_struc"] = "POSCAR_end"
     inputs = get_inputs_list(fname, auto_lower=False)
     for input in inputs:
         key, val = input[0], input[1]
@@ -395,7 +397,7 @@ def main():
 
 if __name__ == '__main__':
     if debug:
-        work_dir = "E:\\volD\\scratch_backup\\perl\\deepdive\\GBRV\\calcs\\nebs\\debug"
+        work_dir = "E:\\volD\\scratch_backup\\perl\\deepdive\\GBRV\\ref_calcs\\supercell\\nebs\\TiC_cubic1_111\\No_bias\\N2_bond_break"
         chdir(work_dir)
     main()
 

@@ -208,7 +208,8 @@ def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
     input_cmds = read_inputs_dict_helper(work_dir)
     if not input_cmds is None:
         nbandkey = "elec-n-bands"
-        ref_struct = opj(work_dir, "POSCAR")
+        if ref_struct is None:
+            ref_struct = opj(work_dir, "POSCAR")
         if nbandkey in input_cmds and input_cmds[nbandkey] == "*":
             input_cmds[nbandkey] = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
         kfoldkey = "kpoint-folding"
