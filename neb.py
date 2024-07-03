@@ -31,11 +31,11 @@ neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
                    "gpu: True",
                    "climbing image: True",
                    "images: 10",
-                   "start struc: POSCAR_start",
-                "end struc: POSCAR_end",
+                   "start_struc: POSCAR_start",
+                "end_struc: POSCAR_end",
                 "bias: No_bias"]
 
-debug = False
+debug = True
 if debug:
     from os import environ
     environ["JDFTx_pseudo"] = "E:\\volD\\scratch_backup\\pseudopotentials"
