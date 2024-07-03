@@ -35,7 +35,10 @@ neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
                 "end_struc: POSCAR_end",
                 "bias: No_bias"]
 
-debug = True
+
+cwd = getcwd()
+debug = "perlStuff" in cwd
+
 if debug:
     from os import environ
     environ["JDFTx_pseudo"] = "E:\\volD\\scratch_backup\\pseudopotentials"
