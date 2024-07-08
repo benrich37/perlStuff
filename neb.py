@@ -280,7 +280,8 @@ def get_img_atoms(img_path_list, i, img_dir, pbc_bool_list, restart_bool=False, 
     try:
         img = get_atoms(img_dir, pbc_bool_list, restart_bool=restart_bool, log_fn=log_fn)
     except Exception as e:
-        print(e)
+        log_fn(e)
+        log_fn(f"Setting image {i} from structure in image {i-1}")
         img = get_atoms(img_path_list[i-1], pbc_bool_list, restart_bool=restart_bool, log_fn=log_fn)
         write(opj(img_dir, "POSCAR"), img, format="vasp")
         failed = True
@@ -293,10 +294,12 @@ def setup_neb_imgs(img_path_list, pbc_bool_list, get_calc_fn, log_fn=log_def, re
     for i in range(len(img_path_list)):
         img_dir = img_path_list[i]
         log_fn(f"Looking for structure for image {i} in {img_dir}")
-        img, failed = get_img_atoms(img_path_list, i, img_dir, pbc_bool_list, restart_bool=False, log_fn=log_def)
+        img, failed = get_img_atoms(img_path_list, i, img_dir, pbc_bool_list, restart_bool=restart_bool, log_fn=log_fn)
         if failed:
+            log_fn(f"Existing structure for image {i} not found - enabling interpolation")
             interpolate = True
-        img.set_calculator(get_calc_fn(img_path_list[i]))
+        if not debug:
+            img.set_calculator(get_calc_fn(img_path_list[i]))
         imgs.append(img)
     return imgs, interpolate
 
@@ -305,8 +308,10 @@ def writing_bounding_images(start_struc, end_struc, images, neb_path):
     end_atoms = read(end_struc, format="vasp")
     start_dir = opj(neb_path, str(0))
     end_dir = opj(neb_path, str(images-1))
-    write(opj(start_dir, "POSCAR"), start_atoms, format="vasp")
-    write(opj(end_dir, "POSCAR"), end_atoms, format="vasp")
+    if not ope(opj(start_dir, "POSCAR")):
+        write(opj(start_dir, "POSCAR"), start_atoms, format="vasp")
+    if not ope(opj(end_dir, "POSCAR")):
+        write(opj(end_dir, "POSCAR"), end_atoms, format="vasp")
 
 
 
@@ -387,7 +392,8 @@ def main():
         restart = False
         mkdir(neb_dir)
     dyn_neb, skip_to_neb = setup_neb(start_struc, end_struc, nImages, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
-                                     opter_ase_fn=FIRE, restart_bool=restart, use_ci_bool=use_ci, log_fn=neb_log)
+                                     opter_ase_fn=FIRE, restart_bool=restart, use_ci_bool=use_ci, log_fn=neb_log,
+                                     freeze_count=freeze_count, freeze_base=freeze_base, freeze_tol=freeze_tol)
     neb_log("Running NEB now")
     dyn_neb.run(fmax=fmax, steps=max_steps)
     neb_log(f"finished neb in {dyn_neb.nsteps}/{max_steps} steps")
