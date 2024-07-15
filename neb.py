@@ -3,6 +3,7 @@ from ase.io import read, write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from os.path import join as opj, exists as ope, isdir,  basename
+from os import rename
 from os import mkdir, getcwd,  chdir
 from ase.neb import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
@@ -20,6 +21,8 @@ from helpers.se_neb_helpers import get_nrgs, has_max, check_poscar, neb_optimize
 from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freeze_list_key, read_schedule_file, \
     get_step_list, energy_key, properties_key, get_prop_idcs_list, append_results_as_comments, \
     get_scan_steps_list_for_neb, get_neb_options, insert_finer_steps, write_schedule_to_text
+from os import listdir
+import numpy as np
 
 neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -263,7 +266,7 @@ def setup_img_dirs(neb_path, nImages, restart_bool=False, log_fn=log_def):
         img_dir_str = opj(neb_path, str(j))
         img_dirs.append(img_dir_str)
         if restart_bool:
-            if not (ope(opj(img_dir_str, "POSCAR"))) and (ope(opj(img_dir_str, "CONTCAR"))):
+            if not (ope(opj(img_dir_str, "POSCAR"))) or (ope(opj(img_dir_str, "CONTCAR"))):
                 log_fn(f"Restart NEB requested but dir for image {j} does not appear to have a structure to use")
                 log_fn(f"(Image {j}'s directory is {img_dir_str}")
                 log_fn(f"Ignoring restart NEB request")
@@ -314,17 +317,64 @@ def writing_bounding_images(start_struc, end_struc, images, neb_path):
         write(opj(end_dir, "POSCAR"), end_atoms, format="vasp")
 
 
+def get_existing_images(neb_path):
+    existing_imgs = [f for f in listdir(neb_path) if isdir(opj(neb_path, f))]
+    return existing_imgs
+
+def not_enough_images(nImages, neb_path):
+    existing_imgs = get_existing_images(neb_path)
+    if len(existing_imgs) < nImages:
+        return True
+    return False
+
+def add_new_imgs(nImages, neb_path):
+    existing_imgs = get_existing_images(neb_path)
+    nInsert = nImages - len(existing_imgs)
+    existing_nrgs = [get_nrg(opj(neb_path, i)) for i in existing_imgs]
+    nrg_gaps = [abs(existing_nrgs[i+1] - existing_nrgs[i]) for i in range(len(existing_nrgs) - 1)]
+    max_gap_idx = np.argsort(nrg_gaps)[-1]
+    new_images = [str(int(existing_imgs[max_gap_idx]) + 1 + i) for i in range(nInsert)]
+    gap_atoms = [get_atoms(opj(neb_path, img), True) for img in existing_imgs[max_gap_idx:max_gap_idx+2]]
+    tmp_atoms_list = [gap_atoms[0]]
+    for i in new_images:
+        tmp_atoms_list.append(gap_atoms[0])
+    tmp_atoms_list.append(gap_atoms[1])
+    tmp_neb = NEB(tmp_atoms_list)
+    tmp_neb.interpolate()
+    insert_atoms = [tmp_neb.images[i+1] for i in range(nInsert)]
+    mod_imgs = existing_imgs[max_gap_idx:]
+    mod_img_names = [str(int(img) + nInsert) for img in mod_imgs]
+    for i in range(len(mod_imgs)):
+        rename(opj(neb_path, mod_imgs[-i-1]), opj(neb_path, mod_img_names[-i-1]))
+    # for i, mod_img in enumerate(mod_imgs[::-1]):
+    #     rename(opj(neb_path, mod_img), opj(neb_path, mod_img_names[i]))
+    for i, img_atoms in enumerate(insert_atoms):
+        img = i + max_gap_idx
+        imd_dir = opj(neb_path, str(img))
+        mkdir(imd_dir)
+        # atoms = tmp_neb[i+1]
+        write(opj(imd_dir, "POSCAR"), img_atoms, format="vasp")
+
+
+
+
+
+
 
 
 
 def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
               opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def,
               freeze_base=False, freeze_tol=0, freeze_count=0):
+
+    hessian_restart = restart_bool
     if restart_bool:
         if not ope(opj(neb_path,"hessian.pckl")):
             log_fn(f"Restart NEB requested but no hessian pckl found - ignoring restart request")
-            restart_bool = False
+            hessian_restart = False
     log_fn(f"Setting up image directories in {neb_path}")
+    if restart_bool and not_enough_images(nImages, neb_path):
+        add_new_imgs(nImages, neb_path)
     check_submit(gpu, getcwd(), "neb", log_fn=log_fn)
     img_dirs, restart_bool = setup_img_dirs(neb_path, nImages, restart_bool=restart_bool, log_fn=log_fn)
     log_fn("Writing bounding images")
@@ -352,7 +402,7 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
         dyn.attach(lambda img, img_dir: _write_img_opt_iolog(img, img_dir, log_fn),
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
-    return dyn, restart_bool
+    return dyn, hessian_restart
 
 
 
@@ -403,7 +453,7 @@ def main():
 
 if __name__ == '__main__':
     if debug:
-        work_dir = "E:\\volD\\scratch_backup\\perl\\deepdive\\GBRV\\ref_calcs\\supercell\\nebs\\TiC_cubic1_111\\No_bias\\N2_bond_break"
+        work_dir = r"E:\volD\scratch_backup\perl\deepdive\GBRV\calcs\nebs\TiC_cubic1_111\No_bias\N2_end_to_side\atop_oa_k01_2"
         chdir(work_dir)
     main()
 

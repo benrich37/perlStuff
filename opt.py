@@ -16,8 +16,12 @@ from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_log
 from scripts.run_ddec6 import main as run_ddec6
 from sys import exit, stderr
 from shutil import copy as cp
+from os import getcwd
 import numpy as np
 import subprocess
+
+cwd = getcwd()
+debug = "perlStuff" in cwd
 
 def write(fname, _atoms, format="vasp"):
     atoms = _atoms.copy()
@@ -361,15 +365,17 @@ def outfile_protect(work_dir):
     outfiles = [opj(c, "out") for c in calc_dirs]
     for o in outfiles:
         if ope(o):
-            print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
-            subprocess.run(f"sed -i '/fluid-ex-corr/d' {o}", shell=True, check=True)
+            if not debug:
+                print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
+                subprocess.run(f"sed -i '/fluid-ex-corr/d' {o}", shell=True, check=True)
 
 def fix_restart_bug(work_dir, restart):
     outfile = opj(opj(work_dir, "ion_opt"), "out")
     if restart:
         if ope(outfile):
-            subprocess.run(f"sed -i '/fluid-ex-corr/d' {outfile}", shell=True, check=True)
-            subprocess.run(f"sed -i '/lda-PZ/d' {outfile}", shell=True, check=True)
+            if not debug:
+                subprocess.run(f"sed -i '/fluid-ex-corr/d' {outfile}", shell=True, check=True)
+                subprocess.run(f"sed -i '/lda-PZ/d' {outfile}", shell=True, check=True)
 
 def main():
     # work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
