@@ -346,7 +346,7 @@ def add_new_imgs(nImages, neb_path, log_fn=log_def):
     nrg_gaps = [abs(existing_nrgs[i+1] - existing_nrgs[i]) for i in range(len(existing_nrgs) - 1)]
     max_gap_idx = np.argsort(nrg_gaps)[-1]
     log_fn(f"Inserting new images between image {existing_imgs[max_gap_idx]} and {existing_imgs[max_gap_idx+1]}")
-    new_images = [str(int(existing_imgs[max_gap_idx]) + 1 + i) for i in range(nInsert)]
+    new_images = [str(max_gap_idx + 1 + i) for i in range(nInsert)]
     gap_atoms = [get_atoms(opj(neb_path, img), True) for img in existing_imgs[max_gap_idx:max_gap_idx+2]]
     tmp_atoms_list = [gap_atoms[0]]
     for i in new_images:
@@ -355,13 +355,15 @@ def add_new_imgs(nImages, neb_path, log_fn=log_def):
     tmp_neb = NEB(tmp_atoms_list)
     tmp_neb.interpolate()
     insert_atoms = [tmp_neb.images[i+1] for i in range(nInsert)]
-    mod_imgs = existing_imgs[max_gap_idx:]
-    mod_img_names = [str(int(img) + nInsert) for img in mod_imgs]
+    rename_idcs = [i for i in range(max_gap_idx, len(existing_nrgs))]
+    mod_imgs = [existing_imgs[idx] for idx in rename_idcs]
+    mod_img_names = [str(idx + nInsert) for idx in rename_idcs]
     for i in range(len(mod_imgs)):
-        ogname = opj(neb_path, mod_imgs[-i-1])
-        newname = opj(neb_path, mod_img_names[-i-1])
-        log_fn(f"Renaming {ogname} --> {newname}")
-        rename(ogname, newname)
+        if not mod_imgs[-i-1] == mod_img_names[-i-1]:
+            ogname = opj(neb_path, mod_imgs[-i-1])
+            newname = opj(neb_path, mod_img_names[-i-1])
+            log_fn(f"Renaming {ogname} --> {newname}")
+            rename(ogname, newname)
     # for i, mod_img in enumerate(mod_imgs[::-1]):
     #     rename(opj(neb_path, mod_img), opj(neb_path, mod_img_names[i]))
     for i, img_atoms in enumerate(insert_atoms):
