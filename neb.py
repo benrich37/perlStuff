@@ -340,7 +340,7 @@ def add_new_imgs(nImages, neb_path, log_fn=log_def):
         except:
             pass
         existing_nrgs.append(nrg)
-    for i in range(len(nImages) - 1):
+    for i in range(len(existing_nrgs) - 1):
         if np.isnan(existing_nrgs[i+1]):
             existing_nrgs[i+1] = existing_nrgs[i]
     nrg_gaps = [abs(existing_nrgs[i+1] - existing_nrgs[i]) for i in range(len(existing_nrgs) - 1)]
