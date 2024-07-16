@@ -329,6 +329,7 @@ def not_enough_images(nImages, neb_path):
 
 def add_new_imgs(nImages, neb_path, log_fn=log_def):
     existing_imgs = get_existing_images(neb_path)
+    existing_imgs = [existing_imgs[idx] for idx in np.argsort([int(im) for im in existing_imgs])]
     nInsert = nImages - len(existing_imgs)
     log_fn(f"{nInsert} new images being created")
     existing_nrgs = [get_nrg(opj(neb_path, i)) for i in existing_imgs]
