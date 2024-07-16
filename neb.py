@@ -453,7 +453,7 @@ def main():
 
 if __name__ == '__main__':
     if debug:
-        work_dir = r"E:\volD\scratch_backup\perl\deepdive\GBRV\calcs\nebs\TiC_cubic1_111\No_bias\N2_end_to_side\atop_oa_k01_2"
+        work_dir = r"E:\volD\scratch_backup\perl\deepdive\GBRV\ref_calcs\supercell\nebs\TiC_cubic1_111\No_bias\Nbb_to_omom"
         chdir(work_dir)
     main()
 
