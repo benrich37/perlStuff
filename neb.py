@@ -327,12 +327,14 @@ def not_enough_images(nImages, neb_path):
         return True
     return False
 
-def add_new_imgs(nImages, neb_path):
+def add_new_imgs(nImages, neb_path, log_fn=log_def):
     existing_imgs = get_existing_images(neb_path)
     nInsert = nImages - len(existing_imgs)
+    log_fn(f"{nInsert} new images being created")
     existing_nrgs = [get_nrg(opj(neb_path, i)) for i in existing_imgs]
     nrg_gaps = [abs(existing_nrgs[i+1] - existing_nrgs[i]) for i in range(len(existing_nrgs) - 1)]
     max_gap_idx = np.argsort(nrg_gaps)[-1]
+    log_fn(f"Inserting new images between image {existing_imgs[max_gap_idx]} and {existing_imgs[max_gap_idx+1]}")
     new_images = [str(int(existing_imgs[max_gap_idx]) + 1 + i) for i in range(nInsert)]
     gap_atoms = [get_atoms(opj(neb_path, img), True) for img in existing_imgs[max_gap_idx:max_gap_idx+2]]
     tmp_atoms_list = [gap_atoms[0]]
@@ -345,7 +347,10 @@ def add_new_imgs(nImages, neb_path):
     mod_imgs = existing_imgs[max_gap_idx:]
     mod_img_names = [str(int(img) + nInsert) for img in mod_imgs]
     for i in range(len(mod_imgs)):
-        rename(opj(neb_path, mod_imgs[-i-1]), opj(neb_path, mod_img_names[-i-1]))
+        ogname = opj(neb_path, mod_imgs[-i-1])
+        newname = opj(neb_path, mod_img_names[-i-1])
+        log_fn(f"Renaming {ogname} --> {newname}")
+        rename(ogname, newname)
     # for i, mod_img in enumerate(mod_imgs[::-1]):
     #     rename(opj(neb_path, mod_img), opj(neb_path, mod_img_names[i]))
     for i, img_atoms in enumerate(insert_atoms):
@@ -374,7 +379,8 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
             hessian_restart = False
     log_fn(f"Setting up image directories in {neb_path}")
     if restart_bool and not_enough_images(nImages, neb_path):
-        add_new_imgs(nImages, neb_path)
+        log_fn("Inserting new images")
+        add_new_imgs(nImages, neb_path, log_fn=log_fn)
     check_submit(gpu, getcwd(), "neb", log_fn=log_fn)
     img_dirs, restart_bool = setup_img_dirs(neb_path, nImages, restart_bool=restart_bool, log_fn=log_fn)
     log_fn("Writing bounding images")
