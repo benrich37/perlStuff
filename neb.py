@@ -332,7 +332,17 @@ def add_new_imgs(nImages, neb_path, log_fn=log_def):
     existing_imgs = [existing_imgs[idx] for idx in np.argsort([int(im) for im in existing_imgs])]
     nInsert = nImages - len(existing_imgs)
     log_fn(f"{nInsert} new images being created")
-    existing_nrgs = [get_nrg(opj(neb_path, i)) for i in existing_imgs]
+    existing_nrgs = []
+    for img in existing_imgs:
+        nrg = np.nan
+        try:
+            nrg = get_nrg(opj(neb_path, img))
+        except:
+            pass
+        existing_nrgs.append(nrg)
+    for i in range(len(nImages) - 1):
+        if np.isnan(existing_nrgs[i+1]):
+            existing_nrgs[i+1] = existing_nrgs[i]
     nrg_gaps = [abs(existing_nrgs[i+1] - existing_nrgs[i]) for i in range(len(existing_nrgs) - 1)]
     max_gap_idx = np.argsort(nrg_gaps)[-1]
     log_fn(f"Inserting new images between image {existing_imgs[max_gap_idx]} and {existing_imgs[max_gap_idx+1]}")
