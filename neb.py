@@ -377,8 +377,12 @@ def add_new_imgs(nImages, neb_path, log_fn=log_def):
 
 
 
-
-
+from os import remove
+def remove_neb_restart_files(neb_path):
+    for f in ["hessian.pckl", "neb.traj"]:
+        p = opj(neb_path, f)
+        if ope(p):
+            remove(p)
 
 
 def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
@@ -394,6 +398,7 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
     if restart_bool and not_enough_images(nImages, neb_path):
         log_fn("Inserting new images")
         add_new_imgs(nImages, neb_path, log_fn=log_fn)
+        remove_neb_restart_files(neb_path)
     check_submit(gpu, getcwd(), "neb", log_fn=log_fn)
     img_dirs, restart_bool = setup_img_dirs(neb_path, nImages, restart_bool=restart_bool, log_fn=log_fn)
     log_fn("Writing bounding images")
