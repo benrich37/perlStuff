@@ -107,7 +107,7 @@ class JDFTx(Calculator):
                                         self.addCommand(icmd[0], icmd[1])
 
                 # Accepted pseudopotential formats
-                self.pseudopotentials = ['fhi', 'uspp', 'upf']
+                self.pseudopotentials = ['fhi', 'uspp', 'upf', 'UPF', 'USPP']
 
                 # Current results
                 self.E = None
