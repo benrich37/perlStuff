@@ -274,13 +274,21 @@ def write_xsf(calc_dir, atoms, S, d_up, d_dn = None, data_fname="density"):
     f.close()
 
 def write_job_control(calc_dir, atoms, xsf_fname, outfile, pbc, a_d_path):
+    print("writing job control")
     nelecs = get_n_elecs(outfile)
+    print(f"nelecs: {nelecs}")
     atom_type_count_dict = get_atom_type_count_dict(atoms)
+    print(f"atom_type_count_dict: {atom_type_count_dict}")
     atom_types = list(atom_type_count_dict.keys())
+    print(f"atom_types: {atom_types}")
     atom_type_core_elecs_dict = get_atom_type_core_elecs_dict(atom_types, outfile)
+    print(f"atom_type_core_elecs_dict: {atom_type_core_elecs_dict}")
     elecs_per_atom_type_for_neutral_dict = get_elecs_per_atom_type_for_neutral_dict(atom_type_core_elecs_dict)
+    print(f"elecs_per_atom_type_for_neutral_dict: {elecs_per_atom_type_for_neutral_dict}")
     elecs_for_neutral = get_elecs_for_neutral(atom_type_count_dict, elecs_per_atom_type_for_neutral_dict)
+    print(f"elecs_for_neutral: {elecs_for_neutral}")
     net_charge = elecs_for_neutral - nelecs
+    print(f"net_charge: {net_charge}")
     job_control_str = get_job_control_str(net_charge, pbc, xsf_fname, atom_type_core_elecs_dict, a_d_path)
     with open(opj(calc_dir, "job_control.txt"), "w") as f:
         f.write(job_control_str)
@@ -403,6 +411,7 @@ def get_Z_val(el, outfile):
                             reading = True
                         else:
                             reading = False
+    print(f"Z_val for {el}: {Z_val}")
     return Z_val
 
 def get_n_elecs(outfile):
