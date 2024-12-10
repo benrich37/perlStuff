@@ -382,14 +382,14 @@ def get_atom_type_core_elecs_dict(atom_types, outfile):
     return atom_type_core_elecs_dict
 
 def get_atom_type_core_elecs(el, outfile):
-    Z_val = get_Z_val(el, outfile)
+    Z_val = get_valence_electrons(el, outfile)
     core_elecs = float(chemical_symbols.index(el)) - Z_val
     return core_elecs
 
-def get_Z_val(el, outfile):
+def get_valence_electrons(el, outfile):
     start_line = get_start_line(outfile)
     reading_key = "Reading pseudopotential file"
-    valence_key = " valence electrons in orbitals"
+    valence_key = " valence electrons"
     Z_val = 0
     with open(outfile, "r") as f:
         reading = False
