@@ -13,6 +13,8 @@ from subprocess import run as run
 from copy import copy as duplicate
 from copy import copy
 import __main__
+from pymatgen.io.jdftx.outputs import JDFTXOutfile
+from pymatgen.io.ase import AseAtomsAdaptor
 
 
 def log_def(s):
@@ -1251,21 +1253,51 @@ def _check_structure(_structure, work, log_fn=log_def):
     return structure
 
 
+
+
+def get_atoms_from_pmg_joutstructure(jstruc):
+    jstruc = joutstructures[idx]
+    atoms = AseAtomsAdaptor.get_atoms(jstruc.structure)
+    E = 0
+    if not jstruc.e is None:
+        E = jstruc.e
+    atoms.E = E
+    charges = np.zeros(len(atoms))
+    if not jstruc.charges is None:
+        for i, charge in enumerate(jstruc.charges):
+            charges[i] = charge
+    atoms.set_initial_charges(charges)
+
+def get_atoms_list_from_pmg_joutstructures(jstrucs):
+    atoms_list = []
+    for jstruc in jstrucs:
+        atoms = get_atoms_from_pmg_joutstructure(jstruc)
+        atoms_list.append(atoms)
+    return atoms_list
+
+def get_atoms_list_from_pmg_jdftxoutfileslice(jdftxoutfile_slice):
+    jstrucs = jdftxoutfile_slice.joutstructures
+    return get_atoms_list_from_pmg_joutstructures(jstrucs)
+
+def get_atoms_list_from_pmg_jdftxoutfile(jdftxoutfile):
+    atoms_list = []
+    for jdftxoutfile_slice in jdftxoutfile:
+        if jdftxoutfile_slice is not None:
+            atoms_list += get_atoms_list_from_pmg_jdftxoutfile_slice(jdftxoutfile_slice)
+        else:
+            atoms_list.append(None)
+    return atoms_list
+
 def get_atoms_from_out(outfile):
     atoms_list = get_atoms_list_from_out(outfile)
     return atoms_list[-1]
 
-def get_atoms_list_from_out(outfile):
-    start_lines = get_start_lines(outfile, add_end=True)
-    for i in range(len(start_lines) - 1):
-        i_start = start_lines[::-1][i+1]
-        i_end = start_lines[::-1][i]
-        atoms_list = get_atoms_list_from_out_slice(outfile, i_start, i_end)
-        if type(atoms_list) is list:
-            if len(atoms_list):
-                return atoms_list
-    erstr = "Failed getting atoms list from out file"
-    raise ValueError(erstr)
+
+def get_atoms_list_from_out(outfile_path):
+    outfile = JDFTXOutfile.from_file(outfile_path, none_slice_on_error=True)
+    _atoms_list = get_atoms_list_from_pmg_jdftxoutfile(outfile)
+    atoms_list = [a for a in _atoms_list if a is not None]
+    return atoms_list
 
 def get_init_atoms_for_out_slice(outfile, i_start, i_end):
     names = []

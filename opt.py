@@ -140,9 +140,8 @@ def finished(dirname):
 
 
 def get_atoms_from_lat_dir(dir):
-    ionpos = opj(dir, "ionpos")
-    lattice = opj(dir, "lattice")
-    return get_atoms_from_coords_out(ionpos, lattice)
+    outfile = opj(dir, "out")
+    return get_atoms_from_out(outfile)
 
 def make_dir(dirname):
     if not ope(dirname):
@@ -234,8 +233,9 @@ def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = F
     log_fn("lattice optimization finished - organizing output data")
     outfile = opj(lat_dir, "out")
     if ope(outfile):
-        atoms_obj_list = get_atoms_list_from_out(outfile)
-        atoms_obj = atoms_obj_list[-1]
+        atoms_obj = get_atoms_from_out(outfile)
+        # atoms_obj_list = get_atoms_list_from_out(outfile)
+        # atoms_obj = atoms_obj_list[-1]
     else:
         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     atoms_obj.pbc = pbc
@@ -279,8 +279,9 @@ def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, fr
     log_fn("ionic optimization finished - organizing output data")
     outfile = opj(ion_dir_path, "out")
     if ope(outfile):
-        atoms_obj_list = get_atoms_list_from_out(outfile)
-        atoms_obj = atoms_obj_list[-1]
+        atoms_obj = get_atoms_from_out(outfile)
+        # atoms_obj_list = get_atoms_list_from_out(outfile)
+        # atoms_obj = atoms_obj_list[-1]
     else:
         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     atoms_obj.pbc = pbc
