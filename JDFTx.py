@@ -700,7 +700,7 @@ class Wannier(Calculator):
                         inputfile += 'slab %i%i%i\n' % (not pbc[0], not pbc[1], not pbc[2])
                 #--- add truncation center:
                 if(sum(pbc) < 3):
-                        center = np.mean(scipy.array(atomPos), axis=0)
+                        center = np.mean(np.array(atomPos), axis=0)
                         inputfile += 'coulomb-truncation-embed %g %g %g\n' % tuple(center.tolist())
 
                 #Add dump commands
