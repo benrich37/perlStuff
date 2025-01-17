@@ -1283,7 +1283,7 @@ def get_atoms_list_from_pmg_jdftxoutfile(jdftxoutfile):
     atoms_list = []
     for jdftxoutfile_slice in jdftxoutfile:
         if jdftxoutfile_slice is not None:
-            atoms_list += get_atoms_list_from_pmg_jdftxoutfile_slice(jdftxoutfile_slice)
+            atoms_list += get_atoms_list_from_pmg_jdftxoutfileslice(jdftxoutfile_slice)
         else:
             atoms_list.append(None)
     return atoms_list
