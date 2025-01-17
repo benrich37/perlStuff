@@ -6,8 +6,10 @@
 
 from __future__ import print_function #For Python2 compatibility
 
+import numpy as np
 import scipy, subprocess, re
-from ase.calculators.interface import Calculator
+from ase.calculators.calculator import Calculator
+# from ase.calculators.interface import Calculator
 from ase.units import Bohr, Hartree
 from os import environ as env_vars_dict
 from os.path import join as opj
@@ -185,7 +187,7 @@ class JDFTx(Calculator):
 
         def get_stress(self, atoms):
                 if self.ignoreStress:
-                        return scipy.zeros((3, 3))
+                        return np.zeros((3, 3))
                 else:
                         raise NotImplementedError(
                                 'Stress calculation not implemented in JDFTx interface: set ignoreStress=True to ignore.')
@@ -217,7 +219,7 @@ class JDFTx(Calculator):
                                 forces[idx] = [float(word) for word in tokens[2:5]] # tokens[2:5]: force components
                 if(len(forces) == 0):
                         raise IOError('Error: Forces not found.')
-                return (Hartree / Bohr) * scipy.array(forces)
+                return (Hartree / Bohr) * np.array(forces)
 
 
         def __readCharges(self, filename):
@@ -237,7 +239,7 @@ class JDFTx(Calculator):
                                         symbol = str(look[1])
                                         charges = [float(val) for val in look[2:]]
                                         chargeDir[symbol] = charges
-                charges = scipy.zeros(len(symbolList), dtype=float)
+                charges = np.zeros(len(symbolList), dtype=float)
                 for atom in list(chargeDir.keys()):
                         for i, idx in enumerate(idxMap[atom]):
                                 charges[idx] += chargeDir[atom][i]
@@ -364,7 +366,7 @@ class JDFTx(Calculator):
                         inputfile += 'slab %i%i%i\n' % (not pbc[0], not pbc[1], not pbc[2])
                 #--- add truncation center:
                 if(sum(pbc) < 3):
-                        center = scipy.mean(scipy.array(atomPos), axis=0)
+                        center = np.mean(np.array(atomPos), axis=0)
                         inputfile += 'coulomb-truncation-embed %g %g %g\n' % tuple(center.tolist())
 
                 #Add dump commands
@@ -698,7 +700,7 @@ class Wannier(Calculator):
                         inputfile += 'slab %i%i%i\n' % (not pbc[0], not pbc[1], not pbc[2])
                 #--- add truncation center:
                 if(sum(pbc) < 3):
-                        center = scipy.mean(scipy.array(atomPos), axis=0)
+                        center = np.mean(scipy.array(atomPos), axis=0)
                         inputfile += 'coulomb-truncation-embed %g %g %g\n' % tuple(center.tolist())
 
                 #Add dump commands
