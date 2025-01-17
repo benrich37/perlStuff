@@ -355,7 +355,7 @@ def append_out_to_logx(outfile, logx, log_fn=log_def):
     log_fn(f"Gathering minimization structures from existing out file")
     _atoms_list = get_atoms_list_from_out(outfile)
     atoms_list = []
-    for atoms in atoms_list:
+    for atoms in _atoms_list:
         if not atoms is None:
             atoms_list.append(atoms)
     log_fn(f"{len(atoms_list)} found from out file")
