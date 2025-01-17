@@ -150,48 +150,27 @@ def make_dir(dirname):
 
 
 
+def get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_def):
+    atoms_obj = None
+    outfile_path = opj(opt_dir, "out")
+    if ope(outfile_path):
+        try:
+            atoms_obj = get_atoms_from_out(outfile_path)
+            log_fn(f"Atoms object set from {outfile_path}")
+        except Exception as e:
+            log_fn(f"Error reading atoms object from {outfile_path}")
+            pass
+    return atoms_obj
+
+
 def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jdft, log_fn=log_def):
-    no_opt_struc = False
-    no_lat_struc = False
-    if ope(opt_dir):
-        log_fn(f"{opt_dir} exists - checking this directory first for restart structure")
-        if not use_jdft:
-            if ope(opj(opt_dir, "CONTCAR")):
-                structure = opj(opt_dir, "CONTCAR")
-                log_fn(f"Found {structure} for restart structure")
-        else:
-            outfile = opj(opt_dir, "out")
-            if ope(outfile):
-                try:
-                    atoms_obj = get_atoms_from_out(outfile)
-                    structure = opj(opt_dir, "POSCAR")
-                    write(structure, atoms_obj, format="vasp")
-                except:
-                    no_opt_struc = True
-    else:
-        no_opt_struc = True
-    if ope(lat_dir) and no_opt_struc:
-        make_dir(opt_dir)
-        if not has_coords_out_files(lat_dir):
-            log_fn(f"No ionpos and/or lattice found in {lat_dir}")
-            lat_out = opj(lat_dir, "out")
-            if ope(lat_out):
-                log_fn(f"Reading recent structure from out file in {lat_out}")
-                atoms = get_atoms_list_from_out(lat_out)[-1]
-                structure = opj(lat_dir, "POSCAR_lat_out")
-                log_fn(f"Saving read structure to {structure}")
-                write(structure, atoms, format="vasp")
-        else:
-            log_fn(f"Reading structure from {lat_dir}")
-            atoms = get_atoms_from_lat_dir(lat_dir)
-            structure = opj(lat_dir, "POSCAR_coords_out")
-            log_fn(f"Saving read structure to {structure}")
-            write(structure, atoms, format="vasp")
-    else:
-        no_lat_struc = True
-    if no_lat_struc and no_opt_struc:
-        make_dir(lat_dir)
-        make_dir(opt_dir)
+    for path in [opt_dir, lat_dir]:
+        if not ope(path):
+            make_dir(path)
+    atoms = get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_fn)
+    if atoms is None:
+        atoms = get_restart_atoms_from_opt_dir(lat_dir, log_fn=log_fn)
+    if atoms is None:
         log_fn(f"Could not gather restart structure from {work_dir}")
         if ope(structure):
             log_fn(f"Using {structure} for structure")
@@ -201,6 +180,62 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
         else:
             log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
     return structure, restart
+    
+
+        
+
+
+# def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jdft, log_fn=log_def):
+#     no_opt_struc = False
+#     no_lat_struc = False
+#     if ope(opt_dir):
+#         log_fn(f"{opt_dir} exists - checking this directory first for restart structure")
+#         if not use_jdft:
+#             if ope(opj(opt_dir, "CONTCAR")):
+#                 structure = opj(opt_dir, "CONTCAR")
+#                 log_fn(f"Found {structure} for restart structure")
+#         else:
+#             outfile = opj(opt_dir, "out")
+#             if ope(outfile):
+#                 try:
+#                     atoms_obj = get_atoms_from_out(outfile)
+#                     structure = opj(opt_dir, "POSCAR")
+#                     write(structure, atoms_obj, format="vasp")
+#                 except:
+#                     no_opt_struc = True
+#     else:
+#         no_opt_struc = True
+#     if ope(lat_dir) and no_opt_struc:
+#         make_dir(opt_dir)
+#         if not has_coords_out_files(lat_dir):
+#             log_fn(f"No ionpos and/or lattice found in {lat_dir}")
+#             lat_out = opj(lat_dir, "out")
+#             if ope(lat_out):
+#                 log_fn(f"Reading recent structure from out file in {lat_out}")
+#                 atoms = get_atoms_list_from_out(lat_out)[-1]
+#                 structure = opj(lat_dir, "POSCAR_lat_out")
+#                 log_fn(f"Saving read structure to {structure}")
+#                 write(structure, atoms, format="vasp")
+#         else:
+#             log_fn(f"Reading structure from {lat_dir}")
+#             atoms = get_atoms_from_lat_dir(lat_dir)
+#             structure = opj(lat_dir, "POSCAR_coords_out")
+#             log_fn(f"Saving read structure to {structure}")
+#             write(structure, atoms, format="vasp")
+#     else:
+#         no_lat_struc = True
+#     if no_lat_struc and no_opt_struc:
+#         make_dir(lat_dir)
+#         make_dir(opt_dir)
+#         log_fn(f"Could not gather restart structure from {work_dir}")
+#         if ope(structure):
+#             log_fn(f"Using {structure} for structure")
+#             log_fn(f"Changing restart to False")
+#             restart = False
+#             log_fn("setting up lattice and opt dir")
+#         else:
+#             log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
+#     return structure, restart
 
 
 def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=log_def):
