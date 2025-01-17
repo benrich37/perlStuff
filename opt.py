@@ -420,7 +420,7 @@ def main():
     structure = opj(work_dir, structure)
     opt_log = get_log_fn(work_dir, "opt", False, restart=restart)
     structure = check_structure(structure, work_dir, log_fn=opt_log)
-    structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft)
+    structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
     exe_cmd = get_exe_cmd(gpu, opt_log)
     cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=opt_log)
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
