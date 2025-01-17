@@ -3,6 +3,7 @@ from os.path import exists as ope, join as opj
 from ase.io import read, write as _write
 from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
+from ase import Atoms, Atom
 from ase.constraints import FixAtoms
 from datetime import datetime
 from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
@@ -225,15 +226,16 @@ def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use
 
 
 
-def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def):
+def run_lat_opt_runner(atoms: Atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def):
     add_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_base=freeze_base, freeze_count = freeze_count)
     atoms.set_calculator(calc_fn(lat_dir))
     log_fn("lattice optimization starting")
     atoms.get_forces()
     log_fn("lattice optimization finished - organizing output data")
     outfile = opj(lat_dir, "out")
+    pbc = atoms.pbc
     if ope(outfile):
-        atoms_obj = get_atoms_from_out(outfile)
+        atoms_obj: Atoms = get_atoms_from_out(outfile)
         # atoms_obj_list = get_atoms_list_from_out(outfile)
         # atoms_obj = atoms_obj_list[-1]
     else:
@@ -269,7 +271,7 @@ def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, f
     return atoms, structure
 
 
-def run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def):
+def run_ion_opt_runner(atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def):
     add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base,  freeze_count = freeze_count)
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
