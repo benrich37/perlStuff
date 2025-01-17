@@ -931,7 +931,7 @@ def update_counter_dict(counter_dict, el):
     return counter_dict
 
 
-def get_pdos_cmd_val(atoms):
+def get_pdos_cmd_val(atoms: Atoms):
     val = ""
     els = atoms.get_chemical_symbols()
     nums = atoms.get_atomic_numbers()
@@ -1259,7 +1259,7 @@ def _check_structure(_structure, work, log_fn=log_def):
 
 def get_atoms_from_pmg_joutstructure(jstruc: JOutStructure):
     struc: Structure = jstruc.structure
-    atoms = AseAtomsAdaptor.get_atoms(struc)
+    atoms: Atoms = AseAtomsAdaptor.get_atoms(struc)
     E = 0
     if not jstruc.e is None:
         E = jstruc.e
@@ -1277,7 +1277,7 @@ def get_atoms_list_from_pmg_joutstructures(jstrucs: JOutStructures):
         atoms_list.append(atoms)
     return atoms_list
 
-def get_atoms_list_from_pmg_jdftxoutfileslice(jdftxoutfile_slice):
+def get_atoms_list_from_pmg_jdftxoutfileslice(jdftxoutfile_slice: JDFTXOutfileSlice):
     jstrucs = jdftxoutfile_slice.jstrucs
     return get_atoms_list_from_pmg_joutstructures(jstrucs)
 

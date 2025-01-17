@@ -8,7 +8,7 @@ from os import environ, chdir, getcwd
 from subprocess import run
 from scipy.interpolate import RegularGridInterpolator
 from time import time
-from pymatgen.io.jdftx.outputs import JDFTxOutfile
+from pymatgen.io.jdftx.outputs import JDFTXOutfile
 from pymatgen.io.ase import AseAtomsAdaptor
 
 pbc_default = [True, True, True]
