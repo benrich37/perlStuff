@@ -1269,6 +1269,7 @@ def get_atoms_from_pmg_joutstructure(jstruc: JOutStructure):
         for i, charge in enumerate(jstruc.charges):
             charges[i] = charge
     atoms.set_initial_charges(charges)
+    return atoms
 
 def get_atoms_list_from_pmg_joutstructures(jstrucs: JOutStructures):
     atoms_list = []

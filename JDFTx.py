@@ -11,6 +11,7 @@ import scipy, subprocess, re
 from ase.calculators.calculator import Calculator
 # from ase.calculators.interface import Calculator
 from ase.units import Bohr, Hartree
+from ase import Atoms
 from os import environ as env_vars_dict
 from os.path import join as opj
 
@@ -117,7 +118,7 @@ class JDFTx(Calculator):
                 self.Charges = None
 
                 # History
-                self.lastAtoms = None
+                self.lastAtoms: Atoms | None = None
                 self.lastInput = None
 
                 # k-points
@@ -162,7 +163,7 @@ class JDFTx(Calculator):
         def clean(self):
                 shell('rm -rf ' + self.runDir)
 
-        def calculation_required(self, atoms, quantities):
+        def calculation_required(self, atoms: Atoms, quantities):
                 if((self.E is None) or (self.Forces is None)):
                         return True
                 if((self.lastAtoms != atoms) or (self.input != self.lastInput)):
@@ -283,7 +284,7 @@ class JDFTx(Calculator):
                         print(e)
                         pass
 
-        def constructInput(self, atoms):
+        def constructInput(self, atoms: Atoms):
                 """ Constructs a JDFTx input string using the input atoms and the input file arguments (kwargs) in self.input """
                 inputfile = ''
 
@@ -621,7 +622,7 @@ class Wannier(Calculator):
                 # self.Forces = self.__readForces('%s/force' % (self.runDir))
                 # self.Charges = self.__readCharges('%s/out' % (self.runDir))
 
-        def constructInput(self, atoms):
+        def constructInput(self, atoms: Atoms):
                 """ Constructs a JDFTx input string using the input atoms and the input file arguments (kwargs) in self.input """
                 inputfile = ''
 
