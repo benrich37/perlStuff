@@ -231,15 +231,28 @@ def run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = F
     atoms.set_calculator(calc_fn(lat_dir))
     log_fn("lattice optimization starting")
     atoms.get_forces()
-    ionpos = opj(lat_dir, "ionpos")
-    lattice = opj(lat_dir, "lattice")
-    pbc = atoms.pbc
-    atoms = get_atoms_from_coords_out(ionpos, lattice)
-    atoms.pbc = pbc
-    structure = opj(lat_dir, "CONTCAR")
-    write(structure, atoms, format="vasp")
-    log_fn(f"Finished lattice optimization")
+    log_fn("lattice optimization finished - organizing output data")
+    outfile = opj(lat_dir, "out")
+    if ope(outfile):
+        atoms_obj_list = get_atoms_list_from_out(outfile)
+        atoms_obj = atoms_obj_list[-1]
+    else:
+        log_and_abort(f"No output data given - check error file", log_fn=log_fn)
+    atoms_obj.pbc = pbc
+    structure_path = opj(lat_dir, "CONTCAR")
+    write(structure_path, atoms_obj, format="vasp")
+    structure_path = opj(lat_dir, "CONTCAR.gjf")
+    write(structure_path, atoms_obj, format="gaussian-in")
     finished(lat_dir)
+    # ionpos = opj(lat_dir, "ionpos")
+    # lattice = opj(lat_dir, "lattice")
+    # pbc = atoms.pbc
+    # atoms = get_atoms_from_coords_out(ionpos, lattice)
+    # atoms.pbc = pbc
+    # structure = opj(lat_dir, "CONTCAR")
+    # write(structure, atoms, format="vasp")
+    # log_fn(f"Finished lattice optimization")
+    # finished(lat_dir)
     return atoms, structure
 
 
