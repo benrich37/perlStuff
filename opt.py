@@ -168,8 +168,14 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
         if not ope(path):
             make_dir(path)
     atoms = get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_fn)
+    if not atoms is None:
+        structure = opj(opt_dir, "POSCAR")
+        write(structure, atoms, format="vasp")
     if atoms is None:
         atoms = get_restart_atoms_from_opt_dir(lat_dir, log_fn=log_fn)
+    if not atoms is None:
+        structure = opj(lat_dir, "POSCAR")
+        write(structure, atoms, format="vasp")
     if atoms is None:
         log_fn(f"Could not gather restart structure from {work_dir}")
         if ope(structure):
