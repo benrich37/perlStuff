@@ -71,6 +71,7 @@ def read_opt_inputs(fname = "opt_input"):
         "bias": 0.0,
         "ddec6": True,
         "freeze_count": 0,
+        "exclude_freeze_count": 0,
     }
     for input in inputs:
         key, val = input[0], input[1]
@@ -110,7 +111,10 @@ def read_opt_inputs(fname = "opt_input"):
             elif ("tol" in key):
                 opt_inputs_dict["freeze_tol"] = float(val)
             elif ("count" in key):
-                opt_inputs_dict["freeze_count"] = int(val)
+                if "exclude" in key:
+                    opt_inputs_dict["exclude_freeze_count"] = int(val)
+                else:
+                    opt_inputs_dict["freeze_count"] = int(val)
         if ("ortho" in key):
             opt_inputs_dict["ortho"] = "true" in val.lower()
         if ("save" in key) and ("state" in key):
@@ -314,8 +318,8 @@ def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, f
     return atoms, structure
 
 
-def run_ion_opt_runner(atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def):
-    add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base,  freeze_count = freeze_count)
+def run_ion_opt_runner(atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0,  log_fn=log_def):
+    add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base,  freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count)
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
     log_fn("ionic optimization starting")
@@ -338,17 +342,17 @@ def run_ion_opt_runner(atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = Fa
     return atoms_obj
 
 
-def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, _failed_before=False, log_fn=log_def):
+def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, _failed_before=False, log_fn=log_def):
     run_again = False
     try:
-        atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=log_fn)
+        atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn)
     except Exception as e:
         check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
         run_again = True
         pass
     if run_again:
         atoms_obj = run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn,
-                                freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, _failed_before=True, log_fn=log_fn)
+                                freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count,exclude_freeze_count=exclude_freeze_count, _failed_before=True, log_fn=log_fn)
     return atoms_obj
 
 
@@ -456,6 +460,9 @@ def main():
     freeze_base = oid["freeze_base"]
     freeze_tol = oid["freeze_tol"]
     freeze_count = oid["freeze_count"]
+    exclude_freeze_count = oid["exclude_freeze_count"]
+    if exclude_freeze_count > freeze_count:
+        raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
     fmax = oid["fmax"]
     os.chdir(work_dir)
     opt_dir = opj(work_dir, "ion_opt")
@@ -498,7 +505,7 @@ def main():
         if restarting_ion:
             make_jdft_logx(opt_dir, log_fn=opt_log)
         opt_log(f"Running ion optimization with JDFTx optimizer")
-        run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=opt_log)
+        run_ion_opt(atoms, opt_dir, work_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=opt_log, exclude_freeze_count=exclude_freeze_count)
         make_jdft_logx(opt_dir, log_fn=opt_log)
         opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
         if not (lat_iters > 0):
