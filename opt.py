@@ -72,6 +72,7 @@ def read_opt_inputs(fname = "opt_input"):
         "ddec6": True,
         "freeze_count": 0,
         "exclude_freeze_count": 0,
+        "direct_coords": False
     }
     for input in inputs:
         key, val = input[0], input[1]
@@ -98,6 +99,8 @@ def read_opt_inputs(fname = "opt_input"):
                 opt_inputs_dict["lat_iters"] = opt_inputs_dict["n_iters"]
             except:
                 pass
+        if ("direct" in key) and ("coord" in key):
+            opt_inputs_dict["direct_coords"] = "true" in val.lower()
         if ("opt" in key) and ("progr" in key):
             if "jdft" in val:
                 opt_inputs_dict["use_jdft"] = True
@@ -171,6 +174,8 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
     for path in [opt_dir, lat_dir]:
         if not ope(path):
             make_dir(path)
+    # If an atoms is found in the ion_opt dir, then an ionic minimization was run
+    # (So even if the lattice opt was run, the ion opt will be the most recent)
     atoms = get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_fn)
     if not atoms is None:
         structure = opj(opt_dir, "POSCAR")
@@ -451,6 +456,7 @@ def main():
     freeze_tol = oid["freeze_tol"]
     freeze_count = oid["freeze_count"]
     exclude_freeze_count = oid["exclude_freeze_count"]
+    direct_coords = oid["direct_coords"]
     if exclude_freeze_count > freeze_count:
         raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
     fmax = oid["fmax"]
@@ -464,6 +470,7 @@ def main():
     exe_cmd = get_exe_cmd(gpu, opt_log)
     cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=opt_log)
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
+    opt_log(f"Setting {structure} to atoms object")
     atoms = read(structure, format="vasp")
     atoms.pbc = pbc
     # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
@@ -473,12 +480,13 @@ def main():
     ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
     if ddec6:
         ion_cmds = add_elec_density_dump(ion_cmds)
-    opt_log(f"Setting {structure} to atoms object")
+    
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
-    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log, direct_coords=True)
+    get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log, direct_coords=direct_coords)
     get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
-    do_lat = (lat_iters > 0) and (not ope(opj(lat_dir, "finished.txt")))
+    lat_finished = ope(opj(lat_dir, "finished.txt"))
+    do_lat = (lat_iters > 0) and (not lat_finished)
     restarting_lat = do_lat and restart
     if do_lat:
         if restarting_lat:
