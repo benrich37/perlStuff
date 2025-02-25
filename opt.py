@@ -273,7 +273,10 @@ def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use
 
 
 
-def run_lat_opt_runner(atoms: Atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def):
+def run_lat_opt_runner(
+        atoms: Atoms, structure: str, lat_dir: str, root: str, calc_fn,
+        freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def
+        ):
     add_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_base=freeze_base, freeze_count = freeze_count)
     atoms.set_calculator(calc_fn(lat_dir))
     log_fn("lattice optimization starting")
@@ -283,8 +286,6 @@ def run_lat_opt_runner(atoms: Atoms, structure, lat_dir, root, calc_fn, freeze_b
     pbc = atoms.pbc
     if ope(outfile):
         atoms_obj: Atoms = get_atoms_from_out(outfile)
-        # atoms_obj_list = get_atoms_list_from_out(outfile)
-        # atoms_obj = atoms_obj_list[-1]
     else:
         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     atoms_obj.pbc = pbc
@@ -293,15 +294,6 @@ def run_lat_opt_runner(atoms: Atoms, structure, lat_dir, root, calc_fn, freeze_b
     structure_path = opj(lat_dir, "CONTCAR.gjf")
     write(structure_path, atoms_obj, format="gaussian-in")
     finished(lat_dir)
-    # ionpos = opj(lat_dir, "ionpos")
-    # lattice = opj(lat_dir, "lattice")
-    # pbc = atoms.pbc
-    # atoms = get_atoms_from_coords_out(ionpos, lattice)
-    # atoms.pbc = pbc
-    # structure = opj(lat_dir, "CONTCAR")
-    # write(structure, atoms, format="vasp")
-    # log_fn(f"Finished lattice optimization")
-    # finished(lat_dir)
     return atoms, structure
 
 
@@ -329,8 +321,6 @@ def run_ion_opt_runner(atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = Fa
     outfile = opj(ion_dir_path, "out")
     if ope(outfile):
         atoms_obj = get_atoms_from_out(outfile)
-        # atoms_obj_list = get_atoms_list_from_out(outfile)
-        # atoms_obj = atoms_obj_list[-1]
     else:
         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     atoms_obj.pbc = pbc
