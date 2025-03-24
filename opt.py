@@ -469,7 +469,7 @@ def main():
     exclude_freeze_count = oid["exclude_freeze_count"]
     direct_coords = oid["direct_coords"]
     freeze_idcs = oid["freeze idcs"]
-    opt_log("main: ", freeze_idcs)
+    
     if exclude_freeze_count > freeze_count:
         raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
     fmax = oid["fmax"]
@@ -478,6 +478,7 @@ def main():
     lat_dir = opj(work_dir, "lat_opt")
     structure = opj(work_dir, structure)
     opt_log = get_log_fn(work_dir, "opt", False, restart=restart)
+    opt_log("main: ", freeze_idcs)
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
     exe_cmd = get_exe_cmd(gpu, opt_log)
