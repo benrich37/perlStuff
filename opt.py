@@ -73,7 +73,7 @@ def read_opt_inputs(fname = "opt_input"):
         "freeze_count": 0,
         "exclude_freeze_count": 0,
         "direct_coords": False,
-        "freeze idcs": None
+        "freeze_idcs": None
     }
     for input in inputs:
         key, val = input[0], input[1]
@@ -468,7 +468,7 @@ def main():
     freeze_count = oid["freeze_count"]
     exclude_freeze_count = oid["exclude_freeze_count"]
     direct_coords = oid["direct_coords"]
-    freeze_idcs = oid["freeze idcs"]
+    freeze_idcs = oid["freeze_idcs"]
     
     if exclude_freeze_count > freeze_count:
         raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
