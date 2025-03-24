@@ -322,6 +322,7 @@ def run_ion_opt_runner(
         atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, 
         freeze_idcs=None,
         log_fn=log_def):
+    log_fn("run_ion_opt_runner: ", freeze_idcs)
     add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base,  freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs)
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
@@ -347,6 +348,7 @@ def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False
                 freeze_idcs=None,
                 log_fn=log_def,
                 ):
+    print("run_ion_opt: ", freeze_idcs)
     run_again = False
     try:
         atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs, log_fn=log_fn)
@@ -467,6 +469,7 @@ def main():
     exclude_freeze_count = oid["exclude_freeze_count"]
     direct_coords = oid["direct_coords"]
     freeze_idcs = oid["freeze idcs"]
+    opt_log("main: ", freeze_idcs)
     if exclude_freeze_count > freeze_count:
         raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
     fmax = oid["fmax"]
