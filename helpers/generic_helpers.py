@@ -623,6 +623,23 @@ def get_freeze_surf_base_constraint_by_dist(atoms, ztol = 3., log_fn=log_def):
     c = FixAtoms(mask=mask)
     return c
 
+
+def get_freeze_surf_base_constraint_by_idcs(atoms, freeze_idcs, log_fn=log_def):
+    mask = []
+    for i in range(len(atoms)):
+        if i in freeze_idcs:
+            mask.append(True)
+        else:
+            mask.append(False)
+    log_fn(f"Imposing atom freezing for bottom {len(freeze_idcs)} atoms")
+    log_str = ""
+    for i, m in enumerate(mask):
+        if m:
+            log_str += f"{get_atom_str(atoms, i)}, "
+    log_fn(f"freezing {log_str}")
+    c = FixAtoms(mask=mask)
+    return c
+
 def get_freeze_surf_base_constraint_by_count(atoms, freeze_count=1, exclude_freeze_count=0, log_fn=log_def):
     direct_posns = atoms.get_scaled_positions()
     idcs = np.argsort(direct_posns[:,2])
@@ -641,7 +658,9 @@ def get_freeze_surf_base_constraint_by_count(atoms, freeze_count=1, exclude_free
     return c
 
 
-def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_freeze_count=0, log_fn=log_def):
+def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_freeze_count=0, freeze_idcs=None, log_fn=log_def):
+    if freeze_idcs is not None:
+        return get_freeze_surf_base_constraint_by_idcs(atoms, freeze_idcs=freeze_idcs, log_fn=log_fn)
     if freeze_count > 0:
         return get_freeze_surf_base_constraint_by_count(atoms, freeze_count=freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn)
     else:
