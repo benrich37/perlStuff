@@ -356,7 +356,7 @@ def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False
         pass
     if run_again:
         atoms_obj = run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn,
-                                freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count,exclude_freeze_count=exclude_freeze_count, _failed_before=True, log_fn=log_fn)
+                                freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count,exclude_freeze_count=exclude_freeze_count, _failed_before=True, log_fn=log_fn, freeze_idcs=freeze_idcs)
     return atoms_obj
 
 
