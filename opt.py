@@ -322,7 +322,7 @@ def run_ion_opt_runner(
         atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, 
         freeze_idcs=None,
         log_fn=log_def):
-    log_fn(f"run_ion_opt_runner: {freeze_idcs}")
+    #log_fn(f"run_ion_opt_runner: {freeze_idcs}")
     add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base,  freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs)
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
@@ -348,7 +348,7 @@ def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False
                 freeze_idcs=None,
                 log_fn=log_def,
                 ):
-    log_fn(f"run_ion_opt: {freeze_idcs}")
+    #log_fn(f"run_ion_opt: {freeze_idcs}")
     run_again = False
     try:
         atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs, log_fn=log_fn)
@@ -478,7 +478,7 @@ def main():
     lat_dir = opj(work_dir, "lat_opt")
     structure = opj(work_dir, structure)
     opt_log = get_log_fn(work_dir, "opt", False, restart=restart)
-    opt_log(f"main: {freeze_idcs}")
+    #opt_log(f"main: {freeze_idcs}")
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
     exe_cmd = get_exe_cmd(gpu, opt_log)

@@ -625,7 +625,7 @@ def get_freeze_surf_base_constraint_by_dist(atoms, ztol = 3., log_fn=log_def):
 
 
 def get_freeze_surf_base_constraint_by_idcs(atoms, freeze_idcs, log_fn=log_def):
-    log_fn(f"get_freeze_surf_base_constraint_by_idcs {freeze_idcs}")
+    #log_fn(f"get_freeze_surf_base_constraint_by_idcs {freeze_idcs}")
     mask = []
     for i in range(len(atoms)):
         if i in freeze_idcs:
@@ -660,7 +660,7 @@ def get_freeze_surf_base_constraint_by_count(atoms, freeze_count=1, exclude_free
 
 
 def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_freeze_count=0, freeze_idcs=None, log_fn=log_def):
-    log_fn(f"get_freeze_surf_base_constraint {freeze_idcs}")
+    #log_fn(f"get_freeze_surf_base_constraint {freeze_idcs}")
     if freeze_idcs is not None:
         return get_freeze_surf_base_constraint_by_idcs(atoms, freeze_idcs=freeze_idcs, log_fn=log_fn)
     if freeze_count > 0:
@@ -669,7 +669,7 @@ def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_
         return get_freeze_surf_base_constraint_by_dist(atoms, ztol = ztol, log_fn=log_fn)
 
 def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0, freeze_count = 0, exclude_freeze_count=0, log_fn=log_def, freeze_idcs=None):
-    log_fn(f"add_freeze_surf_base_constraint: {freeze_idcs}")
+    #log_fn(f"add_freeze_surf_base_constraint: {freeze_idcs}")
     if freeze_base:
         c = get_freeze_surf_base_constraint(atoms, ztol=ztol, freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn)
         add_constraint(atoms, c)
