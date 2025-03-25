@@ -322,7 +322,7 @@ def run_ion_opt_runner(
         atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, 
         freeze_idcs=None,
         log_fn=log_def):
-    #log_fn(f"run_ion_opt_runner: {freeze_idcs}")
+    log_fn(f"run_ion_opt_runner: {freeze_idcs}")
     add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base,  freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs)
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)

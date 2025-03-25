@@ -669,9 +669,9 @@ def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_
         return get_freeze_surf_base_constraint_by_dist(atoms, ztol = ztol, log_fn=log_fn)
 
 def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0, freeze_count = 0, exclude_freeze_count=0, log_fn=log_def, freeze_idcs=None):
-    #log_fn(f"add_freeze_surf_base_constraint: {freeze_idcs}")
+    log_fn(f"add_freeze_surf_base_constraint: {freeze_idcs}")
     if freeze_base:
-        c = get_freeze_surf_base_constraint(atoms, ztol=ztol, freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn)
+        c = get_freeze_surf_base_constraint(atoms, ztol=ztol, freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn, freeze_idcs=freeze_idcs)
         add_constraint(atoms, c)
 
 
