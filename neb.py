@@ -5,7 +5,8 @@ from ase.optimize import FIRE
 from os.path import join as opj, exists as ope, isdir,  basename
 from os import rename
 from os import mkdir, getcwd,  chdir
-from ase.neb import NEB
+#from ase.neb import NEB
+from ase.mep import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
@@ -224,24 +225,24 @@ def read_instructions_run_step(instructions):
 
 
 
-def run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
-             fmax_float=0.1, max_steps_int=50, freeze_base=False, freeze_tol=1.0, log_fn=log_def, _failed_before_bool=False):
-    freeze_list, j_steps = read_instructions_run_step(instructions)
-    run_again = False
-    add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
-    add_freeze_surf_base_constraint(atoms_obj, freeze_base=freeze_base, ztol=freeze_tol, log_fn=log_def)
-    try:
-        run_step_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, j_steps, get_jdft_opt_calc_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
-    except Exception as e:
-        check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
-        if death_by_nan(opj(step_path, "out"), log_def):
-            atoms_obj = reset_atoms_death_by_nan(step_path, step_path)
-            add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
-        run_again = True
-        pass
-    if run_again:
-        run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
-                 fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
+# def run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
+#              fmax_float=0.1, max_steps_int=50, freeze_base=False, freeze_tol=1.0, log_fn=log_def, _failed_before_bool=False):
+#     freeze_list, j_steps = read_instructions_run_step(instructions)
+#     run_again = False
+#     add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
+#     add_freeze_surf_base_constraint(atoms_obj, freeze_base=freeze_base, ztol=freeze_tol, log_fn=log_def)
+#     try:
+#         run_step_runner(atoms_obj, step_path, opter_ase_fn, get_calc_fn, j_steps, get_jdft_opt_calc_fn, log_fn=log_fn, fmax=fmax_float, max_steps=max_steps_int)
+#     except Exception as e:
+#         check_for_restart(e, _failed_before_bool, step_path, log_fn=log_fn)
+#         if death_by_nan(opj(step_path, "out"), log_def):
+#             atoms_obj = reset_atoms_death_by_nan(step_path, step_path)
+#             add_freeze_list_constraints(atoms_obj, freeze_list, log_fn=log_fn)
+#         run_again = True
+#         pass
+#     if run_again:
+#         run_step(atoms_obj, step_path, instructions, get_jdft_opt_calc_fn, get_calc_fn, opter_ase_fn,
+#                  fmax_float=fmax_float, max_steps_int=max_steps_int, log_fn=log_fn, _failed_before_bool=True)
 
 
 
@@ -430,7 +431,7 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
 
 
 
-def main():
+def main(debug=False):
     nid = read_neb_inputs()
     restart = nid["restart"]
     gpu = nid["gpu"]
@@ -456,7 +457,7 @@ def main():
     neb_log(f"Reading JDFTx commands")
     cmds = get_cmds_dict(work_dir, ref_struct=start_struc, log_fn=neb_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
-    exe_cmd = get_exe_cmd(gpu, neb_log)
+    exe_cmd = get_exe_cmd(gpu, neb_log, use_srun=not debug)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=False, log_fn=neb_log)
     ####################################################################################################################
     neb_log("Beginning NEB setup")

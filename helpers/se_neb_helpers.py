@@ -51,6 +51,13 @@ def neb_optimizer(neb, neb_dir, opter, opt_alpha=150):
     dyn = opter(neb, trajectory=traj, logfile=log, restart=restart, a=(opt_alpha / 70) * 0.1)
     return dyn
 
+# def neb_optimizer(neb, neb_dir, opter, opt_alpha=150):
+#     traj = opj(neb_dir, "opt.traj")
+#     log = opj(neb_dir, "opt.log")
+#     restart = opj(neb_dir, "hessian.pckl")
+#     dyn = opter(neb, restart=restart, a=(opt_alpha / 70) * 0.1)
+#     return dyn
+
 
 def check_poscar(work_dir, log_fn):
     if need_sort(work_dir):

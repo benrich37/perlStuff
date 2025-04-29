@@ -12,7 +12,7 @@ def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
             executable=exe_cmd,
             pseudoSet="GBRV_v1.5",
             commands=cmds,
-            outfile=work,
+            calc_dir=work,
             ionic_steps=False,
             ignoreStress=True,
     )
@@ -40,7 +40,7 @@ def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None,
             executable=exe_cmd,
             pseudoSet=pseudoSet,
             commands=cmds,
-            outfile=root,
+            calc_dir=root,
             ionic_steps=False,
             direct_coords=direct_coords
         )
@@ -56,13 +56,16 @@ def get_wannier_exe_cmd(gpu, log_fn):
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
 
-def get_exe_cmd(gpu, log_fn):
+def get_exe_cmd(gpu, log_fn, use_srun=True):
     if gpu:
         _get = 'JDFTx_GPU'
     else:
         _get = 'JDFTx'
     log_fn(f"Using {_get} for JDFTx exe")
-    exe_cmd = 'srun ' + env_vars_dict[_get]
+    if use_srun:
+        exe_cmd = 'srun ' + env_vars_dict[_get]
+    else:
+        exe_cmd = env_vars_dict[_get]
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
 

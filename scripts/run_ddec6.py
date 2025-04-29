@@ -16,13 +16,19 @@ a_d_default = "/global/cfs/cdirs/m4025/Software/Perlmutter/ddec6/chargemol_09_26
 exe_path = "/global/cfs/cdirs/m4025/Software/Perlmutter/ddec6/chargemol_09_26_2017/chargemol_FORTRAN_09_26_2017/compiled_binaries/linux/Chargemol_09_26_2017_linux_parallel"
 
 # Set these to an environmental variable to override the default strings above
-a_d_varname = None
-exe_path_varname = None
+a_d_key = "DDEC6_AD_PATH"
+exe_key = "DDEC6_EXE_PATH"
+a_d_varname = a_d_key
+exe_path_varname = exe_key
 
 if not a_d_varname is None:
-    a_d_default = environ[a_d_varname]
+    if a_d_key in environ:
+        a_d_varname = environ[a_d_key]
+    #a_d_default = environ[a_d_varname]
 if not exe_path_varname is None:
-    exe_path = environ[exe_path_varname]
+    if exe_key in environ:
+        exe_path_varname = environ[exe_key]
+    #exe_path = environ[exe_path_varname]
 
 def add_redun_layer(d, axis):
     S_old = list(np.shape(d))
@@ -816,8 +822,7 @@ def run_ddec6_looper(calc_dir, a_d_env_path, pbc, exe_env_path):
 
 
 
-a_d_key = "DDEC6_AD_PATH"
-exe_key = "DDEC6_EXE_PATH"
+
 
 
 def main(calc_dir=None, pbc=None):
