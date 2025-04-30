@@ -593,7 +593,12 @@ def remove_dir_recursive(path, log_fn=log_def):
     log_fn(f"Removing directory {path}")
     for root, dirs, files in walk(path, topdown=False):  # topdown=False makes the walk visit subdirectories first
         for name in files:
-            rm(opj(root, name))
+            try:
+                rm(opj(root, name))
+            except FileNotFoundError as e:
+                log_fn(f"File {opj(root, name)} not found - ignoring")
+                log_fn(e)
+                pass
         for name in dirs:
             rmdir(opj(root, name))
     rmdir(path)  # remove the root directory itself

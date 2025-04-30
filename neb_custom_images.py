@@ -25,18 +25,21 @@ from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freez
 from os import listdir
 import numpy as np
 
+
+# Same as normal neb, but 
+
 neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
-                   "neb method: spline # idk, something about how forces are projected out / imposed",
-                   "restart: True",
-                   "max_steps: 100 # max number of steps for scan opts",
-                   "fmax: 0.05 # fmax perameter for both neb and scan opt",
-                   "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
-                   "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
-                   "gpu: True",
-                   "climbing image: True",
-                   "images: 10",
-                   "start_struc: POSCAR_start",
-                "end_struc: POSCAR_end",
+                "neb method: spline # idk, something about how forces are projected out / imposed",
+                "interp_method: idpp",
+                "restart: True",
+                "max_steps: 100 # max number of steps for scan opts",
+                "fmax: 0.05 # fmax perameter for both neb and scan opt",
+                "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
+                "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
+                "gpu: True",
+                "climbing image: True",
+                "images: 10",
+                "struc_prefix: POSCAR_",
                 "bias: No_bias"]
 
 
@@ -49,7 +52,82 @@ if debug:
     environ["JDFTx_GPU"] = "None"
     environ["JDFTx"] = "None"
 
-
+def read_neb_inputs(fname="neb_input"):
+    """ Reads
+    :param fname:
+    :return:
+    """
+    if not ope(fname):
+        dump_template_input(fname, neb_template, getcwd())
+        raise ValueError(f"No se neb input supplied: dumping template {fname}")
+    nid = {}
+    nid["k"] = 0.1
+    nid["neb_method"] = "spline"
+    nid["restart"] = True
+    nid["max_steps"] = 100
+    nid["fmax"] = 0.01
+    nid["work_dir"] = None
+    nid["relax_start"] = False
+    nid["relax_end"] = False
+    nid["pbc"] = [True, True, False]
+    nid["gpu"] = False
+    nid["pseudoSet"] = "GBRV"
+    nid["freeze_base"] = False
+    nid["freeze_tol"] = 0.
+    nid["freeze_count"] = 0
+    nid["ci"] = True
+    nid["images"] = 10
+    nid["interp_method"] = "idpp"
+    nid["bias"] = "No_bias"
+    nid["struc_prefix"] = "POSCAR_"
+    inputs = get_inputs_list(fname, auto_lower=False)
+    for input in inputs:
+        key, val = input[0], input[1]
+        if ("freeze" in key):
+            if ("base" in key):
+                nid["freeze_base"] = "true" in val.lower()
+            elif ("tol" in key):
+                nid["freeze_tol"] = float(val)
+            elif ("count" in key):
+                nid["freeze_count"] = int(val)
+        if "pseudo" in key:
+            nid["pseudoSet"] = val.strip()
+        if "gpu" in key:
+            nid["gpu"] = "true" in val.lower()
+        if "restart" in key:
+            nid["restart"] = "true" in val.lower()
+        if "work" in key:
+            nid["work_dir"] = val.strip()
+        if ("method" in key):
+            if ("neb" in key):
+                nid["neb_method"] = val.strip()
+            elif ("interp" in key):
+                nid["interp_method"] = val.strip()
+        if key.lower() == "kval":
+            nid["kval"] = float(val.strip())
+        if "max" in key:
+            if "steps" in key:
+                nid["max_steps"] = int(val.strip())
+            elif ("force" in key) or ("fmax" in key):
+                nid["fmax"] = float(val.strip())
+        if "pbc" in key:
+            nid["pbc"] = read_pbc_val(val)
+        if "relax" in key:
+            if "start" in val:
+                nid["relax_start"] = True
+            if "end" in val:
+                nid["relax_end"] = True
+        if "climbing" in key:
+            if "image" in key:
+                nid["ci"] = "true" in val.lower()
+        if "images" in key:
+            nid["images"] = int(val)
+        if "struc_prefix" in key:
+            nid["struc_prefix"] = val.strip()
+        if "bias" in key:
+            nid["bias"] = val.strip()
+    nid["work_dir"] = fix_work_dir(nid["work_dir"])
+    return nid
 
 
 def parse_lookline(lookline):
@@ -350,86 +428,7 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
     return dyn, hessian_restart
 
-def read_neb_inputs(fname="neb_input"):
-    """ Reads
-    :param fname:
-    :return:
-    """
-    if not ope(fname):
-        dump_template_input(fname, neb_template, getcwd())
-        raise ValueError(f"No se neb input supplied: dumping template {fname}")
-    nid = {}
-    nid["k"] = 1.0
-    nid["neb_method"] = "spline"
-    nid["restart"] = True
-    nid["max_steps"] = 100
-    nid["fmax"] = 0.01
-    nid["work_dir"] = None
-    nid["relax_start"] = False
-    nid["relax_end"] = False
-    nid["pbc"] = [True, True, False]
-    nid["gpu"] = False
-    nid["pseudoSet"] = "GBRV"
-    nid["freeze_base"] = False
-    nid["freeze_tol"] = 0.
-    nid["freeze_count"] = 0
-    nid["ci"] = True
-    nid["images"] = 10
-    nid["interp_method"] = "linear"
-    nid["bias"] = "No_bias"
-    nid["start_struc"] = "POSCAR_start"
-    nid["end_struc"] = "POSCAR_end"
-    inputs = get_inputs_list(fname, auto_lower=False)
-    for input in inputs:
-        key, val = input[0], input[1]
-        if ("freeze" in key):
-            if ("base" in key):
-                nid["freeze_base"] = "true" in val.lower()
-            elif ("tol" in key):
-                nid["freeze_tol"] = float(val)
-            elif ("count" in key):
-                nid["freeze_count"] = int(val)
-        if "pseudo" in key:
-            nid["pseudoSet"] = val.strip()
-        if "gpu" in key:
-            nid["gpu"] = "true" in val.lower()
-        if "restart" in key:
-            nid["restart"] = "true" in val.lower()
-        if "work" in key:
-            nid["work_dir"] = val.strip()
-        if ("method" in key):
-            if ("neb" in key):
-                nid["neb_method"] = val.strip()
-            elif ("interp" in key):
-                nid["interp_method"] = val.strip()
-        if key.lower() == "kval":
-            nid["k"] = float(val.strip())
-        if "max" in key:
-            if "steps" in key:
-                nid["max_steps"] = int(val.strip())
-            elif ("force" in key) or ("fmax" in key):
-                nid["fmax"] = float(val.strip())
-        if "pbc" in key:
-            nid["pbc"] = read_pbc_val(val)
-        if "relax" in key:
-            if "start" in val:
-                nid["relax_start"] = True
-            if "end" in val:
-                nid["relax_end"] = True
-        if "climbing" in key:
-            if "image" in key:
-                nid["ci"] = "true" in val.lower()
-        if "images" in key:
-            nid["images"] = int(val)
-        if "struc" in key:
-            if "start" in key:
-                nid["start_struc"] = val.strip()
-            elif "end" in key:
-                nid["end_struc"] = val.strip()
-        if "bias" in key:
-            nid["bias"] = val.strip()
-    nid["work_dir"] = fix_work_dir(nid["work_dir"])
-    return nid
+
 
 def main(debug=False):
     nid = read_neb_inputs()
