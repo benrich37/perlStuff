@@ -188,7 +188,11 @@ def setup_img_dirs(neb_path, nImages, restart_bool=False, log_fn=log_def):
         img_dir_str = opj(neb_path, str(j))
         img_dirs.append(img_dir_str)
         if restart_bool:
-            if not (ope(opj(img_dir_str, "POSCAR"))) or (ope(opj(img_dir_str, "CONTCAR"))):
+            poscar_path = opj(img_dir_str, "POSCAR")
+            contcar_path = opj(img_dir_str, "CONTCAR")
+            poscar_ope = ope(poscar_path)
+            contcar_ope = ope(contcar_path)
+            if (not poscar_ope) or (not contcar_ope):
                 log_fn(f"Restart NEB requested but dir for image {j} does not appear to have a structure to use")
                 log_fn(f"(Image {j}'s directory is {img_dir_str}")
                 log_fn(f"Ignoring restart NEB request")
@@ -307,9 +311,12 @@ def remove_neb_restart_files(neb_path):
             remove(p)
 
 
-def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
-              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def,
-              freeze_base=False, freeze_tol=0, freeze_count=0):
+def setup_neb(
+        start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
+        relax_start=False, relax_end=False,
+        opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def,
+        freeze_base=False, freeze_tol=0, freeze_count=0
+        ):
 
     hessian_restart = restart_bool
     if restart_bool:
@@ -449,6 +456,8 @@ def main(debug=False):
     freeze_base = nid["freeze_base"]
     freeze_tol = nid["freeze_tol"]
     freeze_count = nid["freeze_count"]
+    relax_start = nid["relax_start"]
+    relax_end = nid["relax_end"]
     chdir(work_dir)
     neb_log = get_log_fn(work_dir, "neb", False, restart=restart)
     start_struc = _check_structure(nid["start_struc"], work_dir, log_fn=neb_log)
