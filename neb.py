@@ -9,6 +9,8 @@ from os import mkdir, getcwd,  chdir
 from ase.mep import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
+    get_atoms_list_from_out, get_do_cell, get_atoms, get_ionic_opt_cmds_list
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint
 from helpers.calc_helpers import _get_calc, get_exe_cmd
@@ -24,6 +26,7 @@ from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freez
     get_scan_steps_list_for_neb, get_neb_options, insert_finer_steps, write_schedule_to_text
 from os import listdir
 import numpy as np
+from opt import run_ion_opt
 
 neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -357,6 +360,24 @@ def setup_neb(
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
     return dyn, hessian_restart
 
+def run_relax(
+        work_dir, struc_path, calc_fn, name,
+        freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, 
+        freeze_idcs=None,
+        log_fn=log_def,
+        ):
+    relax_dir = opj(work_dir, name)
+    if not ope(relax_dir):
+        mkdir(relax_dir)
+    atoms = read(struc_path, format="vasp")
+    run_ion_opt(
+        atoms, relax_dir, work_dir, calc_fn,
+        freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
+        exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs,
+        log_fn=log_fn,
+        )
+    return opj(relax_dir, "CONTCAR")
+
 def read_neb_inputs(fname="neb_input"):
     """ Reads
     :param fname:
@@ -466,11 +487,31 @@ def main(debug=False):
     neb_log(f"Reading JDFTx commands")
     cmds = get_cmds_dict(work_dir, ref_struct=start_struc, log_fn=neb_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
+    relax_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
     exe_cmd = get_exe_cmd(gpu, neb_log, use_srun=not debug)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=False, log_fn=neb_log)
+    get_relax_calc = lambda root: _get_calc(exe_cmd, relax_cmds, root, pseudoSet=pseudoSet, debug=False, log_fn=neb_log)
     ####################################################################################################################
     neb_log("Beginning NEB setup")
     neb_dir = opj(work_dir, "neb")
+    if relax_start:
+        if (not restart) or (not ope(opj(work_dir, "relax_start", "CONTCAR"))):
+            start_struc = run_relax(
+                work_dir, start_struc, get_relax_calc, "relax_start",
+                freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
+                log_fn=neb_log,
+            )
+        else:
+            start_struc = opj(work_dir, opj("relax_start", "CONTCAR"))
+    if relax_end:
+        if (not restart) or (not ope(opj(work_dir, "relax_end", "CONTCAR"))):
+            end_struc = run_relax(
+                work_dir, end_struc, get_relax_calc, "relax_end",
+                freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
+                log_fn=neb_log,
+            )
+        else:
+            end_struc = opj(work_dir, opj("relax_end", "CONTCAR"))
     if not ope(neb_dir):
         neb_log("No NEB dir found - setting restart to False for NEB")
         restart = False
