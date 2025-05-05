@@ -25,6 +25,7 @@ from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freez
 from os import listdir
 import numpy as np
 from neb import setup_img_dirs
+from pathlib import Path
 
 neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -270,6 +271,8 @@ def write_interpolated_missing_images(neb_path, atoms_list, inter_method_str, mi
             if missing_run is not None:
                 missing_runs.append(missing_run)
                 missing_run = None
+    if not missing_run is None:
+        raise ValueError(f"write_interpolated_missing_images found a missing run that was not closed (make sure to include final image) - aborting")
     if not len(missing_runs):
         raise ValueError(f"write_interpolated_missing_images fed empty list of missing_idcs - aborting")
     for missing_run in missing_runs:
@@ -369,6 +372,7 @@ def setup_custom_image_neb(
     check_submit(gpu, getcwd(), "neb", log_fn=log_fn)
     img_dirs, restart_bool = setup_img_dirs(neb_path, nImages, restart_bool=restart_bool, log_fn=log_fn)
     log_fn("Writing provided images")
+    work_dir = str(Path(neb_path).parent)
     write_provided_images(work_dir, structure_prefix, nImages, neb_path, inter_method_str)
     log_fn(f"Creating image objects")
     imgs_atoms_list, interpolate = setup_neb_imgs(img_dirs, pbc, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
