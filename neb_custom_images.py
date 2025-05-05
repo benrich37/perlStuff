@@ -519,7 +519,7 @@ def main(debug=False):
         neb_log("No NEB dir found - setting restart to False for NEB")
         restart = False
         mkdir(neb_dir)
-    dyn_neb, skip_to_neb = setup_custom_image_neb( nImages, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
+    dyn_neb, skip_to_neb = setup_custom_image_neb(struc_prefix, nImages, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
                                      opter_ase_fn=FIRE, restart_bool=restart, use_ci_bool=use_ci, log_fn=neb_log,
                                      freeze_count=freeze_count, freeze_base=freeze_base, freeze_tol=freeze_tol)
     neb_log("Running NEB now")
