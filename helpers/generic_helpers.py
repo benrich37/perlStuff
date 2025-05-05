@@ -768,14 +768,20 @@ def check_submit(gpu, cwd, jobtype, log_fn=log_def):
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
         else:
             dump_template_input(fname, submit_cpu_perl_ref, cwd)
-        run(f"sed -i 's/{foo_str}/{jobtype}/g' {fname}", shell=True, check=True)
+        try:
+            run(f"sed -i 's/{foo_str}/{jobtype}/g' {fname}", shell=True, check=True)
+        except:
+            run(f"sed -i '' 's/{foo_str}/{jobtype}/g' {fname}", shell=True, check=True)
         _bar = __main__.__file__
         bar = ""
         for s in _bar:
             if s == "/":
                 bar += "\\"
             bar += s
-        run(f"sed -i 's/{bar_str}/{bar}/g' {fname}", shell=True, check=True)
+        try:
+            run(f"sed -i 's/{bar_str}/{bar}/g' {fname}", shell=True, check=True)
+        except:
+            run(f"sed -i '' 's/{bar_str}/{bar}/g' {fname}", shell=True, check=True)
         exit()
 
 
