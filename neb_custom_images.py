@@ -24,22 +24,20 @@ from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freez
     get_scan_steps_list_for_neb, get_neb_options, insert_finer_steps, write_schedule_to_text
 from os import listdir
 import numpy as np
-
-
-# Same as normal neb, but 
+from neb import setup_img_dirs
 
 neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
-                "neb method: spline # idk, something about how forces are projected out / imposed",
-                "interp_method: idpp",
-                "restart: True",
-                "max_steps: 100 # max number of steps for scan opts",
-                "fmax: 0.05 # fmax perameter for both neb and scan opt",
-                "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
-                "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
-                "gpu: True",
-                "climbing image: True",
-                "images: 10",
-                "struc_prefix: POSCAR_",
+                   "neb method: spline # idk, something about how forces are projected out / imposed",
+                   "restart: True",
+                   "max_steps: 100 # max number of steps for scan opts",
+                   "fmax: 0.05 # fmax perameter for both neb and scan opt",
+                   "pbc: True, true, false # which lattice vectors to impose periodic boundary conditions on",
+                   "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
+                   "gpu: True",
+                   "climbing image: True",
+                   "images: 10",
+                   "start_struc: POSCAR_start",
+                "end_struc: POSCAR_end",
                 "bias: No_bias"]
 
 
@@ -52,82 +50,7 @@ if debug:
     environ["JDFTx_GPU"] = "None"
     environ["JDFTx"] = "None"
 
-def read_neb_inputs(fname="neb_input"):
-    """ Reads
-    :param fname:
-    :return:
-    """
-    if not ope(fname):
-        dump_template_input(fname, neb_template, getcwd())
-        raise ValueError(f"No se neb input supplied: dumping template {fname}")
-    nid = {}
-    nid["k"] = 0.1
-    nid["neb_method"] = "spline"
-    nid["restart"] = True
-    nid["max_steps"] = 100
-    nid["fmax"] = 0.01
-    nid["work_dir"] = None
-    nid["relax_start"] = False
-    nid["relax_end"] = False
-    nid["pbc"] = [True, True, False]
-    nid["gpu"] = False
-    nid["pseudoSet"] = "GBRV"
-    nid["freeze_base"] = False
-    nid["freeze_tol"] = 0.
-    nid["freeze_count"] = 0
-    nid["ci"] = True
-    nid["images"] = 10
-    nid["interp_method"] = "idpp"
-    nid["bias"] = "No_bias"
-    nid["struc_prefix"] = "POSCAR_"
-    inputs = get_inputs_list(fname, auto_lower=False)
-    for input in inputs:
-        key, val = input[0], input[1]
-        if ("freeze" in key):
-            if ("base" in key):
-                nid["freeze_base"] = "true" in val.lower()
-            elif ("tol" in key):
-                nid["freeze_tol"] = float(val)
-            elif ("count" in key):
-                nid["freeze_count"] = int(val)
-        if "pseudo" in key:
-            nid["pseudoSet"] = val.strip()
-        if "gpu" in key:
-            nid["gpu"] = "true" in val.lower()
-        if "restart" in key:
-            nid["restart"] = "true" in val.lower()
-        if "work" in key:
-            nid["work_dir"] = val.strip()
-        if ("method" in key):
-            if ("neb" in key):
-                nid["neb_method"] = val.strip()
-            elif ("interp" in key):
-                nid["interp_method"] = val.strip()
-        if key.lower() == "kval":
-            nid["kval"] = float(val.strip())
-        if "max" in key:
-            if "steps" in key:
-                nid["max_steps"] = int(val.strip())
-            elif ("force" in key) or ("fmax" in key):
-                nid["fmax"] = float(val.strip())
-        if "pbc" in key:
-            nid["pbc"] = read_pbc_val(val)
-        if "relax" in key:
-            if "start" in val:
-                nid["relax_start"] = True
-            if "end" in val:
-                nid["relax_end"] = True
-        if "climbing" in key:
-            if "image" in key:
-                nid["ci"] = "true" in val.lower()
-        if "images" in key:
-            nid["images"] = int(val)
-        if "struc_prefix" in key:
-            nid["struc_prefix"] = val.strip()
-        if "bias" in key:
-            nid["bias"] = val.strip()
-    nid["work_dir"] = fix_work_dir(nid["work_dir"])
-    return nid
+
 
 
 def parse_lookline(lookline):
@@ -306,15 +229,60 @@ def setup_neb_imgs(img_path_list, pbc_bool_list, get_calc_fn, log_fn=log_def, re
         imgs.append(img)
     return imgs, interpolate
 
-def writing_bounding_images(start_struc, end_struc, images, neb_path):
-    start_atoms = read(start_struc, format="vasp")
-    end_atoms = read(end_struc, format="vasp")
-    start_dir = opj(neb_path, str(0))
-    end_dir = opj(neb_path, str(images-1))
-    if not ope(opj(start_dir, "POSCAR")):
-        write(opj(start_dir, "POSCAR"), start_atoms, format="vasp")
-    if not ope(opj(end_dir, "POSCAR")):
-        write(opj(end_dir, "POSCAR"), end_atoms, format="vasp")
+def write_provided_images(work_dir, structure_prefix, nImages, neb_path, inter_method_str, log_fn=log_def):
+    atoms_list = []
+    missing_idcs = []
+    for i in range(nImages):
+        format = "vasp"
+        path = opj(work_dir, f"{structure_prefix}{i}")
+        if not ope(path):
+            path = opj(work_dir, f"{structure_prefix}{i}.gjf")
+            format = "gaussian-in"
+        if ope(path):
+            atoms = read(path, format=format)
+            atoms_list.append(atoms)
+            img_dir = opj(neb_path, str(i))
+            if not ope(opj(img_dir, "POSCAR")):
+                write(opj(img_dir, "POSCAR"), atoms, format="vasp")
+        else:
+            missing_idcs.append(i)
+            if i > 0:
+                atoms = atoms_list[i-1].copy()
+                atoms_list.append(atoms)
+            elif i == nImages - 1:
+                raise ValueError(f"Final image ({i}) must be provided - aborting")
+            else:
+                raise ValueError(f"Initial image (0) must be provided - aborting")
+    if len(missing_idcs) > 0:
+        write_interpolated_missing_images(neb_path, atoms_list, inter_method_str, missing_idcs, log_fn=log_fn)
+            
+def write_interpolated_missing_images(neb_path, atoms_list, inter_method_str, missing_idcs, log_fn=log_def):
+    log_fn(f"Interpolating missing images {missing_idcs}")
+    missing_runs = []
+    missing_run = None
+    for i in range(len(atoms_list)):
+        if i in missing_idcs:
+            if missing_run is None:
+                missing_run = [i]
+            else:
+                missing_run.append(i)
+        else:
+            if missing_run is not None:
+                missing_runs.append(missing_run)
+                missing_run = None
+    if not len(missing_runs):
+        raise ValueError(f"write_interpolated_missing_images fed empty list of missing_idcs - aborting")
+    for missing_run in missing_runs:
+        start = missing_run[0] - 1
+        end = missing_run[-1] + 1
+        atoms_sublist = atoms_list[start:end]
+        tmp_neb = NEB(atoms_sublist)
+        tmp_neb.interpolate(apply_constraint=True, method=inter_method_str)
+        for idx in missing_run:
+            img_dir = opj(neb_path, str(idx))
+            write(opj(img_dir, "POSCAR"), tmp_neb.images[idx - start], format="vasp")
+            log_fn(f"Writing image {idx} to {img_dir}")
+
 
 
 def get_existing_images(neb_path):
@@ -385,9 +353,12 @@ def remove_neb_restart_files(neb_path):
             remove(p)
 
 
-def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
-              opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def,
-              freeze_base=False, freeze_tol=0, freeze_count=0):
+def setup_custom_image_neb(
+        structure_prefix, nImages, pbc, get_calc_fn, neb_path, k_float, neb_method_str, inter_method_str, gpu,
+        relax_start=False, relax_end=False,
+        opter_ase_fn=FIRE, restart_bool=False, use_ci_bool=False, log_fn=log_def,
+        freeze_base=False, freeze_tol=0, freeze_count=0
+        ):
 
     hessian_restart = restart_bool
     if restart_bool:
@@ -395,21 +366,17 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
             log_fn(f"Restart NEB requested but no hessian pckl found - ignoring restart request")
             hessian_restart = False
     log_fn(f"Setting up image directories in {neb_path}")
-    if restart_bool and not_enough_images(nImages, neb_path):
-        log_fn("Inserting new images")
-        add_new_imgs(nImages, neb_path, log_fn=log_fn)
-        remove_neb_restart_files(neb_path)
     check_submit(gpu, getcwd(), "neb", log_fn=log_fn)
     img_dirs, restart_bool = setup_img_dirs(neb_path, nImages, restart_bool=restart_bool, log_fn=log_fn)
-    log_fn("Writing bounding images")
-    writing_bounding_images(start_struc, end_struc, nImages, neb_path)
+    log_fn("Writing provided images")
+    write_provided_images(work_dir, structure_prefix, nImages, neb_path, inter_method_str)
     log_fn(f"Creating image objects")
     imgs_atoms_list, interpolate = setup_neb_imgs(img_dirs, pbc, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
     neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
-    if interpolate:
-        neb.interpolate(apply_constraint=True, method=inter_method_str)
-        for i in range(nImages):
-            write(opj(img_dirs[i], "POSCAR"), neb.images[i], format="vasp")
+    # if interpolate:
+    #     neb.interpolate(apply_constraint=True, method=inter_method_str)
+    #     for i in range(nImages):
+    #         write(opj(img_dirs[i], "POSCAR"), neb.images[i], format="vasp")
     if freeze_base:
         for i in range(nImages):
             add_freeze_surf_base_constraint(neb.images[i], freeze_base=freeze_base, ztol=freeze_tol, freeze_count=freeze_count, log_fn=log_fn)
@@ -428,7 +395,93 @@ def setup_neb(start_struc, end_struc, nImages, pbc, get_calc_fn, neb_path, k_flo
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
     return dyn, hessian_restart
 
+def read_neb_inputs(fname="neb_input"):
+    """ Reads
+    :param fname:
+    :return:
+    """
+    if not ope(fname):
+        dump_template_input(fname, neb_template, getcwd())
+        raise ValueError(f"No se neb input supplied: dumping template {fname}")
+    nid = {}
+    nid["k"] = 1.0
+    nid["neb_method"] = "spline"
+    nid["restart"] = True
+    nid["max_steps"] = 100
+    nid["fmax"] = 0.01
+    nid["work_dir"] = None
+    nid["relax_start"] = False
+    nid["relax_end"] = False
+    nid["pbc"] = [True, True, False]
+    nid["gpu"] = False
+    nid["pseudoSet"] = "GBRV"
+    nid["freeze_base"] = False
+    nid["freeze_tol"] = 0.
+    nid["freeze_count"] = 0
+    nid["ci"] = True
+    nid["images"] = 10
+    nid["interp_method"] = "linear"
+    nid["bias"] = "No_bias"
+    nid["start_struc"] = "POSCAR_start"
+    nid["end_struc"] = "POSCAR_end"
+    inputs = get_inputs_list(fname, auto_lower=False)
+    for input in inputs:
+        key, val = input[0], input[1]
+        if ("freeze" in key):
+            if ("base" in key):
+                nid["freeze_base"] = "true" in val.lower()
+            elif ("tol" in key):
+                nid["freeze_tol"] = float(val)
+            elif ("count" in key):
+                nid["freeze_count"] = int(val)
+        if "pseudo" in key:
+            nid["pseudoSet"] = val.strip()
+        if "gpu" in key:
+            nid["gpu"] = "true" in val.lower()
+        if "restart" in key:
+            nid["restart"] = "true" in val.lower()
+        if "work" in key:
+            nid["work_dir"] = val.strip()
+        if ("method" in key):
+            if ("neb" in key):
+                nid["neb_method"] = val.strip()
+            elif ("interp" in key):
+                nid["interp_method"] = val.strip()
+        if key.lower() == "kval":
+            nid["k"] = float(val.strip())
+        if "max" in key:
+            if "steps" in key:
+                nid["max_steps"] = int(val.strip())
+            elif ("force" in key) or ("fmax" in key):
+                nid["fmax"] = float(val.strip())
+        if "pbc" in key:
+            nid["pbc"] = read_pbc_val(val)
+        if "relax" in key:
+            if "start" in val:
+                nid["relax_start"] = True
+            if "end" in val:
+                nid["relax_end"] = True
+        if "climbing" in key:
+            if "image" in key:
+                nid["ci"] = "true" in val.lower()
+        if "images" in key:
+            nid["images"] = int(val)
+        if "struc" in key:
+            if "start" in key:
+                nid["start_struc"] = val.strip()
+            elif "end" in key:
+                nid["end_struc"] = val.strip()
+        if "bias" in key:
+            nid["bias"] = val.strip()
+    nid["work_dir"] = fix_work_dir(nid["work_dir"])
+    return nid
 
+def get_ref_struct(work_dir, struc_prefix):
+    all_files = listdir(work_dir)
+    struc_files = [f for f in all_files if struc_prefix in f]
+    if len(struc_files) == 0:
+        raise ValueError(f"No reference structure found in {work_dir} with prefix {struc_prefix}")
+    return opj(work_dir, struc_files[0])
 
 def main(debug=False):
     nid = read_neb_inputs()
@@ -448,13 +501,13 @@ def main(debug=False):
     freeze_base = nid["freeze_base"]
     freeze_tol = nid["freeze_tol"]
     freeze_count = nid["freeze_count"]
+    struc_prefix = "POSCAR_"
     chdir(work_dir)
     neb_log = get_log_fn(work_dir, "neb", False, restart=restart)
-    start_struc = _check_structure(nid["start_struc"], work_dir, log_fn=neb_log)
-    end_struc = _check_structure(nid["end_struc"], work_dir, log_fn=neb_log)
     ####################################################################################################################
     neb_log(f"Reading JDFTx commands")
-    cmds = get_cmds_dict(work_dir, ref_struct=start_struc, log_fn=neb_log, pbc=pbc, bias=bias)
+    ref_struc = get_ref_struct(work_dir, struc_prefix)
+    cmds = get_cmds_dict(work_dir, ref_struct=ref_struc, log_fn=neb_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
     exe_cmd = get_exe_cmd(gpu, neb_log, use_srun=not debug)
     get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=False, log_fn=neb_log)
@@ -465,7 +518,7 @@ def main(debug=False):
         neb_log("No NEB dir found - setting restart to False for NEB")
         restart = False
         mkdir(neb_dir)
-    dyn_neb, skip_to_neb = setup_neb(start_struc, end_struc, nImages, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
+    dyn_neb, skip_to_neb = setup_custom_image_neb( nImages, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
                                      opter_ase_fn=FIRE, restart_bool=restart, use_ci_bool=use_ci, log_fn=neb_log,
                                      freeze_count=freeze_count, freeze_base=freeze_base, freeze_tol=freeze_tol)
     neb_log("Running NEB now")
