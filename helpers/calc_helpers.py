@@ -1,5 +1,6 @@
 from os import getcwd as getcwd, environ as env_vars_dict
 from JDFTx import JDFTx, Wannier
+from JDFTx_new import JDFTx as JDFTx_new, JDFTXInfile
 from helpers.generic_helpers import log_def, fix_dump_cmds_list
 
 
@@ -44,6 +45,25 @@ def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None,
             ionic_steps=False,
             direct_coords=direct_coords
         )
+    
+# def _get_calc_new(
+#         exe_cmd: str, infile: JDFTXInfile, calc_dir: str, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def, direct_coords=False
+#         ):
+#     cmds = fix_dump_cmds_list(cmds)
+#     if debug:
+#         log_fn("Setting calc to debug calc")
+#         return debug_fn()
+#     else:
+#         log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {calc_dir} \n \t cmds: {cmds} \n")
+#         return JDFTx_new(
+
+#             executable=exe_cmd,
+#             pseudoSet=pseudoSet,
+#             commands=cmds,
+#             calc_dir=calc_dir,
+#             ionic_steps=False,
+#             direct_coords=direct_coords
+#         )
 
 
 def get_wannier_exe_cmd(gpu, log_fn):
