@@ -277,7 +277,7 @@ def write_interpolated_missing_images(neb_path, atoms_list, inter_method_str, mi
         raise ValueError(f"write_interpolated_missing_images fed empty list of missing_idcs - aborting")
     for missing_run in missing_runs:
         start = missing_run[0] - 1
-        end = missing_run[-1] + 1
+        end = missing_run[-1] + 2
         atoms_sublist = atoms_list[start:end]
         tmp_neb = NEB(atoms_sublist)
         tmp_neb.interpolate(apply_constraint=True, method=inter_method_str)
