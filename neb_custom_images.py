@@ -373,7 +373,8 @@ def setup_custom_image_neb(
     img_dirs, restart_bool = setup_img_dirs(neb_path, nImages, restart_bool=restart_bool, log_fn=log_fn)
     log_fn("Writing provided images")
     work_dir = str(Path(neb_path).parent)
-    write_provided_images(work_dir, structure_prefix, nImages, neb_path, inter_method_str)
+    if not restart_bool:
+        write_provided_images(work_dir, structure_prefix, nImages, neb_path, inter_method_str)
     log_fn(f"Creating image objects")
     imgs_atoms_list, interpolate = setup_neb_imgs(img_dirs, pbc, get_calc_fn, restart_bool=restart_bool, log_fn=log_fn)
     neb = NEB(imgs_atoms_list, parallel=False, climb=use_ci_bool, k=k_float, method=neb_method_str)
