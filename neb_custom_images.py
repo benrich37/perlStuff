@@ -484,10 +484,14 @@ def read_neb_inputs(fname="neb_input"):
 def get_ref_struct(work_dir, struc_prefix):
     all_files = listdir(work_dir)
     struc_files = [f for f in all_files if struc_prefix in f]
-    struc_files = [f for f in struc_files if not ".gjf" in f]
-    if len(struc_files) == 0:
-        raise ValueError(f"No reference structure found in {work_dir} with prefix {struc_prefix}")
-    return opj(work_dir, struc_files[0])
+    _struc_files = [f for f in struc_files if not ".gjf" in f]
+    if len(_struc_files) == 0:
+        _atoms = read(opj(work_dir, struc_files[0]), format="gaussian-in")
+        ref_struct = struc_files[0].rstrip(".gjf")
+        write(opj(work_dir, ref_struct), _atoms, format="vasp")
+        return ref_struct
+    else:
+        return opj(work_dir, struc_files[0])
 
 def main(debug=False):
     nid = read_neb_inputs()
