@@ -493,7 +493,7 @@ def get_ref_struct(work_dir, struc_prefix):
     else:
         return opj(work_dir, _struc_files[0])
 
-def main(debug=False):
+def main(debug=True):
     nid = read_neb_inputs()
     restart = nid["restart"]
     gpu = nid["gpu"]
