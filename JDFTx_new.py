@@ -1,6 +1,7 @@
 # Atomistic Simulation Environment (ASE) calculator interface for JDFTx
 # See http://jdftx.org for JDFTx and https://wiki.fysik.dtu.dk/ase/ for ASE
 # Authors: Deniz Gunceler, Ravishankar Sundararaman
+# Revised by Benjamin Rich
 
 from __future__ import print_function #For Python2 compatibility
 
@@ -8,9 +9,10 @@ import numpy as np
 import scipy, subprocess, re
 from ase.units import Bohr, Hartree
 from ase import Atoms
+import warnings
 from os import environ as env_vars_dict
 from os.path import join as opj
-from pymatgen.io.jdftx.outputs import JDFTXOutfile, JDFTXOutputs
+from pymatgen.io.jdftx.outputs import JDFTXOutputs
 from pymatgen.io.jdftx.inputs import JDFTXInfile
 from pymatgen.io.ase import AseAtomsAdaptor
 from ase.io.jsonio import write_json
@@ -18,37 +20,54 @@ import ase.io
 from ase.calculators.calculator import (
     Calculator,
     CalculatorSetupError,
+    BaseCalculator,
     Parameters,
     all_changes
 )
 from pathlib import Path
 from ase.config import cfg
 
-#Run shell command and return output as a string:
-def shell(cmd):
-    return subprocess.check_output(cmd, shell=True)
-
-
-def _get_atoms(infile: JDFTXInfile | None, atoms: Atoms | None) -> Atoms:
-    if isinstance(atoms, Atoms):
-        return atoms
-    if isinstance(infile, JDFTXInfile):
-        structure = infile.to_pmg_structure()
-        atoms = AseAtomsAdaptor.get_atoms(structure)
-        return atoms
-    return None
-
-def _tensor_to_voigt(tensor):
-    return np.array(
-        [tensor[0, 0], tensor[1, 1], tensor[2, 2], tensor[1, 2], tensor[0, 2], tensor[0, 1]]
-        )
-
-def _strip_infile(infile: JDFTXInfile) -> JDFTXInfile:
-    new_infile = infile.copy()
-    strip_tags = ["ion", "lattice", "ion-species",]
+run_dir_suffix = "jdftx_run"
 
 
 class JDFTx(Calculator):
+
+    """ Revised JDFTx calculator for ASE.
+
+    Based on the original JDFTx calculator by Deniz Gunceler and Ravishankar Sundararaman.
+    Rewritten for compatability with up-to-date ASE versions.  Requires pymatgen 2025.5.3 or later.
+
+    Major Changes:
+    - Uses JDFTx IO module in pymatgen to read and write input and output files.
+        - Use of JDFTXInfile object 
+    - Implements `read` and `write` methods to read and write restart files:
+        - <label>_restart.traj
+            - Trajectory file containing the atoms object. Overwrites the atoms object
+              in the calculator with the most recent one (there is new functionality in
+              ase to check for changes in an atoms object to decide if any properties
+              need to be recalculated).
+        - <label>_params.ase
+            - ASE Parameters object containing all JDFTx input parameters non-redundant
+              to the `atoms` object. This is pretty redundant at the moment to the JDFTXInfile
+              object at the moment, but is slightly useful for restarting without needing to
+              provide anything in `infile`.
+        - <label>_restart.json
+            - JSON file containing the results of the calculation, using the properties as stored in
+              the `ase.Calculator` `results` dictionary field. This is where ASE expects to find any
+              results from previous calculations.
+        The motivation for for this implementation is primarily for NEB calculations, as this prevents
+        redundant single-points to be run images not being updated between NEB steps.
+    - Runs JDFTx in a sub-directory '<label>_jdftx_run', keeping the restart files separate from the state
+      files. This is useful for ASE codes that require multiple sets of restart files to be present in the 
+      same directory.
+    
+    """
+
+    default_parameters = {
+        "dump-name": "$VAR",
+        "initial-state": "$VAR",
+        "dump": {"End": {"State": True}}
+    }
     
     implemented_properties = ['energy', 'forces', 'stress', 'charges']
     pseudoSetMap = {
@@ -61,36 +80,107 @@ class JDFTx(Calculator):
         'kjpaw': 'kjpaw/$ID_pbe-n-kjpaw_psl.1.0.0.upf',
         'dojo': 'dojo/$ID.upf',
         }
-    pseudopotentials = ['fhi', 'uspp', 'upf', 'UPF', 'USPP']
+    pseudo_filetypes = ['fhi', 'uspp', 'upf', 'UPF', 'USPP']
     
     def __init__(
-            self, restart=None, infile=None, pseudoDir=None, pseudoSet='GBRV',
+            self, 
+            commands: dict | list | None = BaseCalculator._deprecated,
+            executable: str | None = BaseCalculator._deprecated,
+            restart: str | None = None, 
+            infile: JDFTXInfile | dict | list | None = None, 
+            pseudoDir=None, pseudoSet='GBRV',
             label='jdftx', atoms=None, command=None,
+            detect_restart=True,
+            ignore_state_on_failure=True,
             debug=False, **kwargs
             ):
+        """ 
+
+        JDFTx calculator for ASE.
+
+        restart: str
+            Restart label. Set if restarting from different label.
+        infile: JDFTXInfile | dict | list | None
+            JDFTx input file. If None, will use default parameters. This will probably break if you're
+            not fetching parameters from a restart file.
+        pseudoDir: str
+            Directory containing pseudopotentials. If None, will use the JDFTx_pseudo environment variable.
+        pseudoSet: str
+            Pseudopotential set to use. Default is 'GBRV'. If None, will use the JDFTx_pseudo environment variable.
+        label: str
+            Label for the calculation. Default is 'jdftx'.
+        atoms: Atoms
+            Atoms object. If None, will use the atoms from the infile.
+        command: str
+            Command to run JDFTx.
+        detect_restart: bool
+            If True, will attempt a protected read of provided `label` for restart. Sets restart to `label` if
+            successful.
+        ignore_state_on_failure: bool
+            If True and command returns an error, the input file will be rewritten with 'initial-state' removed and
+            the calculation will be retried. If False, the calculation will fail. 
+        debug: bool
+            For debugging. Does nothing right now.
+        """
+        commands = self._check_deprecated_keyword(commands, "commands")
+        executable = self._check_deprecated_keyword(executable, "executable")
+
+        self._set_infile(infile)
         atoms = _get_atoms(infile, atoms)
-        self.infile = infile
         self.pseudoDir = pseudoDir
         self.pseudoSet = pseudoSet
         self._debug = debug
-        self.label = None
-        self.parameters = None
-        self.results = None
-        self.atoms = None
         self.command = command
+        self.ignore_state_on_failure = ignore_state_on_failure
+
+        if (restart is None) and detect_restart:
+            self.parameters = None
+            try:
+                self.read(label)
+                restart = label
+            except Exception as e:
+                print(f"Restart detection failed: {e}")
+                print("Continuing with new calculation.")
 
         super().__init__(
             restart=restart,
             label=label, atoms=atoms, **kwargs
             )
-        if restart is not None:
-            self.read(restart)
 
+    @property
+    def run_dir(self):
+        """Return the run directory for this calculation.
 
+        Return the run directory for this calculation. Kept separate from the
+        directory of the calculator to avoid confusion when restarting from
+        state files.
+        """
+        _run_dir = Path(self.directory) / f"{self.prefix}_{run_dir_suffix}"
+        if not _run_dir.exists():
+            _run_dir.mkdir(parents=True)
+        return str(_run_dir)
+    
+    def set_atoms(self, atoms):
+        self.atoms = atoms
+
+    def _set_infile(self, infile):
+        infile_dict = self.default_parameters.copy()
+        if isinstance(infile, JDFTXInfile):
+            infile_dict.update(infile.as_dict())
+        elif isinstance(infile, dict):
+            infile_dict.update(infile)
+        elif isinstance(infile, list):
+            _infile = JDFTXInfile.from_str("\n".join(infile), dont_require_structure=True)
+            infile_dict.update(_infile.as_dict())
+        elif isinstance(infile, str):
+            _infile = JDFTXInfile.from_file(infile, dont_require_structure=True)
+            infile_dict.update(_infile.as_dict())
+        self.infile = _strip_infile(JDFTXInfile.from_dict(infile_dict))
+        
           
 
     def _read_results(self, properties):
-        outputs = JDFTXOutputs.from_calc_dir(self.directory, store_vars=["eigenvals"])
+        outputs = JDFTXOutputs.from_calc_dir(self.run_dir, store_vars=["eigenvals"])
         outfile = outputs.outfile
         self.results["energy"] = outfile.e
         self.results["forces"] = outfile.forces
@@ -113,15 +203,26 @@ class JDFTx(Calculator):
 
     def write(self, label):
         self.atoms.write(label + "_restart.traj")
-        #self.params.write(label + "_params.ase")
+        self.parameters.write(label + "_params.ase")
         with open(label + "_restart.json", "w") as f:
             ase.io.jsonio.write_json(f, self.results)
 
     def read(self, label):
         self.atoms = ase.io.read(label + "_restart.traj")
-        #self.parameters = Parameters.read(label + "_params.ase")
+        self.parameters = Parameters(label + "_params.ase")
+        # parameters = Parameters.read(label + "_params.ase")
+        # if (self.parameters is None) or (not len(self.parameters)):
+        #     self.parameters = parameters
+        # else:
+        #     self.parameters.update(parameters)
+        # if self.infile is None:
+        #     self.infile = JDFTXInfile.from_dict(self.parameters)
+        # else:
+        #     self.parameters.update(self.infile.as_dict())
         with open(label + "_restart.json", "r") as f:
             self.results = ase.io.jsonio.read_json(f)
+
+    # def _post_read(self):
 
     def _check_properties(self, properties):
         if "stress" in properties:
@@ -130,32 +231,61 @@ class JDFTx(Calculator):
     def calculate(self, atoms=None, properties=None, system_changes=all_changes):
         Calculator.calculate(self, atoms, properties, system_changes)
         self._check_properties(properties)
-        self.constructInput(self.atoms)
-        shell('cd %s && %s -i in -o out' % (self.directory, self.command))
+        self.constructInput(atoms)
+        self.run_jdftx()
+        #shell('cd %s && %s -i in -o out' % (self.run_dir, self.command))
         self._read_results(properties)
         self.write(self.label)
+
+    def run_jdftx(self, ran_before=False):
+        try:
+            shell('cd %s && %s -i in -o out' % (self.run_dir, self.command))
+        except Exception as e:
+            print(f"Error running JDFTx: {e}")
+            if self.ignore_state_on_failure:
+                if ran_before:
+                    print("Ignoring state files did not work, aborting.")
+                    raise RuntimeError("JDFTx calculation failed.")
+                print("Ignoring state files and trying again.")
+                self.constructInput(self.atoms, ignore_state=True)
+                self.run_jdftx(ran_before=True)
+            raise RuntimeError("JDFTx calculation failed.")
+
     
-    def _get_ion_species_cmd(self, atomNames, pseudoDir):
+    def _get_ion_species_cmd(self, atomNames):
         pseudoSetDir = opj(self.pseudoDir, self.pseudoSet)
         for_infile = {"ion-species": []}
         added = []  # List of pseudopotential that have already been added
         for atom in atomNames:
             if(sum([x == atom for x in added]) == 0.):
-                for filetype in self.pseudopotentials:
+                for filetype in self.pseudo_filetypes:
                     try:
-                        #print("trying", atom, filetype)
                         shell('ls %s | grep %s.%s' % (pseudoSetDir, atom, filetype))
                         for_infile["ion-species"].append('%s/%s.%s' % (pseudoSetDir, atom, filetype))
                         added.append(atom)
                         break
                     except Exception as e:
-                        #print(e)
                         pass
                 if not atom in added:
                     raise RuntimeError("Pseudopotential not found for atom %s in directory %s" % (atom, pseudoSetDir))
         return for_infile
     
-    def constructInput(self, atoms: Atoms):
+    def constructInput(self, atoms: Atoms | None, ignore_state=False):
+        """Construct the input file for JDFTx.
+        
+        - Writes the 'in' file read by JDFTx `self.infile` and the provided `atoms`.
+            - If `atoms` is None, will use `self.atoms`.
+        - Sets self.parameters from the infile used to write the input file.
+            - Ensures the most recent parameters are written upon `self.write()`.
+
+        atoms: Atoms | None
+            Atoms object to use for the calculation. If None, will use self.atoms.
+        ignore_state: bool
+            If True, will remove the 'initial-state' tag from the input file. This is useful for
+            restarting calculations that have failed due to the initial state not being found.
+        """
+        if atoms is None:
+            atoms = self.atoms
         structure = AseAtomsAdaptor.get_structure(atoms)
         if len(atoms.constraints):
             fixed_atom_inds = atoms.constraints[0].get_indices()
@@ -163,6 +293,82 @@ class JDFTx(Calculator):
         infile = JDFTXInfile.from_structure(structure)
         infile += self.infile
         if not "ion-species" in infile:
-            infile += self._get_ion_species_cmd(atoms.get_chemical_symbols(), self.pseudoDir)
-        infile.write_file(Path(self.directory) / "in")
+            infile += self._get_ion_species_cmd(atoms.get_chemical_symbols())
+        if ignore_state and "initial-state" in infile:
+            del infile["initial-state"]
+        self.parameters = Parameters(_strip_infile(infile.copy()).as_dict())
+        infile.write_file(Path(self.run_dir) / "in")
+
+    def check_restart(self, label):
+        """Returns a valid restart label.
+        
+        If the label is not valid, it will return None. Else, returns the provided label.
+        Decides if label is valid by checking for errors upon running `self.read(label)`.
+        """
+        self.parameters = None
+        try:
+            self.read(label)
+            return label
+        except Exception as e:
+            print(f"Restart detection failed: {e}")
+            print("Continuing with new calculation.")
+            return None
+
+    def _check_deprecated_keyword(self, arg, argname):
+        if arg is self._deprecated:
+            return None
+        else:
+            warnings.warn(
+                FutureWarning(
+                    _keyword_deprecation_warnings[argname]
+                )
+            )
+            return arg
+
+    
+#Run shell command and return output as a string:
+def shell(cmd):
+    return subprocess.check_output(cmd, shell=True)
+
+
+def _get_atoms(infile: JDFTXInfile | None, atoms: Atoms | None) -> Atoms:
+    if isinstance(atoms, Atoms):
+        return atoms
+    if isinstance(infile, JDFTXInfile):
+        structure = infile.to_pmg_structure()
+        atoms = AseAtomsAdaptor.get_atoms(structure)
+        return atoms
+    return None
+
+def _tensor_to_voigt(tensor):
+    return np.array(
+        [tensor[0, 0], tensor[1, 1], tensor[2, 2], tensor[1, 2], tensor[0, 2], tensor[0, 1]]
+        )
+
+def _strip_infile(infile: JDFTXInfile) -> JDFTXInfile:
+    new_infile = infile.copy()
+    strip_tags = ["ion", "lattice"]
+    for tag in strip_tags:
+        if tag in new_infile:
+            del new_infile[tag]
+    return new_infile
+
+
+_commands_keyword_deprecation_warning = ''
+'The keyword "commands" is deprecated and will be removed in future versions '
+'if this revised calculator is adopted. Use "infile" instead, which can '
+'accept a `JDFTXInfile` object, or a dictionary or list of strings.'
+
+_executable_keyword_deprecation_warning = ''
+'The keyword "executable" is deprecated and will be removed in future versions '
+'if this revised calculator is adopted. Use "command" instead, which includes '
+'passing the executable path to parallelization commands '
+'(ie srun, mpirun, etc.). This most likely looks something like "srun -n 4 <jdftx path>" '
+
+
+_keyword_deprecation_warnings = {
+    "commands": _commands_keyword_deprecation_warning,
+    "executable": _executable_keyword_deprecation_warning,
+}
+
 

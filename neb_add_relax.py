@@ -8,8 +8,6 @@ from os import mkdir, getcwd,  chdir
 #from ase.neb import NEB
 from ase.mep import NEB
 from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
-    get_atoms_list_from_out, get_do_cell, get_atoms
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
     get_atoms_list_from_out, get_do_cell, get_atoms, get_ionic_opt_cmds_list
 from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
 from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, add_freeze_surf_base_constraint
@@ -25,8 +23,8 @@ from helpers.schedule_helpers import write_autofill_schedule, j_steps_key, freez
     get_step_list, energy_key, properties_key, get_prop_idcs_list, append_results_as_comments, \
     get_scan_steps_list_for_neb, get_neb_options, insert_finer_steps, write_schedule_to_text
 from os import listdir
-import numpy as np
 from opt import run_ion_opt
+import numpy as np
 
 neb_template = ["kval: 0.1 # Spring constant for band forces in NEB step",
                    "neb method: spline # idk, something about how forces are projected out / imposed",
@@ -191,11 +189,7 @@ def setup_img_dirs(neb_path, nImages, restart_bool=False, log_fn=log_def):
         img_dir_str = opj(neb_path, str(j))
         img_dirs.append(img_dir_str)
         if restart_bool:
-            poscar_path = opj(img_dir_str, "POSCAR")
-            contcar_path = opj(img_dir_str, "CONTCAR")
-            poscar_ope = ope(poscar_path)
-            contcar_ope = ope(contcar_path)
-            if (not poscar_ope) or (not contcar_ope):
+            if not (ope(opj(img_dir_str, "POSCAR"))) or (ope(opj(img_dir_str, "CONTCAR"))):
                 log_fn(f"Restart NEB requested but dir for image {j} does not appear to have a structure to use")
                 log_fn(f"(Image {j}'s directory is {img_dir_str}")
                 log_fn(f"Ignoring restart NEB request")
@@ -333,6 +327,9 @@ def setup_neb(
         remove_neb_restart_files(neb_path)
     check_submit(gpu, getcwd(), "neb", log_fn=log_fn)
     img_dirs, restart_bool = setup_img_dirs(neb_path, nImages, restart_bool=restart_bool, log_fn=log_fn)
+    # if relax_start and (not restart_bool):
+    #     copy_best_state_files()
+    #     copy_state_files(start_struc, img_dirs[0], log_fn=log_fn)
     log_fn("Writing bounding images")
     writing_bounding_images(start_struc, end_struc, nImages, neb_path)
     log_fn(f"Creating image objects")
@@ -359,24 +356,6 @@ def setup_neb(
         dyn.attach(lambda img, img_dir: _write_img_opt_iolog(img, img_dir, log_fn),
                    interval=1, img_dir=img_dirs[i], img=imgs_atoms_list[i])
     return dyn, hessian_restart
-
-def run_relax(
-        work_dir, struc_path, calc_fn, name,
-        freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, 
-        freeze_idcs=None,
-        log_fn=log_def,
-        ):
-    relax_dir = opj(work_dir, name)
-    if not ope(relax_dir):
-        mkdir(relax_dir)
-    atoms = read(struc_path, format="vasp")
-    run_ion_opt(
-        atoms, relax_dir, work_dir, calc_fn,
-        freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
-        exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs,
-        log_fn=log_fn,
-        )
-    return opj(relax_dir, "CONTCAR")
 
 def read_neb_inputs(fname="neb_input"):
     """ Reads
@@ -459,6 +438,26 @@ def read_neb_inputs(fname="neb_input"):
     nid["work_dir"] = fix_work_dir(nid["work_dir"])
     return nid
 
+def run_relax(
+        work_dir, struc_path, calc_fn, name,
+        freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, 
+        freeze_idcs=None,
+        log_fn=log_def,
+        ):
+    relax_dir = opj(work_dir, name)
+    if not ope(relax_dir):
+        mkdir(relax_dir)
+    atoms = read(struc_path, format="vasp")
+    run_ion_opt(
+        atoms, relax_dir, work_dir, calc_fn,
+        freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
+        exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs,
+        log_fn=log_fn,
+        )
+    return opj(relax_dir, "CONTCAR")
+    
+
+
 def main(debug=False):
     nid = read_neb_inputs()
     restart = nid["restart"]
@@ -517,8 +516,8 @@ def main(debug=False):
         restart = False
         mkdir(neb_dir)
     dyn_neb, skip_to_neb = setup_neb(start_struc, end_struc, nImages, pbc, get_calc, neb_dir, k, neb_method, interp_method, gpu,
+                                     relax_start=relax_start, relax_end=relax_end,
                                      opter_ase_fn=FIRE, restart_bool=restart, use_ci_bool=use_ci, log_fn=neb_log,
-                                     gen_preview=debug,
                                      freeze_count=freeze_count, freeze_base=freeze_base, freeze_tol=freeze_tol)
     neb_log("Running NEB now")
     dyn_neb.run(fmax=fmax, steps=max_steps)

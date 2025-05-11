@@ -204,58 +204,6 @@ class JDFTx(Calculator):
 
         ################### I/O ###################
 
-        def __readEnergy(self, filename):
-                Efinal = None
-                for line in open(filename):
-                        tokens = line.split()
-                        if len(tokens)==3:
-                                Efinal = float(tokens[2])
-                if Efinal is None:
-                        raise IOError('Error: Energy not found.')
-                return Efinal * Hartree #Return energy from final line (Etot, F or G)
-
-        def __readForces(self, filename):
-                idxMap = {}
-                symbolList = self.atoms.get_chemical_symbols()
-                for i, symbol in enumerate(symbolList):
-                        if symbol not in idxMap:
-                                idxMap[symbol] = []
-                        idxMap[symbol].append(i)
-                forces = [0]*len(symbolList)
-                for line in open(filename):
-                        if line.startswith('force '):
-                                tokens = line.split()
-                                idx = idxMap[tokens[1]].pop(0) # tokens[1] is chemical symbol
-                                forces[idx] = [float(word) for word in tokens[2:5]] # tokens[2:5]: force components
-                if(len(forces) == 0):
-                        raise IOError('Error: Forces not found.')
-                return (Hartree / Bohr) * np.array(forces)
-
-
-        def __readCharges(self, filename):
-                idxMap = {}
-                symbolList = self.atoms.get_chemical_symbols()
-                for i, symbol in enumerate(symbolList):
-                        if symbol not in idxMap:
-                                idxMap[symbol] = []
-                        idxMap[symbol].append(i)
-                chargeDir={}
-                key = "oxidation-state"
-                start = self.get_start_line(filename)
-                for i, line in enumerate(open(filename)):
-                        if i > start:
-                                if key in line:
-                                        look = line.rstrip('\n')[line.index(key):].split(' ')
-                                        symbol = str(look[1])
-                                        charges = [float(val) for val in look[2:]]
-                                        chargeDir[symbol] = charges
-                charges = np.zeros(len(symbolList), dtype=float)
-                for atom in list(chargeDir.keys()):
-                        for i, idx in enumerate(idxMap[atom]):
-                                charges[idx] += chargeDir[atom][i]
-                return charges
-
-
 
         def get_start_line(self, outfname):
                 start = 0

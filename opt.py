@@ -344,7 +344,8 @@ def run_ion_opt_runner(
     return atoms_obj
 
 
-def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, _failed_before=False, 
+def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn,
+                freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, _failed_before=False, 
                 freeze_idcs=None,
                 log_fn=log_def,
                 ):

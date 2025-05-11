@@ -20,12 +20,13 @@ def main(debug=False):
         atoms=atoms,
         pseudoDir=os.environ["JDFTx_pseudo"],
         command=cmd,
-        restart=str(calc_dir / "jdftx"),
+        restart=None,
+        detect_restart=True,
     )
     dyn = FIRE(atoms)
     write_logx = lambda: _write_logx(atoms, calc_dir / "opt.logx", do_cell=True)
     dyn.attach(write_logx, interval=1)
-    dyn.run(fmax=0.05, steps=100)
+    dyn.run(fmax=0.001, steps=100)
     # dyn = optimizer(atoms, calc_dir, FIRE)
     # traj = Trajectory(opj(root, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
     # logx = opj(root, "opt.logx")
