@@ -61,7 +61,7 @@ def _get_calc_new(exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=No
         pseudoDir=pseudoDir,
         pseudoSet=pseudoSet,
         command=exe_cmd,
-        debug=debug,
+        #debug=debug,
         log_func=log_fn,
     )
     

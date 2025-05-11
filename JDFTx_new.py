@@ -94,7 +94,7 @@ class JDFTx(Calculator):
             detect_restart=True,
             ignore_state_on_failure=True,
             log_func = None,
-            debug=False, **kwargs
+            debug=True, **kwargs
             ):
         """ 
 
@@ -148,15 +148,15 @@ class JDFTx(Calculator):
                 self.read(label)
                 restart = label
             except Exception as e:
-                print(f"Restart detection failed: {e}")
-                print("Continuing with new calculation.")
+                self.log_func(f"Restart detection failed: {e}")
+                self.log_func("Continuing with new calculation.")
 
         super().__init__(
             restart=restart,
             label=label, atoms=atoms, **kwargs
             )
         if self._debug:
-            print(f"Running {self.label} in debug mode")
+            self.log_func(f"Running {self.label} in debug mode")
 
     @property
     def run_dir(self):
@@ -179,7 +179,7 @@ class JDFTx(Calculator):
 
     def _set_infile(self, infile):
         if self._debug:
-            print(infile)
+            self.log_func(infile)
         infile_dict = self.default_parameters.copy()
         if isinstance(infile, JDFTXInfile):
             infile_dict.update(infile.as_dict())
@@ -196,7 +196,7 @@ class JDFTx(Calculator):
                     _infile_str += " ".join([str(x) for x in v]) + "\n"
                 else:
                     raise TypeError(f"Invalid type {type(v)} in infile list")
-            print(_infile_str)
+            self.log_func(_infile_str)
             _infile = JDFTXInfile.from_str(_infile_str, dont_require_structure=True)
             infile_dict.update(_infile.as_dict())
         elif isinstance(infile, str):
@@ -257,7 +257,7 @@ class JDFTx(Calculator):
 
     def calculate(self, atoms=None, properties=None, system_changes=all_changes):
         if self._debug:
-            print(f"Running in {self.run_dir}")
+            self.log_func(f"Running in {self.run_dir}")
         Calculator.calculate(self, atoms, properties, system_changes)
         self._check_properties(properties)
         self.constructInput(atoms)
@@ -270,12 +270,12 @@ class JDFTx(Calculator):
         try:
             shell('cd %s && %s -i in -o out' % (self.run_dir, self.command))
         except Exception as e:
-            print(f"Error running JDFTx: {e}")
+            self.log_func(f"Error running JDFTx: {e}")
             if self.ignore_state_on_failure:
                 if ran_before:
-                    print("Ignoring state files did not work, aborting.")
+                    self.log_func("Ignoring state files did not work, aborting.")
                     raise RuntimeError("JDFTx calculation failed.")
-                print("Ignoring state files and trying again.")
+                self.log_func("Ignoring state files and trying again.")
                 self.constructInput(self.atoms, ignore_state=True)
                 self.run_jdftx(ran_before=True)
             raise RuntimeError("JDFTx calculation failed.")
@@ -339,8 +339,8 @@ class JDFTx(Calculator):
             self.read(label)
             return label
         except Exception as e:
-            print(f"Restart detection failed: {e}")
-            print("Continuing with new calculation.")
+            self.log_func(f"Restart detection failed: {e}")
+            self.log_func("Continuing with new calculation.")
             return None
 
     def _check_deprecated_keyword(self, arg, argname):

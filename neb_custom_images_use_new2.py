@@ -522,8 +522,8 @@ def main(debug=True):
     #print(cmds)
     cmds = cmds_dict_to_list(cmds)
     #print(cmds)
-    # exe_cmd = get_exe_cmd(gpu, neb_log, use_srun=not debug)
-    exe_cmd = get_exe_cmd(gpu, neb_log)
+    exe_cmd = get_exe_cmd(gpu, neb_log, use_srun=not debug)
+    # exe_cmd = get_exe_cmd(gpu, neb_log)
     #get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=False, log_fn=neb_log)
     get_calc = lambda root: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=neb_log)
     ####################################################################################################################

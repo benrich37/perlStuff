@@ -226,6 +226,7 @@ class JDFTx(Calculator):
                 fp.write(inputfile)
                 fp.close()
                 #Run jdftx:
+                print(f"Running in {self.runDir}")
                 shell('cd %s && %s -i in -o out' % (self.runDir, self.executable))
                 # print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
                 # subprocess.run(f"sed -i '/fluid-ex-corr/d' {opj(self.runDir, 'out')}", shell=True, check=True)
