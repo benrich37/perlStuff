@@ -17,6 +17,7 @@ from pymatgen.io.jdftx.outputs import JDFTXOutfile, JDFTXOutfileSlice
 from pymatgen.io.jdftx.joutstructures import JOutStructures, JOutStructure
 from pymatgen.io.ase import AseAtomsAdaptor
 from pymatgen.core import Structure
+from pymatgen.io.jdftx.inputs import JDFTXInfile
 
 
 def log_def(s):
@@ -173,7 +174,7 @@ def read_inputs_dict_helper(work_dir):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "initial-state",
                   "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
-        input_cmds = {"dump End": "State"}
+        input_cmds = {"dump End": ""}
         with open(inpfname) as f:
             for i, line in enumerate(f):
                 if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
@@ -189,7 +190,7 @@ def read_inputs_dict_helper(work_dir):
                         cmd = line[:line.index(" ")]
                         rest = line.rstrip("\n")[line.index(" ") + 1:]
                         if cmd not in ignore:
-                            if not "dump" in cmd:
+                            if not "dump " in cmd:
                                 input_cmds[cmd] = rest
                             else:
                                 freq = rest.split(" ")[0]
@@ -206,10 +207,28 @@ def read_inputs_dict_helper(work_dir):
     else:
         return None
 
-
+def read_inputs_infile(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
+    input_cmds = read_inputs_dict_helper(work_dir)
+    if not input_cmds is None:
+        nbandkey = "elec-n-bands"
+        if ref_struct is None:
+            ref_struct = opj(work_dir, "POSCAR")
+        if nbandkey in input_cmds and input_cmds[nbandkey] == "*":
+            input_cmds[nbandkey] = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
+        kfoldkey = "kpoint-folding"
+        if kfoldkey in input_cmds and input_cmds[kfoldkey] == "*":
+            input_cmds[kfoldkey] = str(get_kfolding(ref_struct))
+        biaskey = "target-mu"
+        if biaskey in input_cmds and input_cmds[biaskey] == "*":
+            if not bias is None:
+                input_cmds[biaskey] = str(bias_to_mu(bias))
+            else:
+                del input_cmds[biaskey]
+    return input_cmds
 
 def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
     input_cmds = read_inputs_dict_helper(work_dir)
+    #print(input_cmds)
     if not input_cmds is None:
         nbandkey = "elec-n-bands"
         if ref_struct is None:
@@ -576,6 +595,19 @@ def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None)
             log_and_abort(msg, log_fn)
     else:
         return read_inputs_dict(work_dir, ref_struct=ref_struct, bias=bias)
+    
+def get_infile(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None):
+    chdir(work_dir)
+    if not ope(opj(work_dir, "inputs")):
+        if ope(opj(work_dir, "in")):
+            return JDFTXInfile.from_file(opj(work_dir, "in"))
+        else:
+            dump_default_inputs(work_dir, ref_struct, log_fn=log_fn, pbc=pbc, bias=bias)
+            msg = "No inputs or in file found - dumping template inputs"
+            log_and_abort(msg, log_fn)
+    else:
+        return read_inputs_infile(work_dir, ref_struct=ref_struct, bias=bias)
+        #return read_inputs_dict(work_dir, ref_struct=ref_struct, bias=bias)
 
 
 def read_line_generic(line):

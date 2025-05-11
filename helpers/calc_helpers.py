@@ -2,6 +2,7 @@ from os import getcwd as getcwd, environ as env_vars_dict
 from JDFTx import JDFTx, Wannier
 from JDFTx_new import JDFTx as JDFTx_new, JDFTXInfile
 from helpers.generic_helpers import log_def, fix_dump_cmds_list
+from pathlib import Path
 
 
 def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
@@ -46,25 +47,22 @@ def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None,
             direct_coords=direct_coords
         )
     
-def _get_calc_new(exe_cmd, cmds: list[str], root, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def, direct_coords=False):
+def _get_calc_new(exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, debug=False, debug_fn=None, log_fn=log_def, direct_coords=False, label=None):
     cmds = fix_dump_cmds_list(cmds)
-    if debug:
-        log_fn("Setting calc to debug calc")
-        return debug_fn()
+    if label is None:
+        label = root
     else:
-        log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
-        infile = JDFTXInfile.from_str("" + "\n".join(cmds), dont_require_structure=True)
-        return JDFTx_new(
-            infile=infile,
-        )
-        return JDFTx(
-            executable=exe_cmd,
-            pseudoSet=pseudoSet,
-            commands=cmds,
-            calc_dir=root,
-            ionic_steps=False,
-            direct_coords=direct_coords
-        )
+        label = str(Path(root) / label)
+    log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
+    # infile = JDFTXInfile.from_str("" + "\n".join(list), dont_require_structure=True)
+    return JDFTx_new(
+        infile=cmds,
+        label=label,
+        pseudoDir=pseudoDir,
+        pseudoSet=pseudoSet,
+        command=exe_cmd,
+        debug=debug,
+    )
     
 # def _get_calc_new(
 #         exe_cmd: str, infile: JDFTXInfile, calc_dir: str, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def, direct_coords=False

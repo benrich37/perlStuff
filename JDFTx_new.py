@@ -62,7 +62,7 @@ class JDFTx(Calculator):
       same directory.
     
     """
-
+    _debug = False
     default_parameters = {
         "dump-name": "$VAR",
         "initial-state": "$VAR",
@@ -124,10 +124,15 @@ class JDFTx(Calculator):
         """
         commands = self._check_deprecated_keyword(commands, "commands")
         executable = self._check_deprecated_keyword(executable, "executable")
-
+        if isinstance(label, str):
+            _path = Path(label)
+            if _path.exists():
+                if _path.is_dir():
+                    if not label.endswith("/"):
+                        label += "/"
         self._set_infile(infile)
         atoms = _get_atoms(infile, atoms)
-        self.pseudoDir = pseudoDir
+        self.pseudoDir = replaceVariable(pseudoDir, "JDFTx_pseudo")
         self.pseudoSet = pseudoSet
         self._debug = debug
         self.command = command
@@ -146,6 +151,8 @@ class JDFTx(Calculator):
             restart=restart,
             label=label, atoms=atoms, **kwargs
             )
+        if self._debug:
+            print(f"Running {self.label} in debug mode")
 
     @property
     def run_dir(self):
@@ -155,7 +162,10 @@ class JDFTx(Calculator):
         directory of the calculator to avoid confusion when restarting from
         state files.
         """
-        _run_dir = Path(self.directory) / f"{self.prefix}_{run_dir_suffix}"
+        prefix = None
+        _run_dir = Path(self.directory) / f"{prefix}_{run_dir_suffix}"
+        if prefix is None:
+            _run_dir = Path(self.directory) / f"{run_dir_suffix}"
         if not _run_dir.exists():
             _run_dir.mkdir(parents=True)
         return str(_run_dir)
@@ -164,13 +174,26 @@ class JDFTx(Calculator):
         self.atoms = atoms
 
     def _set_infile(self, infile):
+        if self._debug:
+            print(infile)
         infile_dict = self.default_parameters.copy()
         if isinstance(infile, JDFTXInfile):
             infile_dict.update(infile.as_dict())
         elif isinstance(infile, dict):
             infile_dict.update(infile)
         elif isinstance(infile, list):
-            _infile = JDFTXInfile.from_str("\n".join(infile), dont_require_structure=True)
+            _infile_str = ""
+            for v in infile:
+                if isinstance(v, str):
+                    _infile_str += v + "\n"
+                elif isinstance(v, tuple):
+                    _infile_str += " ".join(v) + "\n"
+                elif isinstance(v, list):
+                    _infile_str += " ".join([str(x) for x in v]) + "\n"
+                else:
+                    raise TypeError(f"Invalid type {type(v)} in infile list")
+            print(_infile_str)
+            _infile = JDFTXInfile.from_str(_infile_str, dont_require_structure=True)
             infile_dict.update(_infile.as_dict())
         elif isinstance(infile, str):
             _infile = JDFTXInfile.from_file(infile, dont_require_structure=True)
@@ -229,6 +252,8 @@ class JDFTx(Calculator):
             self.infile.append_tag("dump", {"End": {"Stress": True}})
 
     def calculate(self, atoms=None, properties=None, system_changes=all_changes):
+        if self._debug:
+            print(f"Running in {self.run_dir}")
         Calculator.calculate(self, atoms, properties, system_changes)
         self._check_properties(properties)
         self.constructInput(atoms)
@@ -372,3 +397,8 @@ _keyword_deprecation_warnings = {
 }
 
 
+def replaceVariable(var, varName):
+	if (var is None) and (varName in env_vars_dict):
+		return env_vars_dict[varName]
+	else:
+		return var
