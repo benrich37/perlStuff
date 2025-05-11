@@ -491,7 +491,7 @@ def get_ref_struct(work_dir, struc_prefix):
         write(opj(work_dir, ref_struct), _atoms, format="vasp")
         return ref_struct
     else:
-        return opj(work_dir, struc_files[0])
+        return opj(work_dir, _struc_files[0])
 
 def main(debug=False):
     nid = read_neb_inputs()
