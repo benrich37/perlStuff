@@ -68,6 +68,7 @@ class JDFTx(Calculator):
         "initial-state": "$VAR",
         "dump": {"End": {"State": True}}
     }
+    log_func = lambda x: print(x)
     
     implemented_properties = ['energy', 'forces', 'stress', 'charges']
     pseudoSetMap = {
@@ -92,6 +93,7 @@ class JDFTx(Calculator):
             label='jdftx', atoms=None, command=None,
             detect_restart=True,
             ignore_state_on_failure=True,
+            log_func = None,
             debug=False, **kwargs
             ):
         """ 
@@ -122,6 +124,8 @@ class JDFTx(Calculator):
         debug: bool
             For debugging. Does nothing right now.
         """
+        if not log_func is None:
+            self.log_func = log_func
         commands = self._check_deprecated_keyword(commands, "commands")
         executable = self._check_deprecated_keyword(executable, "executable")
         if isinstance(label, str):
