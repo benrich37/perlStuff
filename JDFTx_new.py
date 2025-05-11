@@ -68,7 +68,7 @@ class JDFTx(Calculator):
         "initial-state": "$VAR",
         "dump": {"End": {"State": True}}
     }
-    log_func = lambda x: print(x)
+    log_func = lambda _, x: print(x)
     
     implemented_properties = ['energy', 'forces', 'stress', 'charges']
     pseudoSetMap = {
@@ -125,7 +125,7 @@ class JDFTx(Calculator):
             For debugging. Does nothing right now.
         """
         if not log_func is None:
-            self.log_func = log_func
+            self.log_func = lambda x: log_func(x)
         commands = self._check_deprecated_keyword(commands, "commands")
         executable = self._check_deprecated_keyword(executable, "executable")
         if isinstance(label, str):
@@ -166,7 +166,7 @@ class JDFTx(Calculator):
         directory of the calculator to avoid confusion when restarting from
         state files.
         """
-        prefix = None
+        prefix = self.prefix
         _run_dir = Path(self.directory) / f"{prefix}_{run_dir_suffix}"
         if prefix is None:
             _run_dir = Path(self.directory) / f"{run_dir_suffix}"
@@ -236,7 +236,7 @@ class JDFTx(Calculator):
 
     def read(self, label):
         self.atoms = ase.io.read(label + "_restart.traj")
-        self.parameters = Parameters(label + "_params.ase")
+        self.parameters = Parameters.read(label + "_params.ase")
         # parameters = Parameters.read(label + "_params.ase")
         # if (self.parameters is None) or (not len(self.parameters)):
         #     self.parameters = parameters
