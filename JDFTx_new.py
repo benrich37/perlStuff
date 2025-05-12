@@ -133,7 +133,8 @@ class JDFTx(Calculator):
             if _path.exists():
                 if _path.is_dir():
                     if not label.endswith("/"):
-                        label += "/"
+                        self.log_func(f"Label {label} is also directory - if you want to contain restart files in this directory, make sure your label ends with a '/'")
+                    #     label += "/"
         self._set_infile(infile)
         atoms = _get_atoms(infile, atoms)
         self.pseudoDir = replaceVariable(pseudoDir, "JDFTx_pseudo")
@@ -175,7 +176,11 @@ class JDFTx(Calculator):
         return str(_run_dir)
     
     def set_atoms(self, atoms):
-        self.atoms = atoms
+        # This function is never called by JDFTx calculator, and is not even present
+        # in the inherited Calculator class. However, it is needed for some reason, and
+        # if the ".copy()" part is removed, atoms.calc.atoms == atoms, causing pretty much
+        # every optimizer to break.
+        self.atoms = atoms.copy()
 
     def _set_infile(self, infile):
         if self._debug:
@@ -362,11 +367,16 @@ def shell(cmd):
 
 def _get_atoms(infile: JDFTXInfile | None, atoms: Atoms | None) -> Atoms:
     if isinstance(atoms, Atoms):
+        # Restarting a FIRE optimization for some reason retains atoms.calc.atoms == atoms
+        # return atoms.copy()
         return atoms
     if isinstance(infile, JDFTXInfile):
-        structure = infile.to_pmg_structure()
-        atoms = AseAtomsAdaptor.get_atoms(structure)
-        return atoms
+        try:
+            structure = infile.to_pmg_structure()
+            atoms = AseAtomsAdaptor.get_atoms(structure)
+            return atoms
+        except:
+            return None
     return None
 
 def _tensor_to_voigt(tensor):
