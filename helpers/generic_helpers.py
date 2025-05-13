@@ -505,7 +505,9 @@ def need_sort(root):
     atoms = get_poscar_atoms(root, log_def)
     return get_sort_bool(atoms.get_chemical_symbols())
 
-
+def get_log_file_name(work, calc_type):
+    fname = opj(work, calc_type + ".iolog")
+    return fname
 
 def get_log_fn(work, calc_type, print_bool, restart=False):
     fname = opj(work, calc_type + ".iolog")
@@ -704,6 +706,13 @@ def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_
         return get_freeze_surf_base_constraint_by_count(atoms, freeze_count=freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn)
     else:
         return get_freeze_surf_base_constraint_by_dist(atoms, ztol = ztol, log_fn=log_fn)
+    
+def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs):
+    def apply_freeze_func(atoms, log_fn=log_def):
+        if freeze_base:
+            c = get_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_count=freeze_count, freeze_idcs=freeze_idcs, log_fn=log_fn)
+            add_constraint(atoms, c)
+    return apply_freeze_func
 
 def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0, freeze_count = 0, exclude_freeze_count=0, log_fn=log_def, freeze_idcs=None):
     log_fn(f"add_freeze_surf_base_constraint: {freeze_idcs}")
@@ -1698,3 +1707,40 @@ def get_mu(outfile):
                 mu = float(line.split(lookkey)[1].strip().split()[0])
                 last_line = line
     return mu
+
+
+def get_ref_struct(work_dir, struc_prefix):
+    all_files = listdir(work_dir)
+    struc_files = [f for f in all_files if struc_prefix in f]
+    _struc_files = [f for f in struc_files if not ".gjf" in f]
+    if len(_struc_files) == 0:
+        _atoms = read(opj(work_dir, struc_files[0]), format="gaussian-in")
+        ref_struct = struc_files[0].rstrip(".gjf")
+        write(opj(work_dir, ref_struct), _atoms, format="vasp")
+        return ref_struct
+    else:
+        return opj(work_dir, _struc_files[0])
+    
+def cmds_list_to_infile(cmds_list):
+    infile_dict = {}
+    if isinstance(cmds_list, JDFTXInfile):
+        return cmds_list
+    elif isinstance(cmds_list, dict):
+        infile_dict.update(cmds_list)
+    elif isinstance(cmds_list, list):
+        _infile_str = ""
+        for v in cmds_list:
+            if isinstance(v, str):
+                _infile_str += v + "\n"
+            elif isinstance(v, tuple):
+                _infile_str += " ".join(v) + "\n"
+            elif isinstance(v, list):
+                _infile_str += " ".join([str(x) for x in v]) + "\n"
+            else:
+                raise TypeError(f"Invalid type {type(v)} in infile list")
+        _infile = JDFTXInfile.from_str(_infile_str, dont_require_structure=True)
+        infile_dict.update(_infile.as_dict())
+    elif isinstance(cmds_list, str):
+        _infile = JDFTXInfile.from_file(cmds_list, dont_require_structure=True)
+        infile_dict.update(_infile.as_dict())
+    return JDFTXInfile.from_dict(infile_dict)

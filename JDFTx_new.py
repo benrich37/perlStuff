@@ -12,7 +12,7 @@ from ase import Atoms
 import warnings
 from os import environ as env_vars_dict
 from os.path import join as opj
-from pymatgen.io.jdftx.outputs import JDFTXOutputs
+from pymatgen.io.jdftx.outputs import JDFTXOutputs, implemented_store_vars
 from pymatgen.io.jdftx.inputs import JDFTXInfile
 from pymatgen.io.ase import AseAtomsAdaptor
 from ase.io.jsonio import write_json
@@ -99,28 +99,38 @@ class JDFTx(Calculator):
         """ 
 
         JDFTx calculator for ASE.
-
+        commands: dict | list | None
+            DEPRECATED. Use infile instead. Kept for backwards compatibility.
+        executable: str | None
+            DEPRECATED. Use command instead. Kept for backwards compatibility.
         restart: str
-            Restart label. Set if restarting from different label.
+            Restart label. Set if restarting from different label. If left as None and detect_restart is True,
+            will attempt to read the provided label for restart. If this fails, will continue with a new calculation.
         infile: JDFTXInfile | dict | list | None
-            JDFTx input file. If None, will use default parameters. This will probably break if you're
-            not fetching parameters from a restart file.
+            Commands to be passed to JDFTx. This can be a JDFTXInfile object, a dictionary of commands, or a list of strings.
+            Allows dict | list for backwards compatibility with the original JDFTx calculator. Provide in the form
+            of a JDFTXInfile object for best results.
         pseudoDir: str
             Directory containing pseudopotentials. If None, will use the JDFTx_pseudo environment variable.
         pseudoSet: str
             Pseudopotential set to use. Default is 'GBRV'. If None, will use the JDFTx_pseudo environment variable.
         label: str
             Label for the calculation. Default is 'jdftx'.
-        atoms: Atoms
-            Atoms object. If None, will use the atoms from the infile.
+        atoms: Atoms | None
+            Atoms object. If None, will try to get an atoms from the infile.
         command: str
-            Command to run JDFTx.
+            Command to run JDFTx. This should include the path to the JDFTx executable and any parallelization commands
+            (ie srun, mpirun, etc.). This most likely looks something like "srun -n 4 <jdftx path>".
         detect_restart: bool
             If True, will attempt a protected read of provided `label` for restart. Sets restart to `label` if
-            successful.
+            successful. If `restart` is not None, this will be ignored.
         ignore_state_on_failure: bool
-            If True and command returns an error, the input file will be rewritten with 'initial-state' removed and
-            the calculation will be retried. If False, the calculation will fail. 
+            If True and running `command` on the constructed 'in' file returns an error, the input file will be 
+            rewritten with 'initial-state' removed and the calculation will be retried. If False, the calculator
+            will raise a `RunTimeError`. 
+        log_func: function
+            Function to log messages. If None, will use print. This is useful if `print` isn't flushed
+            until the end of a job.
         debug: bool
             For debugging. Does nothing right now.
         """
@@ -188,32 +198,90 @@ class JDFTx(Calculator):
         infile_dict = self.default_parameters.copy()
         if isinstance(infile, JDFTXInfile):
             infile_dict.update(infile.as_dict())
-        elif isinstance(infile, dict):
-            infile_dict.update(infile)
-        elif isinstance(infile, list):
-            _infile_str = ""
-            for v in infile:
-                if isinstance(v, str):
-                    _infile_str += v + "\n"
-                elif isinstance(v, tuple):
-                    _infile_str += " ".join(v) + "\n"
-                elif isinstance(v, list):
-                    _infile_str += " ".join([str(x) for x in v]) + "\n"
-                else:
-                    raise TypeError(f"Invalid type {type(v)} in infile list")
-            self.log_func(_infile_str)
-            _infile = JDFTXInfile.from_str(_infile_str, dont_require_structure=True)
-            infile_dict.update(_infile.as_dict())
-        elif isinstance(infile, str):
-            _infile = JDFTXInfile.from_file(infile, dont_require_structure=True)
-            infile_dict.update(_infile.as_dict())
-        self.infile = _strip_infile(JDFTXInfile.from_dict(infile_dict))
+        else:
+            infile_dict.update(self._legacy_commands_to_infile(infile))
+        self.infile = _strip_infile(infile_dict.copy())
         
-          
+        
+    def calculate(self, atoms=None, properties=None, system_changes=all_changes):
+        if self._debug:
+            self.log_func(f"Running in {self.run_dir}")
+        Calculator.calculate(self, atoms, properties, system_changes)
+        self._check_properties(properties)
+        self.constructInput(atoms)
+        self.run_jdftx()
+        atoms = self._read_results(properties, atoms)
+        self.write(self.label, atoms)
 
-    def _read_results(self, properties):
-        outputs = JDFTXOutputs.from_calc_dir(self.run_dir, store_vars=["eigenvals"])
+    def _check_properties(self, properties):
+        if "stress" in properties:
+            self.infile.append_tag("dump", {"End": {"Stress": True}})
+
+    def constructInput(self, atoms: Atoms | None, ignore_state=False):
+        """Construct the input file for JDFTx.
+        
+        - Writes the 'in' file read by JDFTx `self.infile` and the provided `atoms`.
+            - If `atoms` is None, will use `self.atoms`.
+        - Sets self.parameters from the infile used to write the input file.
+            - Ensures the most recent parameters are written upon `self.write()`.
+
+        atoms: Atoms | None
+            Atoms object to use for the calculation. If None, will use self.atoms.
+        ignore_state: bool
+            If True, will remove the 'initial-state' tag from the input file. This is useful for
+            restarting calculations that have failed due to the initial state not being found.
+        """
+        if atoms is None:
+            atoms = self.atoms
+        structure = AseAtomsAdaptor.get_structure(atoms)
+        # TODO: This can be expanded to support FixedLine and FixedPlane constraints
+        if len(atoms.constraints):
+            fixed_atom_inds = atoms.constraints[0].get_indices()
+            structure.site_properties["selective_dynamics"] = [0 if i in fixed_atom_inds else 1 for i in range(len(atoms))]
+        infile = JDFTXInfile.from_structure(structure)
+        infile += self.infile
+        if not "ion-species" in infile:
+            infile += self._get_ion_species_cmd(atoms.get_chemical_symbols())
+        if ignore_state and "initial-state" in infile:
+            # Remove the initial-state tag from the infile as `ignore_state` is True means
+            # the initial state has caused errors in the previous run.
+            del infile["initial-state"]
+        self.parameters = Parameters(_strip_infile(infile.copy()).as_dict())
+        infile.write_file(Path(self.run_dir) / "in")
+
+    def run_jdftx(self, ran_before=False):
+        try:
+            shell('cd %s && %s -i in -o out' % (self.run_dir, self.command))
+        except Exception as e:
+            self.log_func(f"Error running JDFTx: {e}")
+            if self.ignore_state_on_failure:
+                if ran_before:
+                    self.log_func("Ignoring state files did not work, aborting.")
+                    raise RuntimeError("JDFTx calculation failed.")
+                self.log_func("Ignoring state files and trying again.")
+                self.constructInput(self.atoms, ignore_state=True)
+                self.run_jdftx(ran_before=True)
+            raise RuntimeError("JDFTx calculation failed.")
+
+    def _read_results(self, properties, atoms: Atoms):
+        outputs = JDFTXOutputs.from_calc_dir(
+            self.run_dir,
+            store_vars=[p for p in properties if p in implemented_store_vars]
+            )
         outfile = outputs.outfile
+        ran_native_opt = outfile.geom_opt
+        if ran_native_opt:
+            self.log_func(f"Dumped outfile object indicates native optimization ran")
+            _atoms = AseAtomsAdaptor.get_atoms(outfile.structure)
+            # Subtract 1 as jstrucs contains the initial structure
+            niter = len(outfile.slices[-1].jstrucs) - 1
+            if niter > 0:
+                # Only update the atoms if the native optimization ran to avoid
+                # unit conversions indicating a change in the atoms geometry
+                atoms.set_positions(_atoms.get_positions())
+                for i, jstruc in enumerate(outfile.slices[-1].jstrucs):
+                    self.log_func(f"JDFTx: {i:>4}   t[s]: {jstruc.t_s:>8}   {outfile.etype}: {jstruc.e:6.15f} eV")
+            self.log_func(f"Native opt {niter} iterations, updated energy {outfile.e}")
         self.results["energy"] = outfile.e
         self.results["forces"] = outfile.forces
         self.results["charges"] = outfile.structure.site_properties["charges"]
@@ -232,8 +300,17 @@ class JDFTx(Calculator):
                     (self.results["nspins"], self.results["nkpts"], self.results["nbands"])
                     )
         # TODO: Add occupations and kpoint_weights to JDFTxOutputs so I can add them here
+        return atoms
 
-    def write(self, label):
+    def write(self, label, atoms):
+        # For a single-point calculation, `atoms` and `self.atoms` will have the same geometry,
+        # only `atoms` will be updated by the optimizer. If a native optimization was ran, `atoms`
+        # will have been updated in `self._read_results()` before being passed to the ASE optimizer.
+        # `self.atoms` is updated as well here. If it is not, `atoms.get_forces()` will get stuck in
+        # a loop of running the native optimizer until it runs a 0-step optimization. This happens 
+        # because getting any property with `atoms.get_property(...)` will always run the calculator
+        # if the atoms object has different geometries than the one in the calculator. 
+        self.atoms.set_positions(atoms.get_positions())
         self.atoms.write(label + "_restart.traj")
         self.parameters.write(label + "_params.ase")
         with open(label + "_restart.json", "w") as f:
@@ -242,49 +319,8 @@ class JDFTx(Calculator):
     def read(self, label):
         self.atoms = ase.io.read(label + "_restart.traj")
         self.parameters = Parameters.read(label + "_params.ase")
-        # parameters = Parameters.read(label + "_params.ase")
-        # if (self.parameters is None) or (not len(self.parameters)):
-        #     self.parameters = parameters
-        # else:
-        #     self.parameters.update(parameters)
-        # if self.infile is None:
-        #     self.infile = JDFTXInfile.from_dict(self.parameters)
-        # else:
-        #     self.parameters.update(self.infile.as_dict())
         with open(label + "_restart.json", "r") as f:
             self.results = ase.io.jsonio.read_json(f)
-
-    # def _post_read(self):
-
-    def _check_properties(self, properties):
-        if "stress" in properties:
-            self.infile.append_tag("dump", {"End": {"Stress": True}})
-
-    def calculate(self, atoms=None, properties=None, system_changes=all_changes):
-        if self._debug:
-            self.log_func(f"Running in {self.run_dir}")
-        Calculator.calculate(self, atoms, properties, system_changes)
-        self._check_properties(properties)
-        self.constructInput(atoms)
-        self.run_jdftx()
-        #shell('cd %s && %s -i in -o out' % (self.run_dir, self.command))
-        self._read_results(properties)
-        self.write(self.label)
-
-    def run_jdftx(self, ran_before=False):
-        try:
-            shell('cd %s && %s -i in -o out' % (self.run_dir, self.command))
-        except Exception as e:
-            self.log_func(f"Error running JDFTx: {e}")
-            if self.ignore_state_on_failure:
-                if ran_before:
-                    self.log_func("Ignoring state files did not work, aborting.")
-                    raise RuntimeError("JDFTx calculation failed.")
-                self.log_func("Ignoring state files and trying again.")
-                self.constructInput(self.atoms, ignore_state=True)
-                self.run_jdftx(ran_before=True)
-            raise RuntimeError("JDFTx calculation failed.")
-
     
     def _get_ion_species_cmd(self, atomNames):
         pseudoSetDir = opj(self.pseudoDir, self.pseudoSet)
@@ -303,35 +339,6 @@ class JDFTx(Calculator):
                 if not atom in added:
                     raise RuntimeError("Pseudopotential not found for atom %s in directory %s" % (atom, pseudoSetDir))
         return for_infile
-    
-    def constructInput(self, atoms: Atoms | None, ignore_state=False):
-        """Construct the input file for JDFTx.
-        
-        - Writes the 'in' file read by JDFTx `self.infile` and the provided `atoms`.
-            - If `atoms` is None, will use `self.atoms`.
-        - Sets self.parameters from the infile used to write the input file.
-            - Ensures the most recent parameters are written upon `self.write()`.
-
-        atoms: Atoms | None
-            Atoms object to use for the calculation. If None, will use self.atoms.
-        ignore_state: bool
-            If True, will remove the 'initial-state' tag from the input file. This is useful for
-            restarting calculations that have failed due to the initial state not being found.
-        """
-        if atoms is None:
-            atoms = self.atoms
-        structure = AseAtomsAdaptor.get_structure(atoms)
-        if len(atoms.constraints):
-            fixed_atom_inds = atoms.constraints[0].get_indices()
-            structure.site_properties["selective_dynamics"] = [0 if i in fixed_atom_inds else 1 for i in range(len(atoms))]
-        infile = JDFTXInfile.from_structure(structure)
-        infile += self.infile
-        if not "ion-species" in infile:
-            infile += self._get_ion_species_cmd(atoms.get_chemical_symbols())
-        if ignore_state and "initial-state" in infile:
-            del infile["initial-state"]
-        self.parameters = Parameters(_strip_infile(infile.copy()).as_dict())
-        infile.write_file(Path(self.run_dir) / "in")
 
     def check_restart(self, label):
         """Returns a valid restart label.
@@ -358,6 +365,31 @@ class JDFTx(Calculator):
                 )
             )
             return arg
+    
+    def _legacy_commands_to_infile(self, infile):
+        if self._debug:
+            self.log_func(infile)
+        infile_dict = self.default_parameters.copy()
+        if isinstance(infile, dict):
+            infile_dict.update(infile)
+        elif isinstance(infile, list):
+            _infile_str = ""
+            for v in infile:
+                if isinstance(v, str):
+                    _infile_str += v + "\n"
+                elif isinstance(v, tuple):
+                    _infile_str += " ".join(v) + "\n"
+                elif isinstance(v, list):
+                    _infile_str += " ".join([str(x) for x in v]) + "\n"
+                else:
+                    raise TypeError(f"Invalid type {type(v)} in infile list")
+            self.log_func(_infile_str)
+            _infile = JDFTXInfile.from_str(_infile_str, dont_require_structure=True)
+            infile_dict.update(_infile.as_dict())
+        elif isinstance(infile, str):
+            _infile = JDFTXInfile.from_file(infile, dont_require_structure=True)
+            infile_dict.update(_infile.as_dict())
+        return JDFTXInfile.from_dict(infile_dict)
 
     
 #Run shell command and return output as a string:
@@ -391,6 +423,8 @@ def _strip_infile(infile: JDFTXInfile) -> JDFTXInfile:
         if tag in new_infile:
             del new_infile[tag]
     return new_infile
+
+
 
 
 _commands_keyword_deprecation_warning = ''
