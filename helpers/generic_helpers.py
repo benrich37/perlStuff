@@ -233,13 +233,13 @@ def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
         nbandkey = "elec-n-bands"
         if ref_struct is None:
             ref_struct = opj(work_dir, "POSCAR")
-        if nbandkey in input_cmds and input_cmds[nbandkey] == "*":
+        if nbandkey in input_cmds and "*" in input_cmds[nbandkey]:
             input_cmds[nbandkey] = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
         kfoldkey = "kpoint-folding"
-        if kfoldkey in input_cmds and input_cmds[kfoldkey] == "*":
+        if kfoldkey in input_cmds and "*" in input_cmds[kfoldkey]:
             input_cmds[kfoldkey] = str(get_kfolding(ref_struct))
         biaskey = "target-mu"
-        if biaskey in input_cmds and input_cmds[biaskey] == "*":
+        if biaskey in input_cmds and "*" in input_cmds[biaskey]:
             if not bias is None:
                 input_cmds[biaskey] = str(bias_to_mu(bias))
             else:
@@ -510,7 +510,7 @@ def get_log_file_name(work, calc_type):
     return fname
 
 def get_log_fn(work, calc_type, print_bool, restart=False):
-    fname = opj(work, calc_type + ".iolog")
+    fname = get_log_file_name(work, calc_type)
     if not restart:
         if ope(fname):
             rm(fname)
@@ -707,10 +707,13 @@ def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_
     else:
         return get_freeze_surf_base_constraint_by_dist(atoms, ztol = ztol, log_fn=log_fn)
     
-def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs):
+def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs, exclude_freeze_count, log_fn=log_def):
     def apply_freeze_func(atoms, log_fn=log_def):
         if freeze_base:
-            c = get_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_count=freeze_count, freeze_idcs=freeze_idcs, log_fn=log_fn)
+            c = get_freeze_surf_base_constraint(
+                atoms,
+                ztol=freeze_tol, freeze_count=freeze_count, freeze_idcs=freeze_idcs, exclude_freeze_count=exclude_freeze_count,
+                log_fn=log_fn)
             add_constraint(atoms, c)
     return apply_freeze_func
 

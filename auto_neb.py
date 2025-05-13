@@ -44,6 +44,7 @@ from pymatgen.io.jdftx.inputs import JDFTXInfile
 
 
 neb_template = [
+    "kval: 0.1 # Spring constant for band forces in NEB step",
     "neb method: eb # for autoneb, can be eb, aseneb, or improvedtangent",
     "restart: True",
     "max_steps: 100 # max number of steps for bound optimization",
@@ -54,7 +55,7 @@ neb_template = [
     "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
     "gpu: True",
     "climbing image: True",
-    "images_start: 5 # Number of images provided",
+    "images_start: 2 # Number of images provided",
     "images_par: 3 # Number of images ran in a single autoneb step",
     "# (Fewer allows autoneb to focus on more important images, but more allows for saved wavefunction files",
     "# to be be saved for the same image they were created for)",
@@ -87,10 +88,13 @@ def read_neb_inputs(fname="neb_input"):
     nid["freeze_base"] = False
     nid["freeze_tol"] = 0.
     nid["freeze_count"] = 0
+    nid["freeze_idcs"] = None
+    nid["exclude_freeze_count"] = 0
     nid["ci"] = True
     nid["provided_images"] = 10
     nid["interp_method"] = "linear"
     nid["bias"] = "No_bias"
+    nid["k"] = 0.1
     inputs = get_inputs_list(fname, auto_lower=False)
     for input in inputs:
         key, val = input[0], input[1]
@@ -155,6 +159,8 @@ def read_neb_inputs(fname="neb_input"):
                 nid["end_struc"] = val.strip()
         if "bias" in key:
             nid["bias"] = val.strip()
+        if key.lower() == "kval":
+            nid["k"] = float(val.strip())
     nid["work_dir"] = fix_work_dir(nid["work_dir"])
     return nid
 
@@ -264,11 +270,15 @@ def main(debug=False):
     freeze_tol = nid["freeze_tol"]
     freeze_count = nid["freeze_count"]
     freeze_idcs = nid["freeze_idcs"]
-    apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs)
+    exclude_freeze_count = nid["exclude_freeze_count"]
     relax_start = nid["relax_start"]
     relax_end = nid["relax_end"]
     chdir(work_dir)
     neb_log = get_log_fn(work_dir, "neb", False, restart=restart)
+    apply_freeze_func = get_apply_freeze_func(
+        freeze_base, freeze_tol, freeze_count, freeze_idcs, exclude_freeze_count,
+        log_fn=neb_log
+        )
     struc_prefix = "POSCAR_"
     ref_struc = get_ref_struct(work_dir, struc_prefix)
     cmds = get_cmds_dict(work_dir, ref_struct=ref_struc, log_fn=neb_log, pbc=pbc, bias=bias)
@@ -279,6 +289,7 @@ def main(debug=False):
     neb_log("Beginning NEB setup")
     initial_images_dir = opj(work_dir, "initial_images")
     neb_dir = opj(work_dir, "neb")
+    check_submit(gpu, os.getcwd(), "opt", log_fn=neb_log)
     restart = run_initial_images(
         work_dir, initial_images_dir, neb_dir, nimg_start, struc_prefix, 
         get_arb_calc, base_infile,
