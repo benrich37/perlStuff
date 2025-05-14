@@ -406,6 +406,7 @@ def main(debug=False):
     ase = nid["ase"]
     chdir(work_dir)
     neb_log = get_log_fn(work_dir, "neb", debug, restart=restart)
+    check_submit(gpu, os.getcwd(), "neb", log_fn=neb_log)
     neb_log_file = get_log_file_name(work_dir, "neb")
     apply_freeze_func = get_apply_freeze_func(
         freeze_base, freeze_tol, freeze_count, freeze_idcs, exclude_freeze_count,
