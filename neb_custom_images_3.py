@@ -280,31 +280,40 @@ def relax_bounds(
     ion_infile["ionic-minimize"] = f"nIterations {max_steps}"
     get_ion_calc = lambda root: get_arb_calc(root, ion_infile)
     if relax_start:
-        if (not restart) or (not Path(Path(work_dir) / "relax_start" / "CONTCAR").exists()):
-            relax_start_dir = opj(work_dir, "relax_start/")
-            Path(relax_start_dir).mkdir(parents=True, exist_ok=True)
-            start_atoms = run_relax(
-                relax_start_dir, start_atoms, get_ion_calc, None,
-                apply_freeze_func=None, 
-                use_ase=use_ase, fmax=fmax, max_steps=max_steps,
-                log_fn=log_def, log_file_path=log_file_path,
-            )
-            write(opj(work_dir, "relax_start", "CONTCAR"), start_atoms, format="vasp")
-        else:
+        if Path(Path(work_dir) / "relax_start" / "CONTCAR").exists():
             start_atoms = read(opj(work_dir, opj("relax_start", "CONTCAR")), format="vasp")
+        #if (not restart) or (not Path(Path(work_dir) / "relax_start" / "CONTCAR").exists()):
+        relax_start_dir = opj(work_dir, "relax_start/")
+        Path(relax_start_dir).mkdir(parents=True, exist_ok=True)
+        start_atoms = run_relax(
+            relax_start_dir, start_atoms, get_ion_calc, None,
+            apply_freeze_func=None, 
+            use_ase=use_ase, fmax=fmax, max_steps=max_steps,
+            log_fn=log_def, log_file_path=log_file_path,
+        )
+        write(opj(work_dir, "relax_start", "CONTCAR"), start_atoms, format="vasp")
+        # write(opj(work_dir, "relax_start", "CONTCAR"), start_atoms, format="vasp")
+        # else:
+        #     start_atoms = read(opj(work_dir, opj("relax_start", "CONTCAR")), format="vasp")
+    if Path(Path(work_dir) / "relax_start" / "CONTCAR").exists():
+        start_atoms = read(opj(work_dir, opj("relax_start", "CONTCAR")), format="vasp")
     if relax_end:
-        if (not restart) or (not ope(opj(work_dir, "relax_end", "CONTCAR"))):
-            relax_end_dir = opj(work_dir, "relax_end/")
-            Path(relax_end_dir).mkdir(parents=True, exist_ok=True)
-            start_atoms = run_relax(
-                relax_end_dir, end_atoms, get_ion_calc, None,
-                apply_freeze_func=None, 
-                use_ase=use_ase, fmax=fmax, max_steps=max_steps,
-                log_fn=log_def, log_file_path=log_file_path,
-            )
-            write(opj(work_dir, "relax_end", "CONTCAR"), end_atoms, format="vasp")
-        else:
+        if Path(Path(work_dir) / "relax_end" / "CONTCAR").exists():
             end_atoms = read(opj(work_dir, opj("relax_end", "CONTCAR")), format="vasp")
+        #if (not restart) or (not ope(opj(work_dir, "relax_end", "CONTCAR"))):
+        relax_end_dir = opj(work_dir, "relax_end/")
+        Path(relax_end_dir).mkdir(parents=True, exist_ok=True)
+        end_atoms = run_relax(
+            relax_end_dir, end_atoms, get_ion_calc, None,
+            apply_freeze_func=None, 
+            use_ase=use_ase, fmax=fmax, max_steps=max_steps,
+            log_fn=log_def, log_file_path=log_file_path,
+        )
+        write(opj(work_dir, "relax_end", "CONTCAR"), end_atoms, format="vasp")
+        # else:
+        #     end_atoms = read(opj(work_dir, opj("relax_end", "CONTCAR")), format="vasp")
+    if Path(Path(work_dir) / "relax_end" / "CONTCAR").exists():
+        end_atoms = read(opj(work_dir, opj("relax_end", "CONTCAR")), format="vasp")
     return start_atoms, end_atoms
 
 
