@@ -263,7 +263,7 @@ def run_relax(
     if use_ase:
         if log_file_path is None:
             log_file_path = get_log_file_name(work_dir, "neb")
-        dyn = FIRE(atoms, logfile=log_file_path)
+        dyn = FIRE(atoms, logfile=log_file_path, astart=0.01)
         dyn.run(fmax=fmax, steps=max_steps)
     else:
         atoms.get_potential_energy()
@@ -277,7 +277,7 @@ def relax_bounds(
         use_ase=False,
         log_fn=log_def, log_file_path=None):
     ion_infile = base_infile.copy()
-    ion_infile["ionic-minimize"] = f"nIterations {max_steps}"
+    ion_infile["ionic-minimize"] = f"nIterations {max_steps} knormThreshold 1e-6"
     get_ion_calc = lambda root: get_arb_calc(root, ion_infile)
     if relax_start:
         if Path(Path(work_dir) / "relax_start" / "CONTCAR").exists():
