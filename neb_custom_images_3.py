@@ -180,7 +180,9 @@ def interpolate_missing_images(_atoms_list, inter_method_str, log_fn=log_def):
         if _atoms is None:
             if i == 0:
                 raise ValueError(f"Missing image {i} is the first image")
-            atoms_list.append(atoms_list[-1].copy())
+            __atoms = atoms_list[-1].copy()
+            __atoms.calc = None
+            atoms_list.append(__atoms)
         else:
             atoms_list.append(_atoms.copy())
     log_fn(f"Interpolating missing images {missing_idcs}")
