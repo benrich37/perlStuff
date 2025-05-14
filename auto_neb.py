@@ -54,6 +54,7 @@ neb_template = [
     "pbc: True, true, true # which lattice vectors to impose periodic boundary conditions on",
     "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
     "gpu: True",
+    "ase: True # Use ASE for optimization (good for making sure bounds are fulling optimized)",
     "climbing image: True",
     "images_start: 2 # Number of images provided",
     "images_par: 3 # Number of images ran in a single autoneb step",
@@ -276,6 +277,7 @@ def main(debug=False):
     exclude_freeze_count = nid["exclude_freeze_count"]
     relax_start = nid["relax_start"]
     relax_end = nid["relax_end"]
+    ase = nid["ase"]
     chdir(work_dir)
     neb_log = get_log_fn(work_dir, "neb", False, restart=restart)
     apply_freeze_func = get_apply_freeze_func(
@@ -297,7 +299,7 @@ def main(debug=False):
         work_dir, initial_images_dir, neb_dir, nimg_start, struc_prefix, 
         get_arb_calc, base_infile,
         relax_start, relax_end, fmax, max_steps, apply_freeze_func,
-        use_ase=False,
+        use_ase=ase,
         restart=restart, log_fn=neb_log, debug=debug,
         )
     use_infile = base_infile.copy()
@@ -329,7 +331,7 @@ def main(debug=False):
             work_dir, initial_images_dir, neb_dir, nimg_start, struc_prefix, 
             get_arb_calc, base_infile,
             relax_start, relax_end, fmax, max_steps, apply_freeze_func,
-            use_ase=False,
+            use_ase=ase,
             restart=True, log_fn=neb_log, debug=debug,
         )
         neb_log(f"Trying again")
