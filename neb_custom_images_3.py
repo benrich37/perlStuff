@@ -209,42 +209,6 @@ def interpolate_missing_images(_atoms_list, inter_method_str, log_fn=log_def):
     return atoms_list
 
 
-def run_initial_images(
-        work_dir, initial_images_dir, neb_dir, nimg_start, struc_prefix, 
-        get_arb_calc, base_infile,
-        relax_start, relax_end, fmax, max_steps, apply_freeze_func,
-        use_ase=False,
-        restart=False, log_fn=log_def, debug=False,
-        ):
-    atoms_list = get_initial_image_atoms_list(work_dir, nimg_start, struc_prefix, log_fn=log_fn)
-    write_traj_paths = [str(Path(neb_dir) / f"j{i:03d}.traj") for i in range(nimg_start)]
-    restart = restart and all([ope(p) for p in write_traj_paths])
-    for i, atoms in enumerate(atoms_list):
-        initial_images_dir_i = opj(initial_images_dir, f"{i}/")
-        if not ope(initial_images_dir_i):
-            restart = False
-            _dir = Path(initial_images_dir_i)
-            _dir.mkdir(parents=True, exist_ok=True)
-        if not restart:
-            use_infile = base_infile.copy()
-            _use_ase = True
-            # calc_fn = get_sp_calc
-            if ((i == 0 and relax_start) or (i == nimg_start - 1 and relax_end)):
-                use_infile["ionic-minimize"] = f"nIterations {max_steps}"
-            else:
-                use_infile["ionic-minimize"] = f"nIterations 0"
-                _use_ase = False
-            calc_fn = lambda root: get_arb_calc(root, use_infile)
-            ran_atoms = run_relax(
-                initial_images_dir_i, atoms, calc_fn, None,
-                use_ase=(use_ase and _use_ase),
-                fmax=fmax, max_steps=max_steps,
-                apply_freeze_func=apply_freeze_func,
-                log_fn=log_fn, log_file_path=get_log_file_name(work_dir, "neb")
-                )
-            write(str(Path(neb_dir) / f"j{i:03d}.traj"), ran_atoms, format="traj")
-
-
 def run_relax(
         work_dir, atoms, calc_fn, name,
         apply_freeze_func=None, 
@@ -277,7 +241,7 @@ def relax_bounds(
         use_ase=False,
         log_fn=log_def, log_file_path=None):
     ion_infile = base_infile.copy()
-    ion_infile["ionic-minimize"] = f"nIterations {max_steps} knormThreshold 1e-6"
+    ion_infile["ionic-minimize"] = f"nIterations {max_steps}"
     get_ion_calc = lambda root: get_arb_calc(root, ion_infile)
     if relax_start:
         if Path(Path(work_dir) / "relax_start" / "CONTCAR").exists():
