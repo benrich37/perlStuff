@@ -201,12 +201,15 @@ def run_initial_images(
         restart=False, log_fn=log_def, debug=False,
         ):
     atoms_list = get_initial_image_atoms_list(work_dir, nimg_start, struc_prefix, log_fn=log_fn)
+    write_traj_paths = [str(Path(neb_dir) / f"j{i:03d}.traj") for i in range(nimg_start)]
+    restart = restart and all([ope(p) for p in write_traj_paths])
     for i, atoms in enumerate(atoms_list):
         initial_images_dir_i = opj(initial_images_dir, f"{i}/")
         if not ope(initial_images_dir_i):
             restart = False
-            mkdir(initial_images_dir_i)
-        if restart:
+            _dir = Path(initial_images_dir_i)
+            _dir.mkdir(parents=True, exist_ok=True)
+        if not restart:
             use_infile = base_infile.copy()
             _use_ase = True
             # calc_fn = get_sp_calc
@@ -289,7 +292,7 @@ def main(debug=False):
     neb_log("Beginning NEB setup")
     initial_images_dir = opj(work_dir, "initial_images")
     neb_dir = opj(work_dir, "neb")
-    check_submit(gpu, os.getcwd(), "opt", log_fn=neb_log)
+    check_submit(gpu, os.getcwd(), "auto_neb", log_fn=neb_log)
     restart = run_initial_images(
         work_dir, initial_images_dir, neb_dir, nimg_start, struc_prefix, 
         get_arb_calc, base_infile,
@@ -302,7 +305,7 @@ def main(debug=False):
     def attach_calculators(images):
         print(f"Attaching calculators on {len(images)} images")
         for i, image in enumerate(images):
-            image.calc = get_arb_calc(str(neb_dir / f"{i}"), use_infile)
+            image.calc = get_arb_calc(str(Path(neb_dir) / f"{i}"), use_infile)
     neb = AutoNEB(
         attach_calculators,
         str(str(Path(neb_dir) / "j")),
@@ -315,8 +318,42 @@ def main(debug=False):
         method=neb_method,
         interpolate_method=interp_method
         )
-    neb.run()
+    try:
+        neb.run()
+    except StopIteration as e:
+        neb_log(f"NEB run stopped: {e}")
+        neb_log("Cleaning up NEB directory")
+        remove_dir_recursive(neb_dir)
+        Path(neb_dir).mkdir(parents=True, exist_ok=True)
+        run_initial_images(
+            work_dir, initial_images_dir, neb_dir, nimg_start, struc_prefix, 
+            get_arb_calc, base_infile,
+            relax_start, relax_end, fmax, max_steps, apply_freeze_func,
+            use_ase=False,
+            restart=True, log_fn=neb_log, debug=debug,
+        )
+        neb_log(f"Trying again")
+        neb.run()
     
+# def repair_auto_neb_dir(neb_dir):
+#     fs = os.listdir(neb_dir)
+#     fs = [f for f in fs if f.endswith(".traj")]
+#     fs = [f for f in fs if "iter" in f]
+#     image_fs = {}
+#     for f in fs:
+#         img_str = f.split("j")[1].split(".")[0]
+#         if img_str in image_fs:
+#             image_fs[img_str].append(f)
+#         else:
+#             image_fs[img_str] = [f]
+#     for img_str, fs in image_fs.items():
+#         iter_fs = [f.split("iter")[1].split(".traj")[0] for f in fs]
+#         idcs = np.argsort([int(i) for i in iter_fs])
+#         most_recent_f = fs[idcs[-1]]
+#         copy_file(
+#             opj(neb_dir, most_recent_f),
+#             opj(neb_dir, f"j{img_str}.traj"),
+#             )
 
 
 

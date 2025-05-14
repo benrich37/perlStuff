@@ -715,6 +715,8 @@ def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs, ex
                 ztol=freeze_tol, freeze_count=freeze_count, freeze_idcs=freeze_idcs, exclude_freeze_count=exclude_freeze_count,
                 log_fn=log_fn)
             add_constraint(atoms, c)
+        else:
+            return atoms
     return apply_freeze_func
 
 def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0, freeze_count = 0, exclude_freeze_count=0, log_fn=log_def, freeze_idcs=None):
