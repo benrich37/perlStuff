@@ -195,12 +195,25 @@ class JDFTx(Calculator):
     def _set_infile(self, infile):
         if self._debug:
             self.log_func(infile)
-        infile_dict = self.default_parameters.copy()
-        if isinstance(infile, JDFTXInfile):
-            infile_dict.update(infile.as_dict())
-        else:
-            infile_dict.update(self._legacy_commands_to_infile(infile))
-        self.infile = _strip_infile(infile_dict.copy())
+        #infile_dict = self.default_parameters.copy()
+        use_infile = JDFTXInfile.from_dict(self.default_parameters.copy())
+        if not isinstance(infile, JDFTXInfile):
+            infile = self._legacy_commands_to_infile(infile)
+        for key in infile:
+            if key in use_infile:
+                if key == "dump":
+                    [use_infile.append_tag("dump", v) for v in infile[key]]
+                else:
+                    use_infile[key].update(infile[key])
+            else:
+                use_infile[key] = infile[key]
+        # if isinstance(infile, JDFTXInfile):
+        #     use_infile += infile
+        #     infile_dict.update(infile.as_dict())
+        # else:
+        #     use_infile += self._legacy_commands_to_infile(infile)
+        #     #infile_dict.update(self._legacy_commands_to_infile(infile))
+        self.infile = _strip_infile(use_infile)
         
         
     def calculate(self, atoms=None, properties=None, system_changes=all_changes):
