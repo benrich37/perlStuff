@@ -227,7 +227,7 @@ def run_relax(
     if use_ase:
         if log_file_path is None:
             log_file_path = get_log_file_name(work_dir, "neb")
-        dyn = FIRE(atoms, logfile=log_file_path, a=0.000001, astart=0.00000000001, dt=0.000000000000000000000000001)
+        dyn = FIRE(atoms, logfile=log_file_path, dt=0.0000001)
         dyn.run(fmax=fmax, steps=max_steps)
     else:
         atoms.get_potential_energy()
