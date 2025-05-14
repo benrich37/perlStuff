@@ -8,6 +8,8 @@ from ase.optimize import FIRE
 from os.path import join as opj, exists as ope, isdir,  basename
 from os import rename
 from os import mkdir, getcwd,  chdir
+
+import ase.parallel as mpi
 from ase.mep import NEB, AutoNEB
 from datetime import datetime
 #from ase.neb import NEB
@@ -96,6 +98,7 @@ def read_neb_inputs(fname="neb_input"):
     nid["interp_method"] = "linear"
     nid["bias"] = "No_bias"
     nid["k"] = 0.1
+    nid["ase"] = True
     inputs = get_inputs_list(fname, auto_lower=False)
     for input in inputs:
         key, val = input[0], input[1]
@@ -221,11 +224,11 @@ def run_initial_images(
                 _use_ase = False
             calc_fn = lambda root: get_arb_calc(root, use_infile)
             ran_atoms = run_relax(
-                initial_images_dir_i, atoms, calc_fn, f"{i}",
+                initial_images_dir_i, atoms, calc_fn, None,
                 use_ase=(use_ase and _use_ase),
                 fmax=fmax, max_steps=max_steps,
                 apply_freeze_func=apply_freeze_func,
-                log_fn=log_fn,
+                log_fn=log_fn, log_file_path=get_log_file_name(work_dir, "neb")
                 )
             write(str(Path(neb_dir) / f"j{i:03d}.traj"), ran_atoms, format="traj")
 
@@ -234,16 +237,21 @@ def run_relax(
         work_dir, atoms, calc_fn, name,
         apply_freeze_func=None, 
         use_ase=False, fmax=0.01, max_steps=100,
-        log_fn=log_def,
+        log_fn=log_def, log_file_path=None
         ):
-    relax_dir = opj(work_dir, name)
+    if not name is None:
+        relax_dir = opj(work_dir, name)
+    else:
+        relax_dir = work_dir
     if not ope(relax_dir):
         mkdir(relax_dir)
     if not apply_freeze_func is None:
         atoms = apply_freeze_func(atoms)
     atoms.calc = calc_fn(relax_dir)
     if use_ase:
-        dyn = FIRE(atoms, logfile=get_log_file_name(work_dir, "neb"))
+        if log_file_path is None:
+            log_file_path = get_log_file_name(work_dir, "neb")
+        dyn = FIRE(atoms, logfile=log_file_path)
         dyn.run(fmax=fmax, steps=max_steps)
     else:
         atoms.get_potential_energy()
@@ -294,6 +302,7 @@ def main(debug=False):
     neb_log("Beginning NEB setup")
     initial_images_dir = opj(work_dir, "initial_images")
     neb_dir = opj(work_dir, "neb")
+    Path(neb_dir).mkdir(parents=True, exist_ok=True)
     check_submit(gpu, os.getcwd(), "auto_neb", log_fn=neb_log)
     restart = run_initial_images(
         work_dir, initial_images_dir, neb_dir, nimg_start, struc_prefix, 
@@ -313,7 +322,7 @@ def main(debug=False):
         str(str(Path(neb_dir) / "j")),
         nimg_par,
         nimg_max,
-        parallel=False,
+        parallel=mpi.world.rank > 0,
         climb=use_ci,
         iter_folder=neb_dir,
         maxsteps=[step1_max_steps, ci_max_steps],
