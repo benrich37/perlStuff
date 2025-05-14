@@ -1,50 +1,24 @@
 from pathlib import Path
-from helpers.generic_helpers import get_inputs_list, read_pbc_val, fix_work_dir, dump_template_input, get_ref_struct, get_apply_freeze_func
-from os import getcwd, chdir
 import os
-from ase.io import read, write
-from ase.io.trajectory import Trajectory
-from ase.optimize import FIRE
-from os.path import join as opj, exists as ope, isdir,  basename
-from os import rename
-from os import mkdir, getcwd,  chdir
-
-from ase import Atoms
-
-import ase.parallel as mpi
-from ase.mep import NEB, AutoNEB
-from datetime import datetime
-#from ase.neb import NEB
-from ase.mep import NEB
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
-    get_atoms_list_from_out, get_do_cell, get_atoms
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
-    get_atoms_list_from_out, get_do_cell, get_atoms, get_ionic_opt_cmds_list
-from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
-from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, cmds_list_to_infile
-from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, cmds_dict_to_list, add_freeze_surf_base_constraint
-import numpy as np
-from opt import run_ion_opt
-import os
-from ase.io import read, write
-from ase.io.trajectory import Trajectory
-from ase.optimize import FIRE
 from os.path import join as opj, exists as ope
 from os import mkdir, getcwd,  chdir
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
-    get_atoms_list_from_out, get_do_cell, get_atoms
-from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer, get_infile
-from helpers.generic_helpers import dump_template_input, get_log_fn, log_def, get_log_file_name
-from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_calc_new
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart
-from helpers.generic_helpers import cmds_dict_to_list
-from helpers.logx_helpers import _write_logx
-import numpy as np
-from neb import setup_img_dirs
-from pathlib import Path
+from ase import Atoms
+from ase.mep import NEB
+from ase.optimize import FIRE
+from ase.io import read, write
+from ase.io.trajectory import Trajectory
+from ase.optimize import FIRE
 from pymatgen.io.jdftx.inputs import JDFTXInfile
+from helpers.calc_helpers import get_exe_cmd, _get_calc_new
+from helpers.generic_helpers import (
+    dump_template_input, fix_work_dir, check_submit,
+    get_log_file_name,get_log_fn, log_def,
+    get_inputs_list, cmds_list_to_infile, get_cmds_dict, cmds_dict_to_list,
+    read_pbc_val, get_ref_struct, get_apply_freeze_func,
+    _write_contcar
+    )
+
+
 
 
 neb_template = [
