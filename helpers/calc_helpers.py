@@ -53,7 +53,7 @@ def _get_calc_new(exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=No
         label = root
     else:
         label = str(Path(root) / label)
-    log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
+    # log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
     # infile = JDFTXInfile.from_str("" + "\n".join(list), dont_require_structure=True)
     return JDFTx_new(
         infile=cmds,
