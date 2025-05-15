@@ -31,6 +31,7 @@ neb_template = [
     "relax: start, end # start optimizes given structure without frozen bond before scanning bond, end ",
     "gpu: True",
     "ase: True # Use ASE for optimization (good for making sure bounds are fulling optimized)",
+    "jdftx: True # Use JDFTx for optimization (If ASE also True, runs between optimization steps for boundaries)",
     "climbing image: True",
     "images: 5 # Number of images provided",
     "bias: No_bias"
@@ -69,6 +70,7 @@ def read_neb_inputs(fname="neb_input"):
     nid["bias"] = "No_bias"
     nid["k"] = 0.1
     nid["ase"] = True
+    nid["jdftx"] = True
     inputs = get_inputs_list(fname, auto_lower=False)
     for input in inputs:
         key, val = input[0], input[1]
@@ -138,6 +140,8 @@ def read_neb_inputs(fname="neb_input"):
             nid["k"] = float(val.strip())
         if key.strip().lower() == "ase":
             nid["ase"] = "true" in val.lower()
+        if "jdft" in key.lower():
+            nid["jdftx"] = "true" in val.lower()
     nid["work_dir"] = fix_work_dir(nid["work_dir"])
     return nid
 
@@ -227,7 +231,7 @@ def run_relax(
     if use_ase:
         if log_file_path is None:
             log_file_path = get_log_file_name(work_dir, "neb")
-        dyn = FIRE(atoms, logfile=log_file_path, dt=0.01)
+        dyn = FIRE(atoms, logfile=log_file_path, dt=0.005)
         dyn.run(fmax=fmax, steps=max_steps)
     else:
         atoms.get_potential_energy()
@@ -238,10 +242,15 @@ def relax_bounds(
         relax_start, relax_end, work_dir, start_atoms, end_atoms, restart,
         base_infile, get_arb_calc,
         fmax=0.01, max_steps=100,
-        use_ase=False,
+        use_ase=False, use_jdftx=True,
         log_fn=log_def, log_file_path=None):
+    if ((not use_ase) and (not use_jdftx)):
+        use_jdftx = True
     ion_infile = base_infile.copy()
-    ion_infile["ionic-minimize"] = f"nIterations {max_steps}"
+    if use_jdftx:
+        ion_infile["ionic-minimize"] = f"nIterations {max_steps}"
+    else:
+        ion_infile["ionic-minimize"] = f"nIterations 0"
     get_ion_calc = lambda root: get_arb_calc(root, ion_infile)
     if relax_start:
         if Path(Path(work_dir) / "relax_start" / "CONTCAR").exists():
@@ -270,7 +279,7 @@ def relax_bounds(
         end_atoms = run_relax(
             relax_end_dir, end_atoms, get_ion_calc, None,
             apply_freeze_func=None, 
-            use_ase=use_ase, fmax=fmax, max_steps=max_steps,
+            use_ase=use_ase, use_jdftx=use_jdftx, fmax=fmax, max_steps=max_steps,
             log_fn=log_def, log_file_path=log_file_path,
         )
         write(opj(work_dir, "relax_end", "CONTCAR"), end_atoms, format="vasp")
@@ -353,6 +362,7 @@ def main(debug=False):
     relax_start = nid["relax_start"]
     relax_end = nid["relax_end"]
     ase = nid["ase"]
+    jdftx = nid["jdftx"]
     chdir(work_dir)
     neb_log = get_log_fn(work_dir, "neb", debug, restart=restart)
     check_submit(gpu, os.getcwd(), "neb", log_fn=neb_log)
@@ -376,7 +386,7 @@ def main(debug=False):
         relax_start, relax_end, work_dir, initial_images[0], initial_images[-1], restart,
         base_infile, get_arb_calc,
         fmax=fmax, max_steps=max_steps,
-        use_ase=ase,
+        use_ase=ase, use_jdftx=jdftx,
         log_fn=neb_log, log_file_path=get_log_file_name(work_dir, "neb"),
     )
     initial_images[0] = start_atoms
