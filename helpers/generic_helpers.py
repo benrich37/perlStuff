@@ -17,6 +17,7 @@ from pymatgen.io.jdftx.outputs import JDFTXOutfile, JDFTXOutfileSlice
 from pymatgen.io.jdftx.joutstructures import JOutStructures, JOutStructure
 from pymatgen.io.ase import AseAtomsAdaptor
 from pymatgen.core import Structure
+from pymatgen.io.jdftx.inputs import JDFTXInfile
 
 
 def log_def(s):
@@ -173,7 +174,7 @@ def read_inputs_dict_helper(work_dir):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "initial-state",
                   "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
-        input_cmds = {"dump End": "State"}
+        input_cmds = {"dump End": ""}
         with open(inpfname) as f:
             for i, line in enumerate(f):
                 if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
@@ -189,7 +190,7 @@ def read_inputs_dict_helper(work_dir):
                         cmd = line[:line.index(" ")]
                         rest = line.rstrip("\n")[line.index(" ") + 1:]
                         if cmd not in ignore:
-                            if not "dump" in cmd:
+                            if not "dump " in cmd:
                                 input_cmds[cmd] = rest
                             else:
                                 freq = rest.split(" ")[0]
@@ -206,9 +207,7 @@ def read_inputs_dict_helper(work_dir):
     else:
         return None
 
-
-
-def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
+def read_inputs_infile(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
     input_cmds = read_inputs_dict_helper(work_dir)
     if not input_cmds is None:
         nbandkey = "elec-n-bands"
@@ -221,6 +220,26 @@ def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
             input_cmds[kfoldkey] = str(get_kfolding(ref_struct))
         biaskey = "target-mu"
         if biaskey in input_cmds and input_cmds[biaskey] == "*":
+            if not bias is None:
+                input_cmds[biaskey] = str(bias_to_mu(bias))
+            else:
+                del input_cmds[biaskey]
+    return input_cmds
+
+def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
+    input_cmds = read_inputs_dict_helper(work_dir)
+    #print(input_cmds)
+    if not input_cmds is None:
+        nbandkey = "elec-n-bands"
+        if ref_struct is None:
+            ref_struct = opj(work_dir, "POSCAR")
+        if nbandkey in input_cmds and "*" in input_cmds[nbandkey]:
+            input_cmds[nbandkey] = str(get_nbands(ref_struct, pseudoSet=pseudoSet))
+        kfoldkey = "kpoint-folding"
+        if kfoldkey in input_cmds and "*" in input_cmds[kfoldkey]:
+            input_cmds[kfoldkey] = str(get_kfolding(ref_struct))
+        biaskey = "target-mu"
+        if biaskey in input_cmds and "*" in input_cmds[biaskey]:
             if not bias is None:
                 input_cmds[biaskey] = str(bias_to_mu(bias))
             else:
@@ -486,10 +505,12 @@ def need_sort(root):
     atoms = get_poscar_atoms(root, log_def)
     return get_sort_bool(atoms.get_chemical_symbols())
 
-
+def get_log_file_name(work, calc_type):
+    fname = opj(work, calc_type + ".iolog")
+    return fname
 
 def get_log_fn(work, calc_type, print_bool, restart=False):
-    fname = opj(work, calc_type + ".iolog")
+    fname = get_log_file_name(work, calc_type)
     if not restart:
         if ope(fname):
             rm(fname)
@@ -576,6 +597,19 @@ def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None)
             log_and_abort(msg, log_fn)
     else:
         return read_inputs_dict(work_dir, ref_struct=ref_struct, bias=bias)
+    
+def get_infile(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None):
+    chdir(work_dir)
+    if not ope(opj(work_dir, "inputs")):
+        if ope(opj(work_dir, "in")):
+            return JDFTXInfile.from_file(opj(work_dir, "in"))
+        else:
+            dump_default_inputs(work_dir, ref_struct, log_fn=log_fn, pbc=pbc, bias=bias)
+            msg = "No inputs or in file found - dumping template inputs"
+            log_and_abort(msg, log_fn)
+    else:
+        return read_inputs_infile(work_dir, ref_struct=ref_struct, bias=bias)
+        #return read_inputs_dict(work_dir, ref_struct=ref_struct, bias=bias)
 
 
 def read_line_generic(line):
@@ -593,7 +627,12 @@ def remove_dir_recursive(path, log_fn=log_def):
     log_fn(f"Removing directory {path}")
     for root, dirs, files in walk(path, topdown=False):  # topdown=False makes the walk visit subdirectories first
         for name in files:
-            rm(opj(root, name))
+            try:
+                rm(opj(root, name))
+            except FileNotFoundError as e:
+                log_fn(f"File {opj(root, name)} not found - ignoring")
+                log_fn(e)
+                pass
         for name in dirs:
             rmdir(opj(root, name))
     rmdir(path)  # remove the root directory itself
@@ -667,6 +706,18 @@ def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_
         return get_freeze_surf_base_constraint_by_count(atoms, freeze_count=freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn)
     else:
         return get_freeze_surf_base_constraint_by_dist(atoms, ztol = ztol, log_fn=log_fn)
+    
+def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs, exclude_freeze_count, log_fn=log_def):
+    def apply_freeze_func(atoms, log_fn=log_def):
+        if freeze_base:
+            c = get_freeze_surf_base_constraint(
+                atoms,
+                ztol=freeze_tol, freeze_count=freeze_count, freeze_idcs=freeze_idcs, exclude_freeze_count=exclude_freeze_count,
+                log_fn=log_fn)
+            add_constraint(atoms, c)
+        else:
+            return atoms
+    return apply_freeze_func
 
 def add_freeze_surf_base_constraint(atoms, freeze_base = False, ztol = 1.0, freeze_count = 0, exclude_freeze_count=0, log_fn=log_def, freeze_idcs=None):
     log_fn(f"add_freeze_surf_base_constraint: {freeze_idcs}")
@@ -763,14 +814,20 @@ def check_submit(gpu, cwd, jobtype, log_fn=log_def):
             dump_template_input(fname, submit_gpu_perl_ref, cwd)
         else:
             dump_template_input(fname, submit_cpu_perl_ref, cwd)
-        run(f"sed -i 's/{foo_str}/{jobtype}/g' {fname}", shell=True, check=True)
+        try:
+            run(f"sed -i 's/{foo_str}/{jobtype}/g' {fname}", shell=True, check=True)
+        except:
+            run(f"sed -i '' 's/{foo_str}/{jobtype}/g' {fname}", shell=True, check=True)
         _bar = __main__.__file__
         bar = ""
         for s in _bar:
             if s == "/":
                 bar += "\\"
             bar += s
-        run(f"sed -i 's/{bar_str}/{bar}/g' {fname}", shell=True, check=True)
+        try:
+            run(f"sed -i 's/{bar_str}/{bar}/g' {fname}", shell=True, check=True)
+        except:
+            run(f"sed -i '' 's/{bar_str}/{bar}/g' {fname}", shell=True, check=True)
         exit()
 
 
@@ -1655,3 +1712,40 @@ def get_mu(outfile):
                 mu = float(line.split(lookkey)[1].strip().split()[0])
                 last_line = line
     return mu
+
+
+def get_ref_struct(work_dir, struc_prefix):
+    all_files = listdir(work_dir)
+    struc_files = [f for f in all_files if struc_prefix in f]
+    _struc_files = [f for f in struc_files if not ".gjf" in f]
+    if len(_struc_files) == 0:
+        _atoms = read(opj(work_dir, struc_files[0]), format="gaussian-in")
+        ref_struct = struc_files[0].rstrip(".gjf")
+        write(opj(work_dir, ref_struct), _atoms, format="vasp")
+        return ref_struct
+    else:
+        return opj(work_dir, _struc_files[0])
+    
+def cmds_list_to_infile(cmds_list):
+    infile_dict = {}
+    if isinstance(cmds_list, JDFTXInfile):
+        return cmds_list
+    elif isinstance(cmds_list, dict):
+        infile_dict.update(cmds_list)
+    elif isinstance(cmds_list, list):
+        _infile_str = ""
+        for v in cmds_list:
+            if isinstance(v, str):
+                _infile_str += v + "\n"
+            elif isinstance(v, tuple):
+                _infile_str += " ".join(v) + "\n"
+            elif isinstance(v, list):
+                _infile_str += " ".join([str(x) for x in v]) + "\n"
+            else:
+                raise TypeError(f"Invalid type {type(v)} in infile list")
+        _infile = JDFTXInfile.from_str(_infile_str, dont_require_structure=True)
+        infile_dict.update(_infile.as_dict())
+    elif isinstance(cmds_list, str):
+        _infile = JDFTXInfile.from_file(cmds_list, dont_require_structure=True)
+        infile_dict.update(_infile.as_dict())
+    return JDFTXInfile.from_dict(infile_dict)

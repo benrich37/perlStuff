@@ -1,6 +1,8 @@
 from os import getcwd as getcwd, environ as env_vars_dict
 from JDFTx import JDFTx, Wannier
+from JDFTx_new import JDFTx as JDFTx_new, JDFTXInfile
 from helpers.generic_helpers import log_def, fix_dump_cmds_list
+from pathlib import Path
 
 
 def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
@@ -12,7 +14,7 @@ def set_calc_old(exe_cmd, cmds, work=getcwd(), debug=False, debug_calc=None):
             executable=exe_cmd,
             pseudoSet="GBRV_v1.5",
             commands=cmds,
-            outfile=work,
+            calc_dir=work,
             ionic_steps=False,
             ignoreStress=True,
     )
@@ -40,10 +42,47 @@ def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None,
             executable=exe_cmd,
             pseudoSet=pseudoSet,
             commands=cmds,
-            outfile=root,
+            calc_dir=root,
             ionic_steps=False,
             direct_coords=direct_coords
         )
+    
+def _get_calc_new(exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, debug=False, debug_fn=None, log_fn=log_def, direct_coords=False, label=None):
+    cmds = fix_dump_cmds_list(cmds)
+    if label is None:
+        label = root
+    else:
+        label = str(Path(root) / label)
+    log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
+    # infile = JDFTXInfile.from_str("" + "\n".join(list), dont_require_structure=True)
+    return JDFTx_new(
+        infile=cmds,
+        label=label,
+        pseudoDir=pseudoDir,
+        pseudoSet=pseudoSet,
+        command=exe_cmd,
+        #debug=debug,
+        log_func=log_fn,
+    )
+    
+# def _get_calc_new(
+#         exe_cmd: str, infile: JDFTXInfile, calc_dir: str, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def, direct_coords=False
+#         ):
+#     cmds = fix_dump_cmds_list(cmds)
+#     if debug:
+#         log_fn("Setting calc to debug calc")
+#         return debug_fn()
+#     else:
+#         log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {calc_dir} \n \t cmds: {cmds} \n")
+#         return JDFTx_new(
+
+#             executable=exe_cmd,
+#             pseudoSet=pseudoSet,
+#             commands=cmds,
+#             calc_dir=calc_dir,
+#             ionic_steps=False,
+#             direct_coords=direct_coords
+#         )
 
 
 def get_wannier_exe_cmd(gpu, log_fn):
@@ -56,13 +95,16 @@ def get_wannier_exe_cmd(gpu, log_fn):
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
 
-def get_exe_cmd(gpu, log_fn):
+def get_exe_cmd(gpu, log_fn, use_srun=True):
     if gpu:
         _get = 'JDFTx_GPU'
     else:
         _get = 'JDFTx'
     log_fn(f"Using {_get} for JDFTx exe")
-    exe_cmd = 'srun ' + env_vars_dict[_get]
+    if use_srun:
+        exe_cmd = 'srun ' + env_vars_dict[_get]
+    else:
+        exe_cmd = env_vars_dict[_get]
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
 

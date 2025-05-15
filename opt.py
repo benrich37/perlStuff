@@ -344,7 +344,8 @@ def run_ion_opt_runner(
     return atoms_obj
 
 
-def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, _failed_before=False, 
+def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn,
+                freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, _failed_before=False, 
                 freeze_idcs=None,
                 log_fn=log_def,
                 ):
@@ -446,7 +447,7 @@ def fix_restart_bug(work_dir, restart):
                 subprocess.run(f"sed -i '/fluid-ex-corr/d' {outfile}", shell=True, check=True)
                 subprocess.run(f"sed -i '/lda-PZ/d' {outfile}", shell=True, check=True)
 
-def main():
+def main(debug=False):
     # work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
     oid = read_opt_inputs()
     work_dir = oid["work_dir"]
@@ -481,7 +482,7 @@ def main():
     #opt_log(f"main: {freeze_idcs}")
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
-    exe_cmd = get_exe_cmd(gpu, opt_log)
+    exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
     cmds = get_cmds_dict(work_dir, ref_struct=structure, bias=bias, pbc=pbc, log_fn=opt_log)
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
     opt_log(f"Setting {structure} to atoms object")

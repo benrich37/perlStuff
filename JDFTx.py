@@ -14,6 +14,8 @@ from ase.units import Bohr, Hartree
 from ase import Atoms
 from os import environ as env_vars_dict
 from os.path import join as opj
+from pymatgen.io.jdftx.outputs import JDFTXOutfile
+from pathlib import Path
 
 
 def debugging_override():
@@ -37,8 +39,15 @@ def replaceVariable(var, varName):
 
 class JDFTx(Calculator):
 
-        def __init__(self, executable=None, pseudoDir=None, pseudoSet='GBRV', commands=None, outfile=None,
+        implemented_properties = ['energy', 'forces']
+
+        def __init__(self, executable=None, pseudoDir=None, pseudoSet='GBRV', commands=None, calc_dir=None,
                      ionic_steps = False, ignoreStress=True, direct_coords=False):
+                self.atoms = None  # copy of atoms object from last calculation
+                self.results = {}  # calculated properties (energy, forces, ...)
+                self.parameters = {}  # calculational parameters
+                super().__init__(label=calc_dir)
+                #self._directory = None  # Initialize
                 #Valid pseudopotential sets (mapping to path and suffix):
                 pseudoSetMap = {
                         'SG15' : 'SG15/$ID_ONCV_PBE.upf',
@@ -118,7 +127,7 @@ class JDFTx(Calculator):
                 self.Charges = None
 
                 # History
-                self.lastAtoms: Atoms | None = None
+                self.atoms: Atoms | None = None
                 self.lastInput = None
 
                 # k-points
@@ -134,7 +143,7 @@ class JDFTx(Calculator):
 
                 #Run directory:
                 #self.runDir = tempfile.mkdtemp()
-                self.runDir = outfile
+                self.runDir = calc_dir
                 print('Set up JDFTx calculator with run files in \'' + self.runDir + '\'')
 
         ########### Interface Functions ###########
@@ -166,7 +175,7 @@ class JDFTx(Calculator):
         def calculation_required(self, atoms: Atoms, quantities):
                 if((self.E is None) or (self.Forces is None)):
                         return True
-                if((self.lastAtoms != atoms) or (self.input != self.lastInput)):
+                if((self.atoms != atoms) or (self.input != self.lastInput)):
                         return True
                 return False
 
@@ -195,58 +204,6 @@ class JDFTx(Calculator):
 
         ################### I/O ###################
 
-        def __readEnergy(self, filename):
-                Efinal = None
-                for line in open(filename):
-                        tokens = line.split()
-                        if len(tokens)==3:
-                                Efinal = float(tokens[2])
-                if Efinal is None:
-                        raise IOError('Error: Energy not found.')
-                return Efinal * Hartree #Return energy from final line (Etot, F or G)
-
-        def __readForces(self, filename):
-                idxMap = {}
-                symbolList = self.lastAtoms.get_chemical_symbols()
-                for i, symbol in enumerate(symbolList):
-                        if symbol not in idxMap:
-                                idxMap[symbol] = []
-                        idxMap[symbol].append(i)
-                forces = [0]*len(symbolList)
-                for line in open(filename):
-                        if line.startswith('force '):
-                                tokens = line.split()
-                                idx = idxMap[tokens[1]].pop(0) # tokens[1] is chemical symbol
-                                forces[idx] = [float(word) for word in tokens[2:5]] # tokens[2:5]: force components
-                if(len(forces) == 0):
-                        raise IOError('Error: Forces not found.')
-                return (Hartree / Bohr) * np.array(forces)
-
-
-        def __readCharges(self, filename):
-                idxMap = {}
-                symbolList = self.lastAtoms.get_chemical_symbols()
-                for i, symbol in enumerate(symbolList):
-                        if symbol not in idxMap:
-                                idxMap[symbol] = []
-                        idxMap[symbol].append(i)
-                chargeDir={}
-                key = "oxidation-state"
-                start = self.get_start_line(filename)
-                for i, line in enumerate(open(filename)):
-                        if i > start:
-                                if key in line:
-                                        look = line.rstrip('\n')[line.index(key):].split(' ')
-                                        symbol = str(look[1])
-                                        charges = [float(val) for val in look[2:]]
-                                        chargeDir[symbol] = charges
-                charges = np.zeros(len(symbolList), dtype=float)
-                for atom in list(chargeDir.keys()):
-                        for i, idx in enumerate(idxMap[atom]):
-                                charges[idx] += chargeDir[atom][i]
-                return charges
-
-
 
         def get_start_line(self, outfname):
                 start = 0
@@ -260,6 +217,7 @@ class JDFTx(Calculator):
 
         def update(self, atoms):
                 self.runJDFTx(self.constructInput(atoms))
+                
 
         def runJDFTx(self, inputfile):
                 """ Runs a JDFTx calculation """
@@ -268,21 +226,36 @@ class JDFTx(Calculator):
                 fp.write(inputfile)
                 fp.close()
                 #Run jdftx:
+                print(f"Running in {self.runDir}")
                 shell('cd %s && %s -i in -o out' % (self.runDir, self.executable))
-                print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
-                subprocess.run(f"sed -i '/fluid-ex-corr/d' {opj(self.runDir, 'out')}", shell=True, check=True)
-                subprocess.run(f"sed -i '/lda-PZ/d' {opj(self.runDir, 'out')}", shell=True, check=True)
-                print("reading energy")
-                self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
-                print("reading forces")
-                self.Forces = self.__readForces('%s/force' % (self.runDir))
-                print("reading charges")
-                try:
-                        self.Charges = self.__readCharges('%s/out' % (self.runDir))
-                except Exception as e:
-                        print("The following error arose while trying to parse the charges;")
-                        print(e)
-                        pass
+                # print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
+                # subprocess.run(f"sed -i '/fluid-ex-corr/d' {opj(self.runDir, 'out')}", shell=True, check=True)
+                # subprocess.run(f"sed -i '/lda-PZ/d' {opj(self.runDir, 'out')}", shell=True, check=True)
+                self._read_results()
+                # print("reading energy")
+                # self.E = self.__readEnergy('%s/Ecomponents' % (self.runDir))
+                # print("reading forces")
+                # self.Forces = self.__readForces('%s/force' % (self.runDir))
+                # print("reading charges")
+                # try:
+                #         self.Charges = self.__readCharges('%s/out' % (self.runDir))
+                # except Exception as e:
+                #         print("The following error arose while trying to parse the charges;")
+                #         print(e)
+                #         pass
+
+        def _read_results(self):
+                outfile = JDFTXOutfile.from_file('%s/out' % (self.runDir))
+                self.E = outfile.e
+                self.Forces = outfile.forces
+                self.Charges = outfile.structure.site_properties["charges"]
+                self.Stress = outfile.stress
+                self.Strain = outfile.strain
+                self.results["energy"] = self.E
+                self.results["forces"] = self.Forces
+                self.results["charges"] = self.Charges
+                self.results["stress"] = self.Stress
+                self.results["strain"] = self.Strain
 
         def constructInput(self, atoms: Atoms):
                 """ Constructs a JDFTx input string using the input atoms and the input file arguments (kwargs) in self.input """
@@ -374,7 +347,7 @@ class JDFTx(Calculator):
                 inputfile += "".join(["dump %s %s\n" % (when, what) for when, what in self.dumps])
 
                 # Cache this calculation to history
-                self.lastAtoms = atoms.copy()
+                self.atoms = atoms.copy()
                 self.lastInput = list(self.input)
                 return inputfile
 
