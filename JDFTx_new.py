@@ -293,7 +293,11 @@ class JDFTx(Calculator):
                 # unit conversions indicating a change in the atoms geometry
                 atoms.set_positions(_atoms.get_positions())
                 for i, jstruc in enumerate(outfile.slices[-1].jstrucs):
-                    self.log_func(f"JDFTx: {i:>4}   t[s]: {jstruc.t_s:>8}   {outfile.etype}: {jstruc.e:6.15f} eV")
+                    try:
+                        self.log_func(f"JDFTx: {i:>4}   t[s]: {jstruc.t_s:>8}   {outfile.etype}: {jstruc.e:6.15f} eV")
+                    except TypeError:
+                        # Some of the logged values might be None if ionic optimization at roundoff error
+                        pass
             self.log_func(f"Native opt {niter} iterations, updated energy {outfile.e}")
         self.results["energy"] = outfile.e
         self.results["forces"] = outfile.forces
