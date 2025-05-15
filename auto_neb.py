@@ -14,15 +14,6 @@ from ase.mep import NEB, AutoNEB
 from datetime import datetime
 #from ase.neb import NEB
 from ase.mep import NEB
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
-    get_atoms_list_from_out, get_do_cell, get_atoms
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
-    get_atoms_list_from_out, get_do_cell, get_atoms, get_ionic_opt_cmds_list
-from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
-from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, cmds_list_to_infile
-from helpers.calc_helpers import _get_calc, get_exe_cmd
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
-from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, cmds_dict_to_list, add_freeze_surf_base_constraint
 import numpy as np
 from opt import run_ion_opt
 import os
@@ -31,18 +22,30 @@ from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
 from os.path import join as opj, exists as ope
 from os import mkdir, getcwd,  chdir
-from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
-    get_atoms_list_from_out, get_do_cell, get_atoms
-from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer, get_infile
-from helpers.generic_helpers import dump_template_input, get_log_fn, log_def, get_log_file_name
-from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_calc_new
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart
-from helpers.generic_helpers import cmds_dict_to_list
-from helpers.logx_helpers import _write_logx
 import numpy as np
 from neb import setup_img_dirs
 from pathlib import Path
 from pymatgen.io.jdftx.inputs import JDFTXInfile
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
+    get_atoms_list_from_out, get_do_cell, get_atoms
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
+    get_atoms_list_from_out, get_do_cell, get_atoms, get_ionic_opt_cmds_list
+from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer
+from helpers.generic_helpers import dump_template_input, get_log_fn, copy_file, log_def, cmds_list_to_infile
+
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart, get_nrg, _write_img_opt_iolog
+from helpers.generic_helpers import remove_dir_recursive, get_ionic_opt_cmds_dict, check_submit, cmds_dict_to_list, add_freeze_surf_base_constraint
+from helpers.generic_helpers import get_int_dirs, copy_state_files, get_cmds_dict, get_int_dirs_indices, \
+    get_atoms_list_from_out, get_do_cell, get_atoms
+from helpers.generic_helpers import fix_work_dir, read_pbc_val, get_inputs_list, _write_contcar, optimizer, get_infile
+from helpers.generic_helpers import dump_template_input, get_log_fn, log_def, get_log_file_name
+
+from helpers.generic_helpers import _write_opt_iolog, check_for_restart
+from helpers.generic_helpers import cmds_dict_to_list
+from helpers.calc_helpers import _get_calc, get_exe_cmd
+from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_calc_new
+from helpers.logx_helpers import _write_logx
+
 
 
 neb_template = [
@@ -153,7 +156,10 @@ def read_neb_inputs(fname="neb_input"):
             if "start" in key:
                 nid["images_start"] = int(val)
             elif "par" in key:
-                nid["images_par"] = int(val)
+                if "*" in val:
+                    nid["images_par"] = None
+                else:
+                    nid["images_par"] = int(val)
             elif "max" in key:
                 nid["images_max"] = int(val)
         if "struc" in key:
@@ -287,7 +293,7 @@ def main(debug=False):
     relax_end = nid["relax_end"]
     ase = nid["ase"]
     chdir(work_dir)
-    neb_log = get_log_fn(work_dir, "neb", False, restart=restart)
+    neb_log = get_log_fn(work_dir, "neb", debug, restart=restart)
     apply_freeze_func = get_apply_freeze_func(
         freeze_base, freeze_tol, freeze_count, freeze_idcs, exclude_freeze_count,
         log_fn=neb_log
@@ -317,6 +323,7 @@ def main(debug=False):
         print(f"Attaching calculators on {len(images)} images")
         for i, image in enumerate(images):
             image.calc = get_arb_calc(str(Path(neb_dir) / f"{i}"), use_infile)
+    nimg_par = set_nimg_par(nimg_par, neb_dir)
     neb = AutoNEB(
         attach_calculators,
         str(str(Path(neb_dir) / "j")),
@@ -345,6 +352,34 @@ def main(debug=False):
         )
         neb_log(f"Trying again")
         neb.run()
+
+
+def set_nimg_par(nimg_par, neb_dir):
+    if isinstance(nimg_par, int):
+        return nimg_par
+    elif nimg_par is None:
+        ncur = get_cur_num_images(neb_dir)
+        if ncur > 2:
+            nimg_par = ncur
+        else:
+            nimg_par = 2
+    else:
+        nimg_par = int(nimg_par)
+    return nimg_par
+
+def get_cur_num_images(neb_dir):
+    fs = os.listdir(neb_dir)
+    fs = [f for f in fs if f.endswith(".traj")]
+    fs = [f for f in fs if "iter" in f]
+    image_fs = {}
+    for f in fs:
+        img_str = f.split("j")[1].split(".")[0]
+        if img_str in image_fs:
+            image_fs[img_str].append(f)
+        else:
+            image_fs[img_str] = [f]
+    cur_num_images = len(image_fs)
+    return cur_num_images
     
 # def repair_auto_neb_dir(neb_dir):
 #     fs = os.listdir(neb_dir)

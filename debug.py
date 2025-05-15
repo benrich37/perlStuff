@@ -3,7 +3,7 @@ from os import chdir
 
 # calc_dir = r"/media/beri9208/Expansion/scratch_backup/perl/PC3_Gr_sps/molecules/debug"
 # calc_dir = r"/Volumes/Ext4TB/scratch_backup/perl/test_nebs/CH3Br_to_CH3OH/defaults"
-calc_dir = r"/Volumes/Ext4TB/scratch_backup/perl/PC3_Gr_sps/PC3_Gr/no_V/HCOO_transfer_neb_rot_n14"
+calc_dir = r"/Volumes/Ext4TB/scratch_backup/perl/PC3_Gr_sps/PC3_Gr/no_V/HCOO_transfer_neb_par_n11_k005"
 #calc_dir = r"/Volumes/Ext4TB/scratch_backup/perl/PC3_Gr_sps/PC3_Gr/no_V/HCOO_transfer_neb_par"
 chdir(calc_dir)
 #from opt import main
