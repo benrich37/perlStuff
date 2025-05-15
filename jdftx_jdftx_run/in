@@ -1,0 +1,36 @@
+coords-type Lattice 
+lattice \
+    23.499179012672 -0.002634013658 -3.011232623495 \
+    0.000000000000 23.602902904983 -0.000335766538 \
+    0.000000000000 0.000000000000 22.322690536610 
+ion H 0.396568625842 0.443212409258 0.442382495028 1 
+ion H 0.352391164961 0.477244087855 0.374689486828 1 
+core-overlap-check none 
+ion-species /Users/richb/Desktop/jdftx_hold/pseudopotentials/GBRV/H.uspp 
+
+symmetries none 
+
+kpoint-folding 1 1 1 
+
+elec-ex-corr gga 
+van-der-waals D3 
+elec-cutoff 20.0 
+elec-smearing Fermi 0.001 
+elec-n-bands 6 
+spintype z-spin 
+elec-initial-magnetization 0.0 no 
+converge-empty-states yes 
+
+initial-state $VAR 
+
+ionic-minimize \
+    nIterations  5 
+electronic-minimize \
+    energyDiffThreshold  1e-07 \
+    nIterations  5 
+
+fluid None 
+
+dump-name $VAR 
+dump End  State 
+
