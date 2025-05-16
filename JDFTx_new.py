@@ -199,14 +199,15 @@ class JDFTx(Calculator):
         use_infile = JDFTXInfile.from_dict(self.default_parameters.copy())
         if not isinstance(infile, JDFTXInfile):
             infile = self._legacy_commands_to_infile(infile)
-        for key in infile:
-            if key in use_infile:
-                if key == "dump":
-                    [use_infile.append_tag("dump", v) for v in infile[key]]
-                else:
-                    use_infile[key].update(infile[key])
-            else:
-                use_infile[key] = infile[key]
+        use_infile += infile
+        # for key in infile:
+        #     if key in use_infile:
+        #         if key == "dump":
+        #             [use_infile.append_tag("dump", v) for v in infile[key]]
+        #         else:
+        #             use_infile[key].update(infile[key])
+        #     else:
+        #         use_infile[key] = infile[key]
         # if isinstance(infile, JDFTXInfile):
         #     use_infile += infile
         #     infile_dict.update(infile.as_dict())

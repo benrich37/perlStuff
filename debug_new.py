@@ -8,7 +8,7 @@ from os import chdir
 
 #calc_dir = r"/Users/richb/Desktop/run_local/H2_custom_images_old"
 #calc_dir = r"/Users/richb/Desktop/run_local/H2_H_slide_cust3_test"
-calc_dir = r"/Volumes/Ext4TB/scratch_backup/perl/PC3_Gr_sps/PC3_Gr/no_V/HCOO_transfer_neb_par_n8_use_v3"
+calc_dir = r"/Volumes/Ext4TB/scratch_backup/perl/PC3_Gr_sps/PC3_Gr/no_V/HCOO_transfer_neb_rot_n14_usenew"
 chdir(calc_dir)
 from neb_custom_images_3 import main
 main(debug=True)
