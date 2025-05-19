@@ -5,14 +5,46 @@
 # print(mpi.world.size)
 # print(mpi.world.comm)
 
-outfile_path = r"/Volumes/Ext4TB/scratch_backup/perl/PC3_Gr_sps/PC3_Gr/no_V/HCOO_transfer_neb_par_n8_use_v3/relax_start/jdftx_run/out"
-from pymatgen.io.jdftx.outputs import JDFTXOutfile
-outfile = JDFTXOutfile.from_file(outfile_path)
-for i, jstruc in enumerate(outfile.slices[-1].jstrucs):
-    try:
-        print(f"JDFTx: {i:>4}   t[s]: {jstruc.t_s:>8}   {outfile.etype}: {jstruc.e:6.15f} eV")
-    except TypeError:
-        pass
+# outfile_path = r"/Volumes/Ext4TB/scratch_backup/perl/PC3_Gr_sps/PC3_Gr/no_V/HCOO_transfer_neb_par_n8_use_v3/relax_start/jdftx_run/out"
+# from pymatgen.io.jdftx.outputs import JDFTXOutfile
+# outfile = JDFTXOutfile.from_file(outfile_path)
+# for i, jstruc in enumerate(outfile.slices[-1].jstrucs):
+#     try:
+#         print(f"JDFTx: {i:>4}   t[s]: {jstruc.t_s:>8}   {outfile.etype}: {jstruc.e:6.15f} eV")
+#     except TypeError:
+#         pass
+# import numpy as np
+
+# value = -2323.43434343
+
+# print(f'{value:17.10E}')
+
+
+
+
+# test = []
+# alen = 3
+# blen = 5
+# for i in range(alen):
+#     _ = []
+#     for j in range(blen):
+#         _.append(float(np.random.rand()))
+#     test.append(np.array(_))
+# test = np.array(test)
+# for i in range(alen):
+#     for j in range(blen):
+#         print(i, j, test[i,j])
+# print("reshaping")
+# print(test.shape)
+# test2 = test.swapaxes(0, 1)
+# print(test2.shape)
+# for i in range(blen):
+#     for j in range(alen):
+#         assert test[j, i] == test2[i, j]
+
+# print(type(>))
+
+# print(f"{> 0}")
 # from copy import deepcopy
 
 # test1 = {"a": ["fdfd"]}

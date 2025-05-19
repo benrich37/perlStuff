@@ -238,6 +238,14 @@ def run_relax(
     return atoms
 
 
+def get_bounds_atoms(bound_relax_dir, template_atoms):
+    if Path(bound_relax_dir).exists():
+        template_atoms = read(opj(bound_relax_dir, "CONTCAR"), format="vasp")
+    elif Path(bound_relax_dir).exists():
+        template_atoms = read(opj(bound_relax_dir, "_restart.traj"))
+    return template_atoms
+
+
 def relax_bounds(
         relax_start, relax_end, work_dir, start_atoms, end_atoms, restart,
         base_infile, get_arb_calc,
@@ -252,11 +260,12 @@ def relax_bounds(
     else:
         ion_infile["ionic-minimize"] = f"nIterations 0"
     get_ion_calc = lambda root: get_arb_calc(root, ion_infile)
+    relax_start_dir = opj(work_dir, "relax_start/")
+    start_atoms = get_bounds_atoms(relax_start_dir, start_atoms)
+    relax_end_dir = opj(work_dir, "relax_end/")
+    end_atoms = get_bounds_atoms(relax_end_dir, end_atoms)
     if relax_start:
-        if Path(Path(work_dir) / "relax_start" / "CONTCAR").exists():
-            start_atoms = read(opj(work_dir, opj("relax_start", "CONTCAR")), format="vasp")
-        #if (not restart) or (not Path(Path(work_dir) / "relax_start" / "CONTCAR").exists()):
-        relax_start_dir = opj(work_dir, "relax_start/")
+        start_atoms = get_bounds_atoms(relax_start_dir, start_atoms)
         Path(relax_start_dir).mkdir(parents=True, exist_ok=True)
         start_atoms = run_relax(
             relax_start_dir, start_atoms, get_ion_calc, None,
@@ -265,16 +274,8 @@ def relax_bounds(
             log_fn=log_def, log_file_path=log_file_path,
         )
         write(opj(work_dir, "relax_start", "CONTCAR"), start_atoms, format="vasp")
-        # write(opj(work_dir, "relax_start", "CONTCAR"), start_atoms, format="vasp")
-        # else:
-        #     start_atoms = read(opj(work_dir, opj("relax_start", "CONTCAR")), format="vasp")
-    if Path(Path(work_dir) / "relax_start" / "CONTCAR").exists():
-        start_atoms = read(opj(work_dir, opj("relax_start", "CONTCAR")), format="vasp")
     if relax_end:
-        if Path(Path(work_dir) / "relax_end" / "CONTCAR").exists():
-            end_atoms = read(opj(work_dir, opj("relax_end", "CONTCAR")), format="vasp")
-        #if (not restart) or (not ope(opj(work_dir, "relax_end", "CONTCAR"))):
-        relax_end_dir = opj(work_dir, "relax_end/")
+        end_atoms = get_bounds_atoms(relax_end_dir, end_atoms)
         Path(relax_end_dir).mkdir(parents=True, exist_ok=True)
         end_atoms = run_relax(
             relax_end_dir, end_atoms, get_ion_calc, None,
@@ -283,10 +284,6 @@ def relax_bounds(
             log_fn=log_def, log_file_path=log_file_path,
         )
         write(opj(work_dir, "relax_end", "CONTCAR"), end_atoms, format="vasp")
-        # else:
-        #     end_atoms = read(opj(work_dir, opj("relax_end", "CONTCAR")), format="vasp")
-    if Path(Path(work_dir) / "relax_end" / "CONTCAR").exists():
-        end_atoms = read(opj(work_dir, opj("relax_end", "CONTCAR")), format="vasp")
     return start_atoms, end_atoms
 
 
