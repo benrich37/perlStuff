@@ -238,11 +238,25 @@ def run_relax(
     return atoms
 
 
-def get_bounds_atoms(bound_relax_dir, template_atoms):
-    if Path(bound_relax_dir).exists():
-        template_atoms = read(opj(bound_relax_dir, "CONTCAR"), format="vasp")
-    elif Path(bound_relax_dir).exists():
-        template_atoms = read(opj(bound_relax_dir, "_restart.traj"))
+def get_bounds_atoms(bound_relax_dir, template_atoms, log_fn=log_def):
+    contcar = Path(bound_relax_dir) / "CONTCAR"
+    traj = Path(bound_relax_dir) / "_restart.traj"
+    if all([not contcar.exists(), not traj.exists()]):
+        log_fn(f"Neither CONTCAR nor _restart.traj exist in {bound_relax_dir}")
+        return template_atoms
+    elif all([contcar.exists(), traj.exists()]):
+        if contcar.stat().st_mtime > traj.stat().st_mtime:
+            log_fn(f"Reading CONTCAR from {bound_relax_dir} since it is newer than _restart.traj")
+            template_atoms = read(contcar, format="vasp")
+        else:
+            log_fn(f"Reading _restart.traj from {bound_relax_dir} since it is newer than CONTCAR")
+            template_atoms = read(traj)
+    elif contcar.exists():
+        log_fn(f"Reading CONTCAR from {bound_relax_dir}")
+        template_atoms = read(contcar, format="vasp")
+    elif traj.exists():
+        log_fn(f"Reading _restart.traj from {bound_relax_dir}")
+        template_atoms = read(traj)
     return template_atoms
 
 
