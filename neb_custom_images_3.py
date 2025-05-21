@@ -208,8 +208,9 @@ def interpolate_missing_images(_atoms_list, inter_method_str, log_fn=log_def):
         atoms_sublist = atoms_list[start:end]
         tmp_neb = NEB(atoms_sublist)
         tmp_neb.interpolate(apply_constraint=True, method=inter_method_str)
-        for i, idx in enumerate(missing_run):
-            atoms_list[idx].set_positions(tmp_neb.images[i].get_positions())
+        for i, idx in enumerate(missing_run): # Missing run only contains the missing images
+            # while tmp_neb contains the bounds as well, so [i+1] is needed to skip the first image
+            atoms_list[idx].set_positions(tmp_neb.images[i+1].get_positions())
     return atoms_list
 
 
