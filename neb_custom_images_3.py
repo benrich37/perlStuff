@@ -294,7 +294,7 @@ def relax_bounds(
         end_atoms = run_relax(
             relax_end_dir, end_atoms, get_ion_calc, None,
             apply_freeze_func=None, 
-            use_ase=use_ase, use_jdftx=use_jdftx, fmax=fmax, max_steps=max_steps,
+            use_ase=use_ase, fmax=fmax, max_steps=max_steps,
             log_fn=log_def, log_file_path=log_file_path,
         )
         write(opj(work_dir, "relax_end", "CONTCAR"), end_atoms, format="vasp")
