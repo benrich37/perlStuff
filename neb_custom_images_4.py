@@ -347,7 +347,7 @@ def set_atoms_list_from_traj(neb_dir, atoms_list):
     if not _atoms_list is None:
         for i, atoms in enumerate(_atoms_list):
             if not i in [0, nimg-1]:
-                atoms.calc = None
+                # atoms.calc = None
                 atoms_list[i] = atoms
     return atoms_list
 
@@ -426,6 +426,8 @@ def main(debug=False):
     neb_dir = opj(work_dir, "neb")
     Path(neb_dir).mkdir(parents=True, exist_ok=True)
     initial_images = get_initial_image_atoms_list(work_dir, nimg_start, struc_prefix, log_fn=neb_log)
+    # This is run regardless of whether boundary relaxation is requested or not, as if there are boundary
+    # relaxation calculations found, they will be used as the boundaries
     start_atoms, end_atoms = relax_bounds(
         relax_start, relax_end, work_dir, initial_images[0], initial_images[-1], restart,
         base_infile, get_arb_calc,
