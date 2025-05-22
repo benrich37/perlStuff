@@ -167,10 +167,21 @@ def get_initial_image_atoms(work_dir, struc_prefix, i, log_fn=log_def):
         atoms = read(struc_path, format="vasp")
     return atoms
 
-def get_initial_image_atoms_list(work_dir, nimg_start, struc_prefix, log_fn=log_def, interp_method="idpp"):
+def get_initial_image_atoms_list(work_dir, nimg_start, struc_prefix, log_fn=log_def):
     initial_image_atoms_list = []
     for i in range(nimg_start):
         initial_image_atoms_list.append(get_initial_image_atoms(work_dir, struc_prefix, i, log_fn=log_fn))
+    if initial_image_atoms_list[0] is None:
+        log_fn(f"First initial image atoms not found in {work_dir} (should be named {struc_prefix}0)")
+        raise ValueError(f"First initial image atoms not found in {work_dir} (should be named {struc_prefix}0)")
+    if initial_image_atoms_list[-1] is None:
+        log_fn(f"Last initial image atoms not found in {work_dir} (should be named {struc_prefix}{nimg_start-1})")
+        raise ValueError(f"Last initial image atoms not found in {work_dir} (should be named {struc_prefix}{nimg_start-1})")
+    return initial_image_atoms_list
+    
+
+
+def check_initial_atoms_list(initial_image_atoms_list, log_fn=log_def, interp_method="idpp"):
     if None in initial_image_atoms_list:
         log_fn(f"Missing initial image atoms, interpolating")
         initial_image_atoms_list = interpolate_missing_images(initial_image_atoms_list, interp_method, log_fn=log_fn)
@@ -232,7 +243,7 @@ def run_relax(
     if use_ase:
         if log_file_path is None:
             log_file_path = get_log_file_name(work_dir, "neb")
-        dyn = FIRE(atoms, logfile=log_file_path, dt=0.05, dtmax=0.3)
+        dyn = FIRE(atoms, logfile=log_file_path)
         dyn.run(fmax=fmax, steps=max_steps)
     else:
         atoms.get_potential_energy()
@@ -266,6 +277,7 @@ def relax_bounds(
         base_infile, get_arb_calc,
         fmax=0.01, max_steps=100,
         use_ase=False, use_jdftx=True,
+        apply_freeze_func=None,
         log_fn=log_def, log_file_path=None):
     if ((not use_ase) and (not use_jdftx)):
         use_jdftx = True
@@ -284,7 +296,7 @@ def relax_bounds(
         Path(relax_start_dir).mkdir(parents=True, exist_ok=True)
         start_atoms = run_relax(
             relax_start_dir, start_atoms, get_ion_calc, None,
-            apply_freeze_func=None, 
+            apply_freeze_func=apply_freeze_func, 
             use_ase=use_ase, fmax=fmax, max_steps=max_steps,
             log_fn=log_def, log_file_path=log_file_path,
         )
@@ -294,7 +306,7 @@ def relax_bounds(
         Path(relax_end_dir).mkdir(parents=True, exist_ok=True)
         end_atoms = run_relax(
             relax_end_dir, end_atoms, get_ion_calc, None,
-            apply_freeze_func=None, 
+            apply_freeze_func=apply_freeze_func, 
             use_ase=use_ase, fmax=fmax, max_steps=max_steps,
             log_fn=log_def, log_file_path=log_file_path,
         )
@@ -305,37 +317,56 @@ def relax_bounds(
 def setup_img_dirs(
         work_dir, neb_dir, atoms_list
 ):
-    _atoms_list = []
+   #  _atoms_list = []
     for i, atoms in enumerate(atoms_list):
         img_dir = opj(neb_dir, f"{i}")
         if not ope(img_dir):
             Path(img_dir).mkdir(parents=True, exist_ok=True)
-            write(opj(img_dir, "POSCAR"), atoms, format="vasp")
-            _atoms_list.append(atoms)
-        elif ope(opj(img_dir, "CONTCAR")):
-            _atoms = read(opj(img_dir, "CONTCAR"), format="vasp")
-            _atoms_list.append(_atoms)
-        elif ope(opj(img_dir, "POSCAR")):
-            _atoms = read(opj(img_dir, "POSCAR"), format="vasp")
-            _atoms_list.append(_atoms)
-        else:
-            write(opj(img_dir, "POSCAR"), atoms, format="vasp")
-            _atoms_list.append(atoms)
-    return _atoms_list
+    #         write(opj(img_dir, "POSCAR"), atoms, format="vasp")
+    #         _atoms_list.append(atoms)
+    #     elif ope(opj(img_dir, "CONTCAR")):
+    #         _atoms = read(opj(img_dir, "CONTCAR"), format="vasp")
+    #         _atoms_list.append(_atoms)
+    #     elif ope(opj(img_dir, "POSCAR")):
+    #         _atoms = read(opj(img_dir, "POSCAR"), format="vasp")
+    #         _atoms_list.append(_atoms)
+    #     else:
+    #         write(opj(img_dir, "POSCAR"), atoms, format="vasp")
+    #         _atoms_list.append(atoms)
+    # return _atoms_list
+
+
+def set_atoms_list_from_traj(neb_dir, atoms_list):
+    nimg = len(atoms_list)
+    _atoms_list = None
+    trajfile = opj(neb_dir, "neb.traj")
+    try:
+        _atoms_list = read(trajfile)[-nimg:]
+    except:
+        pass
+    if not _atoms_list is None:
+        for i, atoms in enumerate(_atoms_list):
+            if not i in [0, nimg-1]:
+                atoms.calc = None
+                atoms_list[i] = atoms
+    return atoms_list
 
 
 def setup_neb(
         work_dir: str, neb_dir: str, atoms_list: list[Atoms], base_infile: JDFTXInfile,
-        get_arb_calc, use_ci: bool, k: float, neb_method: str, logfile: str):
-    atoms_list = setup_img_dirs(work_dir, neb_dir, atoms_list)
+        get_arb_calc, use_ci: bool, k: float, neb_method: str, logfile: str, apply_freeze_func=None):
+    setup_img_dirs(work_dir, neb_dir, atoms_list)
+    # Using the trajectory is more robust as it won't allow initializing a partially updated set of images
+    atoms_list = set_atoms_list_from_traj(neb_dir, atoms_list)
     sp_infile = base_infile.copy()
     sp_infile["ionic-minimize"] = f"nIterations 0"
     get_sp_calc = lambda root: get_arb_calc(root, sp_infile)
     for i, atoms in enumerate(atoms_list):
         img_dir = opj(neb_dir, f"{i}/")
+        atoms = apply_freeze_func(atoms)
         atoms.calc = get_sp_calc(img_dir)
     neb = NEB(atoms_list, parallel=False, climb=use_ci, k=k, method=neb_method)
-    dyn = FIRE(neb, logfile=logfile)
+    dyn = FIRE(neb, logfile=logfile, restart=opj(neb_dir, "hessian.pckl"))
     traj = Trajectory(opj(neb_dir, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
     for i, img in enumerate(atoms_list):
@@ -393,20 +424,22 @@ def main(debug=False):
     neb_log("Beginning NEB setup")
     neb_dir = opj(work_dir, "neb")
     Path(neb_dir).mkdir(parents=True, exist_ok=True)
-    initial_images = get_initial_image_atoms_list(work_dir, nimg_start, struc_prefix, log_fn=neb_log, interp_method=interp_method)
+    initial_images = get_initial_image_atoms_list(work_dir, nimg_start, struc_prefix, log_fn=neb_log)
     start_atoms, end_atoms = relax_bounds(
         relax_start, relax_end, work_dir, initial_images[0], initial_images[-1], restart,
         base_infile, get_arb_calc,
         fmax=fmax, max_steps=max_steps,
         use_ase=ase, use_jdftx=jdftx,
+        apply_freeze_func=apply_freeze_func,
         log_fn=neb_log, log_file_path=get_log_file_name(work_dir, "neb"),
     )
     initial_images[0] = start_atoms
     initial_images[-1] = end_atoms
+    initial_images = check_initial_atoms_list(initial_images, interp_method=interp_method, log_fn=neb_log)
     dyn = setup_neb(
         work_dir, neb_dir, initial_images,
         base_infile, get_arb_calc, use_ci, k, neb_method,
-        neb_log_file
+        neb_log_file, apply_freeze_func=apply_freeze_func,
     )
     dyn.run(fmax=fmax, steps=max_steps)
 
