@@ -2,7 +2,7 @@ from pathlib import Path
 import os
 from os.path import join as opj, exists as ope
 from os import mkdir, getcwd,  chdir
-from ase import Atoms
+from ase import Atoms, Atom
 from ase.mep import NEB
 from ase.optimize import FIRE
 from ase.io import read, write
@@ -341,7 +341,9 @@ def set_atoms_list_from_traj(neb_dir, atoms_list):
     _atoms_list = None
     trajfile = opj(neb_dir, "neb.traj")
     try:
-        _atoms_list = read(trajfile)[-nimg:]
+        _atoms_list = Trajectory(trajfile)[-nimg:]
+        # Prevent from setting Atom objects in the atoms_list
+        assert all([not isinstance(atoms, Atom) for atoms in _atoms_list])
     except:
         pass
     if not _atoms_list is None:
