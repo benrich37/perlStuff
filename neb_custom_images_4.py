@@ -367,7 +367,8 @@ def setup_neb(
         atoms.calc = get_sp_calc(img_dir)
     neb = NEB(atoms_list, parallel=False, climb=use_ci, k=k, method=neb_method)
     dyn = FIRE(neb, logfile=logfile, restart=opj(neb_dir, "hessian.pckl"))
-    traj = Trajectory(opj(neb_dir, "neb.traj"), 'w', neb, properties=['energy', 'forces'])
+    tmode = 'a' if Path(opj(neb_dir, "neb.traj")).exists() else 'w'
+    traj = Trajectory(opj(neb_dir, "neb.traj"), tmode, neb, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
     for i, img in enumerate(atoms_list):
         dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
