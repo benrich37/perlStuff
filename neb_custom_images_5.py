@@ -100,7 +100,11 @@ def read_neb_inputs(fname="neb_input"):
             elif ("interp" in key):
                 nid["interp_method"] = val.strip()
         if key.lower() == "kval":
-            nid["k"] = float(val.strip())
+            _val = val.strip()
+            if len(_val.split()) == 1:
+                nid["k"] = float(_val)
+            else:
+                nid["k"] = [float(v.rstrip(",")) for v in _val.split()]
         if "max" in key:
             if "steps" in key:
                 if "step1" in key:
@@ -136,8 +140,6 @@ def read_neb_inputs(fname="neb_input"):
                 nid["end_struc"] = val.strip()
         if "bias" in key:
             nid["bias"] = val.strip()
-        if key.lower() == "kval":
-            nid["k"] = float(val.strip())
         if key.strip().lower() == "ase":
             nid["ase"] = "true" in val.lower()
         if "jdft" in key.lower():
@@ -356,7 +358,7 @@ def set_atoms_list_from_traj(neb_dir, atoms_list):
 
 def setup_neb(
         work_dir: str, neb_dir: str, atoms_list: list[Atoms], base_infile: JDFTXInfile,
-        get_arb_calc, use_ci: bool, k: float, neb_method: str, logfile: str, apply_freeze_func=None):
+        get_arb_calc, use_ci: bool, k: float | list[float], neb_method: str, logfile: str, apply_freeze_func=None):
     setup_img_dirs(work_dir, neb_dir, atoms_list)
     # Using the trajectory is more robust as it won't allow initializing a partially updated set of images
     atoms_list = set_atoms_list_from_traj(neb_dir, atoms_list)
@@ -368,8 +370,7 @@ def setup_neb(
         atoms = apply_freeze_func(atoms)
         atoms.calc = get_sp_calc(img_dir)
     neb = NEB(atoms_list, parallel=False, climb=use_ci, k=k, method=neb_method)
-    fire_traj = Trajectory(opj(neb_dir, "fire.traj"), 'wa', neb, properties=['energy', 'forces'])
-    dyn = FIRE(neb, logfile=logfile, restart=opj(neb_dir, "hessian.pckl"), trajectory=fire_traj)
+    dyn = FIRE(neb, logfile=logfile, restart=opj(neb_dir, "hessian.pckl"))
     tmode = 'a' if Path(opj(neb_dir, "neb.traj")).exists() else 'w'
     traj = Trajectory(opj(neb_dir, "neb.traj"), tmode, neb, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
