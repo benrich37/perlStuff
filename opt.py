@@ -120,7 +120,7 @@ def read_opt_inputs(fname = "opt_input"):
                 else:
                     opt_inputs_dict["freeze_count"] = int(val)
             elif ("idcs" in key):
-                opt_inputs_dict["freeze_idcs"] = [int(i) for i in val.split()]
+                opt_inputs_dict["freeze_idcs"] = [int(i.rstrip(",")) for i in val.split()]
         if ("ortho" in key):
             opt_inputs_dict["ortho"] = "true" in val.lower()
         if ("save" in key) and ("state" in key):
