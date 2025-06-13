@@ -15,7 +15,7 @@ from helpers.generic_helpers import (
     get_log_file_name,get_log_fn, log_def,
     get_inputs_list, cmds_list_to_infile, get_cmds_dict, cmds_dict_to_list,
     read_pbc_val, get_ref_struct, get_apply_freeze_func,
-    _write_contcar
+    _write_contcar, add_cohp_cmds
     )
 
 
@@ -66,7 +66,7 @@ def read_neb_inputs(fname="neb_input"):
     nid["exclude_freeze_count"] = 0
     nid["ci"] = True
     nid["images"] = 5
-    nid["interp_method"] = "linear"
+    nid["interp_method"] = "idpp"
     nid["bias"] = "No_bias"
     nid["k"] = 0.1
     nid["ase"] = True
@@ -378,6 +378,31 @@ def setup_neb(
         dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
                    interval=1, img_dir=str(Path(neb_dir) / f"{i}/"), img=img)
     return dyn
+
+
+def setuprun_neb_post_anl(
+        work_dir: str, neb_dir: str, atoms_list, neb_anl_dir: str, wdump_infile: JDFTXInfile,
+        get_arb_calc, use_ci: bool, k: float | list[float], neb_method: str, logfile: str, apply_freeze_func=None):
+    setup_img_dirs(work_dir, neb_dir, atoms_list)
+    # Using the trajectory is more robust as it won't allow initializing a partially updated set of images
+    atoms_list = set_atoms_list_from_traj(neb_dir, atoms_list)
+    sp_infile = wdump_infile.copy()
+    sp_infile["ionic-minimize"] = f"nIterations 0"
+    get_sp_calc = lambda root: get_arb_calc(root, sp_infile)
+    for i, atoms in enumerate(atoms_list):
+        img_dir = opj(neb_anl_dir, f"{i}/")
+        atoms = apply_freeze_func(atoms)
+        atoms.calc = get_sp_calc(img_dir)
+    # Ensure bounds are ran before realizing band is converged by forcing method as spline
+    neb = NEB(atoms_list, parallel=False, climb=use_ci, k=k, method="spline")
+    dyn = FIRE(neb, logfile=logfile, restart=opj(neb_anl_dir, "hessian.pckl"))
+    tmode = 'a' if Path(opj(neb_anl_dir, "neb.traj")).exists() else 'w'
+    traj = Trajectory(opj(neb_anl_dir, "neb.traj"), tmode, neb, properties=['energy', 'forces'])
+    dyn.attach(traj.write, interval=1)
+    for i, img in enumerate(atoms_list):
+        dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
+                   interval=1, img_dir=str(Path(neb_anl_dir) / f"{i}/"), img=img)
+    return dyn
         
 
     
@@ -423,7 +448,9 @@ def main(debug=False):
     ref_struc = get_ref_struct(work_dir, struc_prefix)
     cmds = get_cmds_dict(work_dir, ref_struct=ref_struc, log_fn=neb_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
+    wdump_cmds = add_cohp_cmds(cmds)
     base_infile = cmds_list_to_infile(cmds)
+    wdump_infile = cmds_list_to_infile(wdump_cmds)
     exe_cmd = get_exe_cmd(gpu, neb_log, use_srun=not debug)
     get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=neb_log)
     neb_log("Beginning NEB setup")
@@ -449,8 +476,14 @@ def main(debug=False):
         neb_log_file, apply_freeze_func=apply_freeze_func,
     )
     dyn.run(fmax=fmax, steps=max_steps)
-
-
+    neb_anl_dir = opj(work_dir, "neb_anl")
+    Path(neb_anl_dir).mkdir(parents=True, exist_ok=True)
+    anl_dyn = setuprun_neb_post_anl(
+        work_dir, neb_dir, initial_images, neb_anl_dir, wdump_infile,
+        get_arb_calc, use_ci, k, neb_method,
+        neb_log_file, apply_freeze_func=apply_freeze_func
+    )
+    anl_dyn.run(fmax=fmax*100, steps=0)
 
 from sys import exc_info, stderr
 
