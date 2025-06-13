@@ -17,7 +17,7 @@ from helpers.generic_helpers import (
     read_pbc_val, get_ref_struct, get_apply_freeze_func,
     _write_contcar, add_cohp_cmds, add_elec_density_dump
     )
-from scripts.run_ddec6 import main as run_ddec6
+from scripts.run_ddec6_v3 import main as run_ddec6
 
 
 
@@ -397,14 +397,18 @@ def setuprun_neb_post_anl(
     # Ensure bounds are ran before realizing band is converged by forcing method as spline
     neb = NEB(atoms_list, parallel=False, climb=use_ci, k=k, method="spline")
     dyn = FIRE(neb, logfile=logfile, restart=opj(neb_anl_dir, "hessian.pckl"))
-    tmode = 'a' if Path(opj(neb_anl_dir, "neb.traj")).exists() else 'w'
+    tmode = 'w'
     traj = Trajectory(opj(neb_anl_dir, "neb.traj"), tmode, neb, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
     for i, img in enumerate(atoms_list):
         # dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
         #            interval=1, img_dir=str(Path(neb_anl_dir) / f"{i}/"), img=img)
         dyn.attach(lambda img_dir_run_dir: run_ddec6(img_dir_run_dir),
-                   interval=1, img_dir=str(Path(neb_anl_dir) / f"{i}/jdftx_run/"), img=img)
+                   interval=1, img_dir_run_dir=str(Path(neb_anl_dir) / f"{i}/jdftx_run/"))
+    cwd = getcwd()
+    dyn.attach(
+        lambda: chdir(cwd), interval=1
+        )  # Ensure we return to the original working directory after each step
     return dyn
         
 
