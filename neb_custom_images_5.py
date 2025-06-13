@@ -15,8 +15,9 @@ from helpers.generic_helpers import (
     get_log_file_name,get_log_fn, log_def,
     get_inputs_list, cmds_list_to_infile, get_cmds_dict, cmds_dict_to_list,
     read_pbc_val, get_ref_struct, get_apply_freeze_func,
-    _write_contcar, add_cohp_cmds
+    _write_contcar, add_cohp_cmds, add_elec_density_dump
     )
+from scripts.run_ddec6 import main as run_ddec6
 
 
 
@@ -400,13 +401,13 @@ def setuprun_neb_post_anl(
     traj = Trajectory(opj(neb_anl_dir, "neb.traj"), tmode, neb, properties=['energy', 'forces'])
     dyn.attach(traj.write, interval=1)
     for i, img in enumerate(atoms_list):
-        dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
-                   interval=1, img_dir=str(Path(neb_anl_dir) / f"{i}/"), img=img)
+        # dyn.attach(lambda img, img_dir: _write_contcar(img, img_dir),
+        #            interval=1, img_dir=str(Path(neb_anl_dir) / f"{i}/"), img=img)
+        dyn.attach(lambda img_dir_run_dir: run_ddec6(img_dir_run_dir),
+                   interval=1, img_dir=str(Path(neb_anl_dir) / f"{i}/jdftx_run/"), img=img)
     return dyn
         
 
-    
-    
 
 def main(debug=False):
     nid = read_neb_inputs()
@@ -449,6 +450,7 @@ def main(debug=False):
     cmds = get_cmds_dict(work_dir, ref_struct=ref_struc, log_fn=neb_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
     wdump_cmds = add_cohp_cmds(cmds)
+    wdump_cmds = add_elec_density_dump(wdump_cmds)
     base_infile = cmds_list_to_infile(cmds)
     wdump_infile = cmds_list_to_infile(wdump_cmds)
     exe_cmd = get_exe_cmd(gpu, neb_log, use_srun=not debug)

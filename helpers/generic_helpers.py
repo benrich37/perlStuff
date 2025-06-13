@@ -975,7 +975,7 @@ def get_ionic_opt_cmds_list(cmds, ion_iters):
 
 def add_elec_density_dump(cmds_list):
     key = "dump"
-    val = "end ElecDensity"
+    val = "End ElecDensity"
     cmds_list = append_key_val_to_cmds_list(cmds_list, key, val, allow_duplicates=True)
     return cmds_list
 
