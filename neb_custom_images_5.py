@@ -453,8 +453,14 @@ def main(debug=False):
     ref_struc = get_ref_struct(work_dir, struc_prefix)
     cmds = get_cmds_dict(work_dir, ref_struct=ref_struc, log_fn=neb_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
-    wdump_cmds = add_cohp_cmds(cmds.copy())
-    wdump_cmds = add_elec_density_dump(wdump_cmds)
+    if ope(opj(work_dir, "anl_inputs")):
+        anl_cmds = get_cmds_dict(work_dir, ref_struct=ref_struc, log_fn=neb_log, pbc=pbc, bias=bias, inputs_name="anl_inputs")
+        anl_cmds = cmds_dict_to_list(anl_cmds)
+    else:
+        print("No anl_inputs found, using default commands")
+        anl_cmds = cmds.copy()
+    wdump_cmds = add_cohp_cmds(anl_cmds.copy())
+    wdump_cmds = add_elec_density_dump(anl_cmds)
     base_infile = cmds_list_to_infile(cmds)
     wdump_infile = cmds_list_to_infile(wdump_cmds)
     exe_cmd = get_exe_cmd(gpu, neb_log, use_srun=not debug)

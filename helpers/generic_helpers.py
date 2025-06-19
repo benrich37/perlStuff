@@ -168,9 +168,9 @@ def insert_el(filename):
         f.write('\n'.join(contents))
 
 
-def read_inputs_dict_helper(work_dir):
-    inpfname = opj(work_dir, "inputs")
-    if ope("inputs"):
+def read_inputs_dict_helper(work_dir, inputs_name="inputs"):
+    inpfname = opj(work_dir, inputs_name)
+    if ope(inputs_name):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "initial-state",
                   "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
@@ -226,8 +226,8 @@ def read_inputs_infile(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
                 del input_cmds[biaskey]
     return input_cmds
 
-def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0):
-    input_cmds = read_inputs_dict_helper(work_dir)
+def read_inputs_dict(work_dir, pseudoSet="GBRV", ref_struct=None, bias=0.0, inputs_name="inputs"):
+    input_cmds = read_inputs_dict_helper(work_dir, inputs_name=inputs_name)
     #print(input_cmds)
     if not input_cmds is None:
         nbandkey = "elec-n-bands"
@@ -586,9 +586,9 @@ def get_cmds_list(work_dir, ref_struct=None, log_fn=log_def):
     else:
         return read_inputs_list(work_dir, ref_struct=ref_struct)
 
-def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None):
+def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None, inputs_name="inputs"):
     chdir(work_dir)
-    if not ope(opj(work_dir, "inputs")):
+    if not ope(opj(work_dir, inputs_name)):
         if ope(opj(work_dir, "in")):
             return dup_cmds_list(opj(work_dir, "in"))
         else:
@@ -596,9 +596,9 @@ def get_cmds_dict(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None)
             msg = "No inputs or in file found - dumping template inputs"
             log_and_abort(msg, log_fn)
     else:
-        return read_inputs_dict(work_dir, ref_struct=ref_struct, bias=bias)
+        return read_inputs_dict(work_dir, ref_struct=ref_struct, bias=bias, inputs_name=inputs_name)
     
-def get_infile(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None):
+def get_infile(work_dir, ref_struct=None, bias=0.0, log_fn=log_def, pbc=None,):
     chdir(work_dir)
     if not ope(opj(work_dir, "inputs")):
         if ope(opj(work_dir, "in")):
