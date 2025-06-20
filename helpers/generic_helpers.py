@@ -1302,11 +1302,24 @@ def check_structure(structure, work, log_fn=log_def):
         atoms_obj = read(structure, format=use_fmt)
     except Exception as e:
         log_fn(e)
+        if isinstance(e, AttributeError) and use_fmt == "gaussian-in":
+            log_fn("AttributeError - trying to clear unknown symbols from gaussian input")
+            clear_unknown_symbols_from_gaussian_in(structure)
+            atoms_obj = read(structure, format=use_fmt)
+        else:
+            log_fn(f"Could not read structure {structure} with format {use_fmt} - aborting")
+            raise e
     log_fn(f"Saving found structure {structure} as {opj(work, fname_out)}")
     structure = opj(work, fname_out)
     write(structure, atoms_obj, format="vasp")
     return structure
 
+def clear_unknown_symbols_from_gaussian_in(fname):
+    with open(fname, "r") as f:
+        _lines = f.readlines()
+    lines = [line for line in _lines if not "?" in line]
+    with open(fname, "w") as f:
+        f.writelines(lines)
 
 def _check_structure(_structure, work, log_fn=log_def):
     use_fmt = "vasp"
