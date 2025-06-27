@@ -289,7 +289,7 @@ class JDFTx(Calculator):
             self.log_func(f"Native opt {niter} iterations, updated energy {outfile.e}")
         self.results["energy"] = outfile.e
         self.results["forces"] = outfile.forces
-        self.results["charges"] = outfile.structure.site_properties["charges"]
+        self.results["charges"] = outfile.structure.site_properties["charges"] if "charges" in outfile.structure.site_properties else None
         self.results["nbands"] = outfile.nbands
         self.results["nkpts"] = int(np.prod(outfile.kgrid))
         self.results["nspins"] = outfile.nspin
