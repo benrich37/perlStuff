@@ -18,7 +18,8 @@ from helpers.generic_helpers import (
     _write_contcar, add_cohp_cmds, add_elec_density_dump
     )
 from scripts.run_ddec6_v3 import main as run_ddec6
-
+from pymatgen.io.jdftx.outputs import JDFTXOutfile
+from pymatgen.io.ase import AseAtomsAdaptor
 
 
 
@@ -253,11 +254,13 @@ def run_relax(
     return atoms
 
 
+
 def get_bounds_atoms(bound_relax_dir, template_atoms, log_fn=log_def):
+    outpath = Path(bound_relax_dir) / "jdftx_run" / "out"
     contcar = Path(bound_relax_dir) / "CONTCAR"
     traj = Path(bound_relax_dir) / "_restart.traj"
-    if all([not contcar.exists(), not traj.exists()]):
-        log_fn(f"Neither CONTCAR nor _restart.traj exist in {bound_relax_dir}")
+    if all([not contcar.exists(), not traj.exists(), not outpath.exists()]):
+        log_fn(f"Neither out, CONTCAR, nor _restart.traj exist in {bound_relax_dir}")
         return template_atoms
     elif all([contcar.exists(), traj.exists()]):
         if contcar.stat().st_mtime > traj.stat().st_mtime:
@@ -272,6 +275,9 @@ def get_bounds_atoms(bound_relax_dir, template_atoms, log_fn=log_def):
     elif traj.exists():
         log_fn(f"Reading _restart.traj from {bound_relax_dir}")
         template_atoms = read(traj)
+    elif outpath.exists():
+        outfile = JDFTXOutfile.from_file(outpath)
+        template_atoms = AseAtomsAdaptor.get_atoms(outfile.structure)
     return template_atoms
 
 
