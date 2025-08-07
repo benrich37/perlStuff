@@ -73,6 +73,7 @@ def read_neb_inputs(fname="neb_input"):
     nid["k"] = 0.1
     nid["ase"] = True
     nid["jdftx"] = True
+    nid["run_anl"] = True
     inputs = get_inputs_list(fname, auto_lower=False)
     for input in inputs:
         key, val = input[0], input[1]
@@ -129,12 +130,6 @@ def read_neb_inputs(fname="neb_input"):
                 nid["ci"] = "true" in val.lower()
         if "images" in key:
             nid["images"] = int(val.strip())
-            # if "start" in key:
-            #     nid["images_start"] = int(val)
-            # elif "par" in key:
-            #     nid["images_par"] = int(val)
-            # elif "max" in key:
-            #     nid["images_max"] = int(val)
         if "struc" in key:
             if "start" in key:
                 nid["start_struc"] = val.strip()
@@ -146,6 +141,8 @@ def read_neb_inputs(fname="neb_input"):
             nid["ase"] = "true" in val.lower()
         if "jdft" in key.lower():
             nid["jdftx"] = "true" in val.lower()
+        if "run_anl" in key.lower():
+            nid["run_anl"] = "true" in val.lower()
     nid["work_dir"] = fix_work_dir(nid["work_dir"])
     return nid
 
@@ -494,6 +491,9 @@ def main(debug=False):
         neb_log_file, apply_freeze_func=apply_freeze_func,
     )
     dyn.run(fmax=fmax, steps=max_steps)
+    if not nid["run_anl"]:
+        neb_log("Skipping NEB analysis as run_anl is set to False")
+        return
     neb_anl_dir = opj(work_dir, "neb_anl")
     Path(neb_anl_dir).mkdir(parents=True, exist_ok=True)
     anl_dyn = setuprun_neb_post_anl(
