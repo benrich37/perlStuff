@@ -578,7 +578,7 @@ def main(debug=False):
             run_ddec6(opt_dir)
         except Exception as e:
             if ope(opj(opt_dir, "jdftx_run")):
-                opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, "jdftx_run")}")
+                opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
                 run_ddec6(opj(opt_dir, "jdftx_run"))
     # copy_result_files(opt_dir, work_dir)
 
