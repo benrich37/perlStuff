@@ -837,7 +837,11 @@ def main(calc_dir=None, pbc=None):
         exe_env_path = environ[exe_key]
     # If your fftbox is too coarse, adding max_space=0.1 can force ddec6 to work with a linear interpolation onto
     # a finer density grid.
-    run_ddec6_looper(calc_dir, a_d_env_path, pbc, exe_env_path)
+    try:
+        run_ddec6_looper(calc_dir, a_d_env_path, pbc, exe_env_path)
+    except Exception as e:
+        if ope(opj(calc_dir, "jdftx_run")):
+            run_ddec6_looper(opj(calc_dir, "jdftx_run"), a_d_env_path, pbc, exe_env_path)
 
 
 if __name__ == "__main__":

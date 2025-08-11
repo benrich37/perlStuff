@@ -14,7 +14,7 @@ from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort, cmds_dict_to_list, cmds_list_to_infile
 from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
-from scripts.run_ddec6 import main as run_ddec6
+from scripts.run_ddec6_v3 import main as run_ddec6
 from sys import exit, stderr
 from shutil import copy as cp
 from os import getcwd
@@ -524,13 +524,13 @@ def main(debug=False):
     atoms.pbc = pbc
     # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
     cmds = add_cohp_cmds(cmds, ortho=ortho)
+    if ddec6:
+        cmds = add_elec_density_dump(cmds)
     base_infile = cmds_list_to_infile(cmds)
     lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
     lat_infile = cmds_list_to_infile(lat_cmds)
-    ion_cmds = get_ionic_opt_cmds_list(cmds, max_steps)
     ion_infile = get_ionic_opt_cmds_infile(base_infile, ion_iters=max_steps, use_jdft=use_jdft)
-    if ddec6:
-        ion_cmds = add_elec_density_dump(ion_cmds)
+    
     get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log)
     #get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
     get_lat_calc = lambda root: get_arb_calc(root, lat_infile)
@@ -573,8 +573,13 @@ def main(debug=False):
         run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=opt_log)
     opt_log("Optimization finished.")
     if ddec6:
-        opt_log("Running DDEC6 analysis")
-        run_ddec6(opt_dir, pbc=pbc)
+        opt_log(f"Running DDEC6 analysis in {opt_dir}")
+        try:
+            run_ddec6(opt_dir)
+        except Exception as e:
+            if ope(opj(opt_dir, "jdftx_run")):
+                opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, "jdftx_run")}")
+                run_ddec6(opj(opt_dir, "jdftx_run"))
     # copy_result_files(opt_dir, work_dir)
 
 from sys import exc_info
