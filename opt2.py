@@ -260,10 +260,11 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
 
 
 def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=log_def):
-    dirs_list = [opt_dir]
+    dirs_list = [opt_dir, opj(opt_dir, "jdftx_run")]
     if lat_iters > 0:
         log_fn(f"Lattice opt requested ({lat_iters} iterations) - adding lat dir to setup list")
         dirs_list.append(lat_dir)
+        dirs_list.append(opj(lat_dir, "jdftx_run"))
     if not restart:
         for d in dirs_list:
             if ope(d):
@@ -331,9 +332,12 @@ def run_ion_opt_runner(
     pbc = atoms_obj.pbc
     atoms_obj.get_forces()
     log_fn("ionic optimization finished - organizing output data")
-    outfile = opj(ion_dir_path, "out")
-    if ope(outfile):
-        atoms_obj = get_atoms_from_out(outfile)
+    outfile1 = opj(ion_dir_path, "out")
+    outfile2 = opj(ion_dir_path, opj("jdftx_run", "out"))
+    if ope(outfile1):
+        atoms_obj = get_atoms_from_out(outfile1)
+    elif ope(outfile2):
+        atoms_obj = get_atoms_from_out(outfile2)
     else:
         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     atoms_obj.pbc = pbc
