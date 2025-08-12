@@ -163,14 +163,23 @@ def make_dir(dirname):
 
 def get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_def):
     atoms_obj = None
-    outfile_path = opj(opt_dir, "out")
-    if ope(outfile_path):
+    outfile_path1 = opj(opt_dir, "out")
+    outfile_path2 = opj(opt_dir, opj("jdftx_run", "out"))
+    if ope(outfile_path2):
         try:
-            atoms_obj = get_atoms_from_out(outfile_path)
-            log_fn(f"Atoms object set from {outfile_path}")
+            atoms_obj = get_atoms_from_out(outfile_path2)
+            log_fn(f"Atoms object set from {outfile_path2}")
         except Exception as e:
-            log_fn(f"Error reading atoms object from {outfile_path}")
+            log_fn(f"Error reading atoms object from {outfile_path2}")
             pass
+    if atoms_obj is None:
+        if ope(outfile_path1):
+            try:
+                atoms_obj = get_atoms_from_out(outfile_path1)
+                log_fn(f"Atoms object set from {outfile_path1}")
+            except Exception as e:
+                log_fn(f"Error reading atoms object from {outfile_path1}")
+                pass
     return atoms_obj
 
 
@@ -260,7 +269,7 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
 
 
 def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=log_def):
-    dirs_list = [opt_dir, opj(opt_dir, "jdftx_run")]
+    dirs_list = [opt_dir]
     if lat_iters > 0:
         log_fn(f"Lattice opt requested ({lat_iters} iterations) - adding lat dir to setup list")
         dirs_list.append(lat_dir)
