@@ -562,9 +562,9 @@ def main(debug=False):
             atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, 
             log_fn=opt_log
             )
-        make_jdft_logx(lat_dir, log_fn=opt_log)
-        opt_dot_log_faker(opj(lat_dir, "out"), lat_dir)
-        cp(opj(lat_dir, "opt.log"), work_dir)
+        # make_jdft_logx(lat_dir, log_fn=opt_log)
+        # opt_dot_log_faker(opj(lat_dir, "out"), lat_dir)
+        # cp(opj(lat_dir, "opt.log"), work_dir)
     restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
     opt_log(f"Finding/copying any state files to {opt_dir}")
@@ -577,10 +577,10 @@ def main(debug=False):
             atoms, opt_dir, work_dir, get_ion_calc, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=opt_log, exclude_freeze_count=exclude_freeze_count,
             freeze_idcs=freeze_idcs,
             )
-        make_jdft_logx(opt_dir, log_fn=opt_log)
-        opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
-        if not (lat_iters > 0):
-            cp(opj(opt_dir, "opt.log"), work_dir)
+        #make_jdft_logx(opt_dir, log_fn=opt_log)
+        # opt_dot_log_faker(opj(opt_dir, "out"), opt_dir)
+        # if not (lat_iters > 0):
+        #     cp(opj(opt_dir, "opt.log"), work_dir)
     else:
         opt_log(f"Running ion optimization with ASE optimizer")
         run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=opt_log)
