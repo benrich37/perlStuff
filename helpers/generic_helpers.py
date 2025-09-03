@@ -674,7 +674,8 @@ def _get_freeze_by_map(atoms, freeze_map: dict[str, list[int]], ref_bool: bool, 
     mask = [ref_bool for _ in range(len(atoms))]
     for el in freeze_map:
         el_idcs = [idx for idx, el in enumerate(atoms.get_chemical_symbols()) if el == el]
-        mapped_idcs = [idx for i, idx in enumerate(el_idcs) if i in freeze_map[el]]
+        read_idcs = [i % len(el_idcs) for i in freeze_map[el]] # allow negative indexing
+        mapped_idcs = [idx for i, idx in enumerate(el_idcs) if i in read_idcs]
         for idx in mapped_idcs:
             mask[idx] = not mask[idx]
     log_fn(f"Imposing atom freezing by map")
