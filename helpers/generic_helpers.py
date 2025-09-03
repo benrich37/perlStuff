@@ -663,6 +663,29 @@ def get_freeze_surf_base_constraint_by_dist(atoms, ztol = 3., log_fn=log_def):
     return c
 
 
+def get_freeze_all_but_by_map(atoms, freeze_map: dict[str, list[int]], log_fn=log_def):
+    return _get_freeze_by_map(atoms, freeze_map, True, log_fn=log_fn)
+
+def get_freeze_by_map(atoms, freeze_map: dict[str, list[int]], log_fn=log_def):
+    return _get_freeze_by_map(atoms, freeze_map, False, log_fn=log_fn)
+
+def _get_freeze_by_map(atoms, freeze_map: dict[str, list[int]], ref_bool: bool, log_fn=log_def):
+    #log_fn(f"get_freeze_surf_base_constraint_by_idcs {freeze_idcs}")
+    mask = [ref_bool for _ in range(len(atoms))]
+    for el in freeze_map:
+        el_idcs = [idx for idx, el in enumerate(atoms.get_chemical_symbols()) if el == el]
+        mapped_idcs = [idx for i, idx in enumerate(el_idcs) if i in freeze_map[el]]
+        for idx in mapped_idcs:
+            mask[idx] = not mask[idx]
+    log_fn(f"Imposing atom freezing by map")
+    log_str = ""
+    for i, m in enumerate(mask):
+        if m:
+            log_str += f"{get_atom_str(atoms, i)}, "
+    log_fn(f"freezing {log_str}")
+    c = FixAtoms(mask=mask)
+    return c
+
 def get_freeze_surf_base_constraint_by_idcs(atoms, freeze_idcs, log_fn=log_def):
     #log_fn(f"get_freeze_surf_base_constraint_by_idcs {freeze_idcs}")
     mask = []
@@ -698,16 +721,19 @@ def get_freeze_surf_base_constraint_by_count(atoms, freeze_count=1, exclude_free
     return c
 
 
-def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_freeze_count=0, freeze_idcs=None, log_fn=log_def):
-    #log_fn(f"get_freeze_surf_base_constraint {freeze_idcs}")
-    if freeze_idcs is not None:
+def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_freeze_count=0, freeze_idcs=None, freeze_map: dict | None = None, freeze_all_but_map: dict | None = None, log_fn=log_def):
+    if freeze_all_but_map is not None:
+        return get_freeze_all_but_by_map(atoms, freeze_map=freeze_all_but_map, log_fn=log_fn)
+    elif freeze_map is not None:
+        return get_freeze_by_map(atoms, freeze_map=freeze_map, log_fn=log_fn)
+    elif freeze_idcs is not None:
         return get_freeze_surf_base_constraint_by_idcs(atoms, freeze_idcs=freeze_idcs, log_fn=log_fn)
-    if freeze_count > 0:
+    elif freeze_count > 0:
         return get_freeze_surf_base_constraint_by_count(atoms, freeze_count=freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn)
     else:
         return get_freeze_surf_base_constraint_by_dist(atoms, ztol = ztol, log_fn=log_fn)
     
-def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs, exclude_freeze_count, log_fn=log_def):
+def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs, exclude_freeze_count, freeze_map: dict | None = None, freeze_all_but_map: dict | None = None, log_fn=log_def):
     if freeze_idcs is None:
         freeze_idcs = []
     def apply_freeze_func(atoms, log_fn=log_def):
@@ -715,6 +741,7 @@ def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs, ex
             c = get_freeze_surf_base_constraint(
                 atoms,
                 ztol=freeze_tol, freeze_count=freeze_count, freeze_idcs=freeze_idcs, exclude_freeze_count=exclude_freeze_count,
+                freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map,
                 log_fn=log_fn)
             add_constraint(atoms, c)
             return atoms

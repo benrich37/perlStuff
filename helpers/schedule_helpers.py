@@ -390,6 +390,7 @@ def read_schedule_file(root_path):
 
 
 def get_step_list(schedule, restart_at):
+    """ Returns a list of steps in the schedule starting from restart_at"""
     step_list = []
     for key in schedule.keys():
         try:
