@@ -673,7 +673,7 @@ def _get_freeze_by_map(atoms, freeze_map: dict[str, list[int]], ref_bool: bool, 
     #log_fn(f"get_freeze_surf_base_constraint_by_idcs {freeze_idcs}")
     mask = [ref_bool for _ in range(len(atoms))]
     for el in freeze_map:
-        el_idcs = [idx for idx, el in enumerate(atoms.get_chemical_symbols()) if el == el]
+        el_idcs = [idx for idx, _el in enumerate(atoms.get_chemical_symbols()) if el == _el]
         read_idcs = [i % len(el_idcs) for i in freeze_map[el]] # allow negative indexing
         log_fn(f"Map for freezing {el}: {freeze_map[el]} -> {read_idcs} of {el_idcs}")
         mapped_idcs = [idx for i, idx in enumerate(el_idcs) if i in read_idcs]
