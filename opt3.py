@@ -397,9 +397,9 @@ def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, f
 def run_ion_opt(
         atoms_obj, ion_dir_path, calc_fn, apply_freeze_func,
         log_fn=log_def):
-    atoms_obj = apply_freeze_func(atoms_obj)
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
+    atoms_obj = apply_freeze_func(atoms_obj)
     log_fn("ionic optimization starting")
     pbc = atoms_obj.pbc
     atoms_obj.get_forces()
