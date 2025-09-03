@@ -495,10 +495,7 @@ def append_out_to_logx(outfile, logx, log_fn=log_def):
 def make_jdft_logx(opt_dir, log_fn=log_def):
     outfile = opj(opt_dir, "out")
     logx = opj(opt_dir, "out.logx")
-    if ope(logx):
-        log_fn("Appending existing out file data to existing logx file")
-        append_out_to_logx(outfile, logx, log_fn=log_fn)
-    elif ope(outfile):
+    if ope(outfile):
         out_to_logx(opt_dir, outfile, log_fn=log_fn)
         log_fn("Writing existing out file to logx file")
 
