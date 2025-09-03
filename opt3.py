@@ -559,7 +559,7 @@ def main(debug=False):
     freeze_all_but_map = oid["freeze_all_but_map"]
     if exclude_freeze_count > freeze_count:
         raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
-    apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, None, exclude_freeze_count, freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map)
+    
 
 
     fmax = oid["fmax"]
@@ -569,6 +569,7 @@ def main(debug=False):
     structure = opj(work_dir, structure)
     opt_log = get_log_fn(work_dir, "opt", False, restart=restart)
     opt_log(f"Given opt_input: {oid}")
+    apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, None, exclude_freeze_count, freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map, log_fn=opt_log)
     #opt_log(f"main: {freeze_idcs}")
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
