@@ -568,6 +568,7 @@ def main(debug=False):
     lat_dir = opj(work_dir, "lat_opt/")
     structure = opj(work_dir, structure)
     opt_log = get_log_fn(work_dir, "opt", False, restart=restart)
+    opt_log(f"Given opt_input: {oid}")
     #opt_log(f"main: {freeze_idcs}")
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     structure, restart = get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)

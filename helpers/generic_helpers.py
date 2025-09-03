@@ -723,11 +723,17 @@ def get_freeze_surf_base_constraint_by_count(atoms, freeze_count=1, exclude_free
 
 
 def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_freeze_count=0, freeze_idcs=None, freeze_map: dict | None = None, freeze_all_but_map: dict | None = None, log_fn=log_def):
-    if freeze_all_but_map is not None:
+    if freeze_idcs is None:
+        freeze_idcs = []
+    if freeze_map is None:
+        freeze_map = {}
+    if freeze_all_but_map is None:
+        freeze_all_but_map = {}
+    if len(freeze_all_but_map) > 0:
         return get_freeze_all_but_by_map(atoms, freeze_map=freeze_all_but_map, log_fn=log_fn)
-    elif freeze_map is not None:
+    elif len(freeze_map) > 0:
         return get_freeze_by_map(atoms, freeze_map=freeze_map, log_fn=log_fn)
-    elif freeze_idcs is not None:
+    elif len(freeze_idcs) > 0:
         return get_freeze_surf_base_constraint_by_idcs(atoms, freeze_idcs=freeze_idcs, log_fn=log_fn)
     elif freeze_count > 0:
         return get_freeze_surf_base_constraint_by_count(atoms, freeze_count=freeze_count, exclude_freeze_count=exclude_freeze_count, log_fn=log_fn)
@@ -737,8 +743,12 @@ def get_freeze_surf_base_constraint(atoms, ztol = 3., freeze_count = 0, exclude_
 def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs, exclude_freeze_count, freeze_map: dict | None = None, freeze_all_but_map: dict | None = None, log_fn=log_def):
     if freeze_idcs is None:
         freeze_idcs = []
+    if freeze_map is None:
+        freeze_map = {}
+    if freeze_all_but_map is None:
+        freeze_all_but_map = {}
     def apply_freeze_func(atoms, log_fn=log_def):
-        if freeze_base or len(freeze_idcs):
+        if any([freeze_base, bool(len(freeze_idcs)), bool(len(freeze_map)), bool(len(freeze_all_but_map))]):
             c = get_freeze_surf_base_constraint(
                 atoms,
                 ztol=freeze_tol, freeze_count=freeze_count, freeze_idcs=freeze_idcs, exclude_freeze_count=exclude_freeze_count,
