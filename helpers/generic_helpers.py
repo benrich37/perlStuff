@@ -675,7 +675,9 @@ def _get_freeze_by_map(atoms, freeze_map: dict[str, list[int]], ref_bool: bool, 
     for el in freeze_map:
         el_idcs = [idx for idx, el in enumerate(atoms.get_chemical_symbols()) if el == el]
         read_idcs = [i % len(el_idcs) for i in freeze_map[el]] # allow negative indexing
+        log_fn(f"Map for freezing {el}: {freeze_map[el]} -> {read_idcs} of {el_idcs}")
         mapped_idcs = [idx for i, idx in enumerate(el_idcs) if i in read_idcs]
+        log_fn(f"Mapped idcs for freezing {el}: {mapped_idcs}")
         for idx in mapped_idcs:
             mask[idx] = not mask[idx]
     log_fn(f"Imposing atom freezing by map")
@@ -747,7 +749,7 @@ def get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, freeze_idcs, ex
         freeze_map = {}
     if freeze_all_but_map is None:
         freeze_all_but_map = {}
-    def apply_freeze_func(atoms, log_fn=log_def):
+    def apply_freeze_func(atoms, log_fn=log_fn):
         if any([freeze_base, bool(len(freeze_idcs)), bool(len(freeze_map)), bool(len(freeze_all_but_map))]):
             c = get_freeze_surf_base_constraint(
                 atoms,
