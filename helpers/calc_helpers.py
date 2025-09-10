@@ -47,12 +47,26 @@ def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None,
             direct_coords=direct_coords
         )
     
-def _get_calc_new(exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, debug=False, debug_fn=None, log_fn=log_def, direct_coords=False, label=None):
+def _get_calc_new(
+        exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, 
+        debug=False, debug_fn=None, log_fn=log_def, direct_coords=False, label=None,
+        ignore_cache_for_aimd=True,
+        ):
     cmds = fix_dump_cmds_list(cmds)
     if label is None:
         label = root
     else:
         label = str(Path(root) / label)
+    force_eval = False
+    if ignore_cache_for_aimd:
+        if not isinstance(cmds, JDFTXInfile):
+            log_fn("Cannot check if AIMD is requested since cmds is not a JDFTXInfile instance")
+        elif "ionic-dynamics" in cmds and int(cmds["ionic-dynamics"]["nSteps"]) > 0:
+            log_fn("AIMD requested - forcing evaluation even if atoms are unchanged")
+            force_eval = True
+        else:
+            log_fn("AIMD not requested - using caching if possible")
+
     # log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
     # infile = JDFTXInfile.from_str("" + "\n".join(list), dont_require_structure=True)
     return JDFTx_new(
@@ -63,6 +77,7 @@ def _get_calc_new(exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=No
         command=exe_cmd,
         #debug=debug,
         log_func=log_fn,
+        force_evaluation=force_eval,
     )
     
 # def _get_calc_new(

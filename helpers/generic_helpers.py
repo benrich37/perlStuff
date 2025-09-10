@@ -1415,6 +1415,16 @@ def get_atoms_from_pmg_joutstructure(jstruc: JOutStructure):
         for i, charge in enumerate(jstruc.charges):
             charges[i] = charge
     atoms.set_initial_charges(charges)
+    if "velocities" in struc.site_properties and struc.site_properties["velocities"] is not None:
+        try:
+            atoms.set_velocities(struc.site_properties["velocities"])
+        except Exception as e:
+            print(f"Error setting velocities for {atoms}: {e}")
+    if hasattr(jstruc, "thermostat_velocity") and jstruc.thermostat_velocity is not None:
+        try:
+            atoms.info["thermostat-velocity"] = jstruc.thermostat_velocity
+        except Exception as e:
+            print(f"Error setting thermostat-velocity for {atoms}: {e}")
     return atoms
 
 def get_atoms_list_from_pmg_joutstructures(jstrucs: JOutStructures):
@@ -1437,9 +1447,28 @@ def get_atoms_list_from_pmg_jdftxoutfile(jdftxoutfile):
             atoms_list.append(None)
     return atoms_list
 
-def get_atoms_from_out(outfile):
-    atoms_list = get_atoms_list_from_out(outfile)
-    return atoms_list[-1]
+def get_atoms_from_out(outfile_path, ):
+    outfile = JDFTXOutfile.from_file(outfile_path, none_slice_on_error=True)
+    atoms_list = get_atoms_list_from_out_alt(outfile)
+    atoms_1 = atoms_list[-1]
+    atoms_2 = None
+    if len(atoms_list) > 1:
+        atoms_2 = atoms_list[-2]
+    if atoms_2 is None:
+        return atoms_1
+    else:
+        # If calculation is AIMD, the last structure is likely partially written and
+        # may be missing the thermostat-velocity. In that case, return the second to last structure.
+        if outfile.slices[-1].is_md:
+            return atoms_2
+        else:
+            return atoms_1
+
+
+def get_atoms_list_from_out_alt(outfile):
+    _atoms_list = get_atoms_list_from_pmg_jdftxoutfile(outfile)
+    atoms_list = [a for a in _atoms_list if a is not None]
+    return atoms_list
 
 
 def get_atoms_list_from_out(outfile_path):

@@ -26,6 +26,7 @@ from ase.calculators.calculator import (
 )
 from pathlib import Path
 from ase.config import cfg
+from numpy.typing import NDArray
 
 run_dir_suffix = "jdftx_run"
 
@@ -82,7 +83,8 @@ class JDFTx(Calculator):
         'dojo': 'dojo/$ID.upf',
         }
     pseudo_filetypes = ['fhi', 'uspp', 'upf', 'UPF', 'USPP']
-    
+    use_zero_velocities = False  # If False, if atoms.get_velocities() are all zero, they will be ignored
+
     def __init__(
             self, 
             commands: dict | list | None = BaseCalculator._deprecated,
@@ -94,6 +96,8 @@ class JDFTx(Calculator):
             detect_restart=True,
             ignore_state_on_failure=True,
             log_func = None,
+            force_evaluation=False,
+            use_zero_velocities=False,
             debug=True, **kwargs
             ):
         """ 
@@ -131,9 +135,13 @@ class JDFTx(Calculator):
         log_func: function
             Function to log messages. If None, will use print. This is useful if `print` isn't flushed
             until the end of a job.
+        force_evaluation: bool
+            If False, calculation will be skipped if the atoms object is the same as the one in the calculator.
+            If True, calculation will be run regardless by setting `self.use_cache = False`. Default is False.
         debug: bool
             For debugging. Does nothing right now.
         """
+        self.use_cache = not force_evaluation
         if not log_func is None:
             self.log_func = lambda x: log_func(x)
         commands = self._check_deprecated_keyword(commands, "commands")
@@ -152,6 +160,7 @@ class JDFTx(Calculator):
         self._debug = debug
         self.command = command
         self.ignore_state_on_failure = ignore_state_on_failure
+        self.use_zero_velocities = use_zero_velocities
 
         if (restart is None) and detect_restart:
             self.parameters = None
@@ -232,7 +241,13 @@ class JDFTx(Calculator):
         """
         if atoms is None:
             atoms = self.atoms
+        # structure.properties can be populated through AseAtomsAdaptor.get_structure via
+        # atoms.info. This is where thermostat-velocities for AIMD should be passed.
         structure = AseAtomsAdaptor.get_structure(atoms)
+        velocities = atoms.get_velocities()
+        ignore_velocities = (not self.use_zero_velocities) and is_ignorable_velocities(velocities)
+        if not ignore_velocities:
+            structure.add_site_property("velocities", velocities)
         # TODO: This can be expanded to support FixedLine and FixedPlane constraints
         if len(atoms.constraints):
             fixed_atom_idcs = []
@@ -242,6 +257,14 @@ class JDFTx(Calculator):
             structure.site_properties["selective_dynamics"] = [0 if i in fixed_atom_idcs else 1 for i in range(len(atoms))]
         infile = JDFTXInfile.from_structure(structure)
         infile += self.infile
+        if "thermostat-velocity" in atoms.info:
+            if isinstance(atoms.info["thermostat-velocity"], dict):
+                infile["thermostat-velocity"] = atoms.info["thermostat-velocity"]
+            else:
+                try:
+                    infile["thermostat-velocity"] = {f"v{i+1}": atoms.info["thermostat-velocity"][i] for i in range(3)}
+                except Exception as e:
+                    self.log_func(f"Error setting thermostat-velocity from atoms.info: {e}")
         if not "ion-species" in infile:
             infile += self._get_ion_species_cmd(atoms.get_chemical_symbols())
         if ignore_state and "initial-state" in infile:
@@ -286,6 +309,8 @@ class JDFTx(Calculator):
                     except TypeError:
                         # Some of the logged values might be None if ionic optimization at roundoff error
                         pass
+                if outfile.slices[-1].is_md:
+                    atoms.set_velocities(outfile.structure.site_properties["velocities"])
             self.log_func(f"Native opt {niter} iterations, updated energy {outfile.e}")
         self.results["energy"] = outfile.e
         self.results["forces"] = outfile.forces
@@ -298,6 +323,9 @@ class JDFTx(Calculator):
             self.results["stress"] = _tensor_to_voigt(outfile.stress)
         if not outfile.strain is None:
             self.results["strain"] = _tensor_to_voigt(outfile.strain)
+        for aimd_field in ["thermostat_velocity", "pe", "ke", "tmd_fs", "p_bar", "t_k"]:
+            if hasattr(outfile, aimd_field) and not getattr(outfile, aimd_field) is None:
+                self.results[aimd_field] = getattr(outfile, aimd_field)
         # Limit large output files to only those requested in properties
         if "eigenvalues" in properties:
             if not outputs.eigenvals is None:
@@ -455,3 +483,7 @@ def replaceVariable(var, varName):
 		return env_vars_dict[varName]
 	else:
 		return var
+    
+
+def is_ignorable_velocities(velocities: NDArray) -> bool:
+    return np.all(np.abs(velocities.flatten()) < 1e-8)
