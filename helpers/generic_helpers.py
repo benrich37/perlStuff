@@ -172,7 +172,7 @@ def read_inputs_dict_helper(work_dir, inputs_name="inputs"):
     inpfname = opj(work_dir, inputs_name)
     if ope(inputs_name):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "initial-state",
-                  "coulomb-interaction", "coulomb-truncation-embed", "lattice-type", "opt", "max_steps", "fmax",
+                  "lattice-type", "opt", "max_steps", "fmax",
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
         input_cmds = {"dump End": ""}
         with open(inpfname) as f:
