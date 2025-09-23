@@ -167,42 +167,49 @@ def insert_el(filename):
     with open(filename, 'w') as f:
         f.write('\n'.join(contents))
 
+from pymatgen.io.jdftx.inputs import JDFTXInfile, clean_lines
 
 def read_inputs_dict_helper(work_dir, inputs_name="inputs"):
     inpfname = opj(work_dir, inputs_name)
+    with open(Path(inpfname)) as file:
+        string = file.read()
+    lines: list[str] = list(clean_lines(string.splitlines()))
+    lines = JDFTXInfile._gather_tags(lines)
     if ope(inputs_name):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "initial-state",
                   "lattice-type", "opt", "max_steps", "fmax", 
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
         input_cmds = {"dump End": ""}
-        with open(inpfname) as f:
-            for i, line in enumerate(f):
-                if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
-                    skip = False
-                    for ig in ignore:
-                        if ig in line:
-                            skip = True
-                    if "#" in line:
+        
+        # with open(inpfname) as f:
+        #     for i, line in enumerate(f):
+        for i, line in enumerate(lines):
+            if (len(line.split(" ")) > 1) and (len(line.strip()) > 0):
+                skip = False
+                for ig in ignore:
+                    if ig in line:
                         skip = True
-                    if "ASE" in line:
-                        break
-                    if not skip:
-                        cmd = line[:line.index(" ")]
-                        rest = line.rstrip("\n")[line.index(" ") + 1:]
-                        if cmd not in ignore:
-                            if not "dump " in cmd:
-                                input_cmds[cmd] = rest
+                if "#" in line:
+                    skip = True
+                if "ASE" in line:
+                    break
+                if not skip:
+                    cmd = line[:line.index(" ")]
+                    rest = line.rstrip("\n")[line.index(" ") + 1:]
+                    if cmd not in ignore:
+                        if not "dump " in cmd:
+                            input_cmds[cmd] = rest
+                        else:
+                            freq = rest.split(" ")[0]
+                            vars = " " + " ".join(rest.split(" ")[1:])
+                            if freq == "End":
+                                input_cmds["dump End"] += vars
                             else:
-                                freq = rest.split(" ")[0]
-                                vars = " " + " ".join(rest.split(" ")[1:])
-                                if freq == "End":
-                                    input_cmds["dump End"] += vars
+                                dump_cmd = f"dump {freq}"
+                                if not dump_cmd in input_cmds:
+                                    input_cmds[dump_cmd] = vars
                                 else:
-                                    dump_cmd = f"dump {freq}"
-                                    if not dump_cmd in input_cmds:
-                                        input_cmds[dump_cmd] = vars
-                                    else:
-                                        input_cmds[dump_cmd] += vars
+                                    input_cmds[dump_cmd] += vars
         return input_cmds
     else:
         return None
