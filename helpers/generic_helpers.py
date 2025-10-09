@@ -1475,6 +1475,8 @@ def get_atoms_from_out(outfile_path, ):
 def get_atoms_list_from_out_alt(outfile):
     _atoms_list = get_atoms_list_from_pmg_jdftxoutfile(outfile)
     atoms_list = [a for a in _atoms_list if a is not None]
+    if not len(atoms_list):
+        atoms_list = [AseAtomsAdaptor.get_atoms(outfile.structure)]
     return atoms_list
 
 
