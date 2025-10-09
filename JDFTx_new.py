@@ -313,7 +313,9 @@ class JDFTx(Calculator):
                     atoms.set_velocities(outfile.structure.site_properties["velocities"])
             self.log_func(f"Native opt {niter} iterations, updated energy {outfile.e}")
         self.results["energy"] = outfile.e
-        self.results["forces"] = outfile.forces
+        # Some calculations (ie vibrations) do not have forces in the output file
+        if "forces" in properties:
+            self.results["forces"] = outfile.forces
         self.results["charges"] = outfile.structure.site_properties["charges"] if "charges" in outfile.structure.site_properties else None
         self.results["nbands"] = outfile.nbands
         self.results["nkpts"] = int(np.prod(outfile.kgrid))
