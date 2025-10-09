@@ -314,17 +314,21 @@ class JDFTx(Calculator):
             self.log_func(f"Native opt {niter} iterations, updated energy {outfile.e}")
         self.results["energy"] = outfile.e
         # Some calculations (ie vibrations) do not have forces in the output file
-        if "forces" in properties:
-            self.results["forces"] = outfile.forces
-        self.results["charges"] = outfile.structure.site_properties["charges"] if "charges" in outfile.structure.site_properties else None
-        self.results["nbands"] = outfile.nbands
-        self.results["nkpts"] = int(np.prod(outfile.kgrid))
-        self.results["nspins"] = outfile.nspin
-        self.results["fermi_level"] = outfile.efermi
-        if not outfile.stress is None:
-            self.results["stress"] = _tensor_to_voigt(outfile.stress)
-        if not outfile.strain is None:
-            self.results["strain"] = _tensor_to_voigt(outfile.strain)
+        default_results_map = {
+            "forces": outfile.forces if hasattr(outfile, "forces") else None,
+            "charges": outfile.structure.site_properties["charges"] if "charges" in outfile.structure.site_properties else None,
+            "nbands": outfile.nbands if hasattr(outfile, "nbands") else None,
+            "nkpts": int(np.prod(outfile.kgrid)) if hasattr(outfile, "kgrid") else None,
+            "nspins": outfile.nspin if hasattr(outfile, "nspin") else None,
+            "fermi_level": outfile.efermi if hasattr(outfile, "efermi") else None,
+            "stress": _tensor_to_voigt(outfile.stress) if (hasattr(outfile, "stress") and not outfile.stress is None) else None,
+            "strain": _tensor_to_voigt(outfile.strain) if (hasattr(outfile, "strain") and not outfile.strain is None) else None,
+        }
+        for rprop in default_results_map:
+            if rprop in properties:
+                self.results[rprop] = default_results_map[rprop]
+            elif not default_results_map[rprop] is None:
+                self.log_func(f"Not storing {rprop} in results as it was not requested, but it is available.")
         for aimd_field in ["thermostat_velocity", "pe", "ke", "tmd_fs", "p_bar", "t_k"]:
             if hasattr(outfile, aimd_field) and not getattr(outfile, aimd_field) is None:
                 self.results[aimd_field] = getattr(outfile, aimd_field)
