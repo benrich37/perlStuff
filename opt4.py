@@ -446,7 +446,8 @@ def run_ion_opt(
     log_fn("ionic optimization starting")
     pbc = atoms_obj.pbc
     # atoms_obj.get_properties()
-    atoms_obj.get_forces()
+    # atoms_obj.get_forces()
+    atoms_obj.get_properties(['energy'])
     log_fn("ionic optimization finished - organizing output data")
     outfile2 = opj(ion_dir_path, opj("jdftx_run", "out"))
     if ope(outfile2):
