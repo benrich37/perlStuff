@@ -21,6 +21,7 @@ from os import getcwd
 import numpy as np
 import subprocess
 from pymatgen.io.jdftx.inputs import JDFTXInfile
+from pathlib import Path
 
 cwd = getcwd()
 debug = "perlStuff" in cwd
@@ -567,7 +568,7 @@ def fix_restart_bug(work_dir, restart):
 def get_ionic_opt_cmds_infile(infile: JDFTXInfile, ion_iters: int, use_jdft: bool):
     if use_jdft:
         if "ionic-minimize" in infile:
-            infile["ionic-minimize"]["nIterations"] = int(max(ion_iters, infile["ionic-minimize"].get("nIterations", 0)))
+            infile["ionic-minimize"]["nIterations"] = int(max(ion_iters, infile["ionic-minimize"]["nIterations"]))
         else:
             infile["ionic-minimize"] = {"nIterations": ion_iters}
     else:
@@ -578,7 +579,7 @@ def get_ionic_opt_cmds_infile(infile: JDFTXInfile, ion_iters: int, use_jdft: boo
 def main(debug=False):
     # work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
     oid = read_opt_inputs()
-    work_dir = oid["work_dir"]
+    work_dir = Path(oid["work_dir"])
     # outfile_protect(work_dir)
     structure = oid["structure"]
     restart = oid["restart"]
@@ -606,17 +607,17 @@ def main(debug=False):
 
     fmax = oid["fmax"]
     os.chdir(work_dir)
-    opt_dir = opj(work_dir, "ion_opt/")
-    lat_dir = opj(work_dir, "lat_opt/")
-    structure = opj(work_dir, structure)
-    opt_log = get_log_fn(work_dir, "opt", False, restart=restart)
+    opt_dir = work_dir / "ion_opt"
+    lat_dir = work_dir / "lat_opt"
+    structure = work_dir / structure
+    opt_log = get_log_fn(str(work_dir), "opt", False, restart=restart)
     opt_log(f"Given opt_input: {oid}")
     apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, None, exclude_freeze_count, freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map, log_fn=opt_log)
     #opt_log(f"main: {freeze_idcs}")
-    structure = check_structure(structure, work_dir, log_fn=opt_log)
-    atoms, restart = get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
+    structure = check_structure(structure, str(work_dir), log_fn=opt_log)
+    atoms, restart = get_atoms(structure, restart, str(work_dir), opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
     exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
-    cmds = get_cmds_dict(work_dir, ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias)
+    cmds = get_cmds_dict(str(work_dir), ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
     
     # cmds = get_cmds_list(work_dir, ref_struct=structure)
