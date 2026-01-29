@@ -84,6 +84,7 @@ def get_calc_pyjdftx(
         cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, 
         debug=False, debug_fn=None, log_fn=log_def, direct_coords=False, label=None,
         ignore_cache_for_aimd=True,
+        restart=True,
         ):
     from JDFTx_pyjdftx import JDFTx
     import pyjdftx
@@ -111,6 +112,7 @@ def get_calc_pyjdftx(
         label=label,
         # pseudoDir=pseudoDir,
         pseudoSet=pseudoSet,
+        restart=restart,
         # command=exe_cmd,
         #debug=debug,
         # log_func=log_fn,
