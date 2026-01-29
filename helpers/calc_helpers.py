@@ -112,7 +112,7 @@ def get_calc_pyjdftx(
         label=label,
         # pseudoDir=pseudoDir,
         pseudoSet=pseudoSet,
-        restart=restart,
+        restart=label if restart else None,
         # command=exe_cmd,
         #debug=debug,
         # log_func=log_fn,
