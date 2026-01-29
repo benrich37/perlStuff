@@ -180,10 +180,10 @@ def make_dir(dirname):
 
 
 
-def get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_def):
+def get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_def, prefix="jdftx."):
     atoms_obj = None
-    outfile_path1 = opj(opt_dir, "out")
-    outfile_path2 = opj(opt_dir, opj("jdftx_run", "out"))
+    outfile_path1 = opj(opt_dir, f"{prefix}out")
+    outfile_path2 = opj(opt_dir, opj("jdftx_run", f"{prefix}out"))
     if ope(outfile_path2):
         try:
             atoms_obj = get_atoms_from_out(outfile_path2)
