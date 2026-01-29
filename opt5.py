@@ -421,7 +421,7 @@ def main(debug=False):
     get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, ignore_cache_for_aimd=True)
     get_calc = lambda root: get_arb_calc(root, base_infile)
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
-    lat_finished = Path(lat_dir / "finished.txt").exists()
+    lat_finished = Path(Path(lat_dir) / "finished.txt").exists()
     do_lat = (lat_iters > 0) and (not lat_finished)
     restarting_lat = do_lat and restart
     # implement this when the time comes
