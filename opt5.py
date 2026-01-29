@@ -399,6 +399,9 @@ def main(debug=False):
     opt_dir = work_dir / "ion_opt"
     lat_dir = work_dir / "lat_opt"
     structure = work_dir / structure
+    opt_dir = str(opt_dir)
+    structure = str(structure)
+    lat_dir = str(lat_dir)
     opt_log = get_log_fn(str(work_dir), "opt", False, restart=restart)
     opt_log(f"Given opt_input: {oid}")
     apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, None, exclude_freeze_count, freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map, log_fn=opt_log)
