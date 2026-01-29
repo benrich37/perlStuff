@@ -321,8 +321,11 @@ def get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdf
 
 
 def run_ase_opt(atoms_obj, ion_dir_path, opter, calc_fn, fmax, max_steps, apply_freeze_func, log_fn=log_def, _failed_before=False):
+    log_fn("Import pyjdftx")
     import pyjdftx
+    log_fn("Creating calculator object")
     calculator_object = calc_fn(ion_dir_path)
+    log_fn(f"Setting calculator to atoms object")
     atoms_obj.set_calculator(calculator_object)
     atoms_obj = apply_freeze_func(atoms_obj)
     log_fn("ASE ionic optimization starting")
