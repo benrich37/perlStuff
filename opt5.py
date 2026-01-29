@@ -1,3 +1,5 @@
+# For using pyjdftx with ASE optimizers
+
 import os
 from os.path import exists as ope, join as opj
 from ase.io import read, write as _write
@@ -62,9 +64,8 @@ def read_opt_inputs(fname = "opt_input"):
         "max_steps": 100,
         "gpu": True,
         "restart": False,
-        "pbc": [True, True, False],
+        "pbc": None,
         "lat_iters": 0,
-        "use_jdft": True,
         "freeze_base": False,
         "freeze_tol": 3.,
         "ortho": True,
@@ -250,62 +251,7 @@ def get_restart_atoms(structure, restart, work_dir, opt_dir, lat_dir, use_jdft, 
         else:
             log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
     return atoms, restart
-    
 
-        
-
-
-# def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jdft, log_fn=log_def):
-#     no_opt_struc = False
-#     no_lat_struc = False
-#     if ope(opt_dir):
-#         log_fn(f"{opt_dir} exists - checking this directory first for restart structure")
-#         if not use_jdft:
-#             if ope(opj(opt_dir, "CONTCAR")):
-#                 structure = opj(opt_dir, "CONTCAR")
-#                 log_fn(f"Found {structure} for restart structure")
-#         else:
-#             outfile = opj(opt_dir, "out")
-#             if ope(outfile):
-#                 try:
-#                     atoms_obj = get_atoms_from_out(outfile)
-#                     structure = opj(opt_dir, "POSCAR")
-#                     write(structure, atoms_obj, format="vasp")
-#                 except:
-#                     no_opt_struc = True
-#     else:
-#         no_opt_struc = True
-#     if ope(lat_dir) and no_opt_struc:
-#         make_dir(opt_dir)
-#         if not has_coords_out_files(lat_dir):
-#             log_fn(f"No ionpos and/or lattice found in {lat_dir}")
-#             lat_out = opj(lat_dir, "out")
-#             if ope(lat_out):
-#                 log_fn(f"Reading recent structure from out file in {lat_out}")
-#                 atoms = get_atoms_list_from_out(lat_out)[-1]
-#                 structure = opj(lat_dir, "POSCAR_lat_out")
-#                 log_fn(f"Saving read structure to {structure}")
-#                 write(structure, atoms, format="vasp")
-#         else:
-#             log_fn(f"Reading structure from {lat_dir}")
-#             atoms = get_atoms_from_lat_dir(lat_dir)
-#             structure = opj(lat_dir, "POSCAR_coords_out")
-#             log_fn(f"Saving read structure to {structure}")
-#             write(structure, atoms, format="vasp")
-#     else:
-#         no_lat_struc = True
-#     if no_lat_struc and no_opt_struc:
-#         make_dir(lat_dir)
-#         make_dir(opt_dir)
-#         log_fn(f"Could not gather restart structure from {work_dir}")
-#         if ope(structure):
-#             log_fn(f"Using {structure} for structure")
-#             log_fn(f"Changing restart to False")
-#             restart = False
-#             log_fn("setting up lattice and opt dir")
-#         else:
-#             log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
-#     return structure, restart
 
 
 def get_structure(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=log_def):
@@ -352,118 +298,6 @@ def get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdf
 
 
 
-
-def run_lat_opt_runner(
-        atoms: Atoms, structure: str, lat_dir: str, root: str, calc_fn,
-        freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def
-        ):
-    add_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_base=freeze_base, freeze_count = freeze_count)
-    atoms.set_calculator(calc_fn(lat_dir))
-    log_fn("lattice optimization starting")
-    atoms.get_forces()
-    log_fn("lattice optimization finished - organizing output data")
-    outfile = opj(lat_dir, "out")
-    pbc = atoms.pbc
-    if ope(outfile):
-        atoms_obj: Atoms = get_atoms_from_out(outfile)
-    else:
-        log_and_abort(f"No output data given - check error file", log_fn=log_fn)
-    atoms_obj.pbc = pbc
-    structure_path = opj(lat_dir, "CONTCAR")
-    write(structure_path, atoms_obj, format="vasp")
-    structure_path = opj(lat_dir, "CONTCAR.gjf")
-    write(structure_path, atoms_obj, format="gaussian-in")
-    finished(lat_dir)
-    return atoms, structure
-
-
-def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def, _failed_before=False):
-    run_again = False
-    try:
-        atoms, structure = run_lat_opt_runner(atoms, structure, lat_dir, root, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=log_fn)
-    except Exception as e:
-        check_for_restart(e, _failed_before, lat_dir, log_fn=log_fn)
-        run_again = True
-        pass
-    if run_again:
-        atoms, structure = run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=log_fn, _failed_before=True)
-    return atoms, structure
-
-
-# def run_ion_opt_runner(
-#         atoms_obj: Atoms, ion_dir_path, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, 
-#         freeze_idcs=None,
-#         log_fn=log_def):
-#     log_fn(f"run_ion_opt_runner: {freeze_idcs}")
-#     add_freeze_surf_base_constraint(atoms_obj, ztol=freeze_tol, freeze_base=freeze_base,  freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs)
-#     calculator_object = calc_fn(ion_dir_path)
-#     atoms_obj.set_calculator(calculator_object)
-#     log_fn("ionic optimization starting")
-#     pbc = atoms_obj.pbc
-#     atoms_obj.get_forces()
-#     log_fn("ionic optimization finished - organizing output data")
-#     outfile1 = opj(ion_dir_path, "out")
-#     outfile2 = opj(ion_dir_path, opj("jdftx_run", "out"))
-#     if ope(outfile1):
-#         atoms_obj = get_atoms_from_out(outfile1)
-#     elif ope(outfile2):
-#         atoms_obj = get_atoms_from_out(outfile2)
-#     else:
-#         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
-#     atoms_obj.pbc = pbc
-#     structure_path = opj(ion_dir_path, "CONTCAR")
-#     write(structure_path, atoms_obj, format="vasp")
-#     structure_path = opj(ion_dir_path, "CONTCAR.gjf")
-#     write(structure_path, atoms_obj, format="gaussian-in")
-#     finished(ion_dir_path)
-#     return atoms_obj
-
-
-# def run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn,
-#                 freeze_base = False, freeze_tol = 0., freeze_count = 0, exclude_freeze_count=0, _failed_before=False, 
-#                 freeze_idcs=None,
-#                 log_fn=log_def,
-#                 ):
-#     #log_fn(f"run_ion_opt: {freeze_idcs}")
-#     run_again = False
-#     try:
-#         atoms_obj = run_ion_opt_runner(atoms_obj, ion_dir_path, calc_fn, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, exclude_freeze_count=exclude_freeze_count, freeze_idcs=freeze_idcs, log_fn=log_fn)
-#     except Exception as e:
-#         check_for_restart(e, _failed_before, ion_dir_path, log_fn=log_fn)
-#         run_again = True
-#         pass
-#     if run_again:
-#         atoms_obj = run_ion_opt(atoms_obj, ion_dir_path, root_path, calc_fn,
-#                                 freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count,exclude_freeze_count=exclude_freeze_count, _failed_before=True, log_fn=log_fn, freeze_idcs=freeze_idcs)
-#     return atoms_obj
-
-
-def run_ion_opt(
-        atoms_obj: Atoms, ion_dir_path, calc_fn, apply_freeze_func,
-        log_fn=log_def):
-    calculator_object = calc_fn(ion_dir_path)
-    atoms_obj.set_calculator(calculator_object)
-    atoms_obj = apply_freeze_func(atoms_obj)
-    log_fn("ionic optimization starting")
-    pbc = atoms_obj.pbc
-    # atoms_obj.get_properties()
-    # atoms_obj.get_forces()
-    atoms_obj.get_properties(['energy'])
-    log_fn("ionic optimization finished - organizing output data")
-    outfile2 = opj(ion_dir_path, opj("jdftx_run", "out"))
-    if ope(outfile2):
-        atoms_obj = get_atoms_from_out(outfile2)
-    else:
-        log_and_abort(f"No output data given - check error file", log_fn=log_fn)
-    atoms_obj.pbc = pbc
-    structure_path = opj(ion_dir_path, "CONTCAR")
-    write(structure_path, atoms_obj, format="vasp")
-    structure_path = opj(ion_dir_path, "CONTCAR.gjf")
-    write(structure_path, atoms_obj, format="gaussian-in")
-    finished(ion_dir_path)
-    return atoms_obj
-
-
 def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, freeze_base = False, freeze_tol = 0., freeze_count = 0,log_fn=log_def):
     add_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_base=freeze_base, freeze_count = freeze_count)
     do_cell = get_do_cell(atoms.pbc)
@@ -486,106 +320,61 @@ def run_ase_opt_runner(atoms, root, opter, fmax, max_steps, freeze_base = False,
     finished(root)
 
 
-def run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, freeze_base = False, freeze_tol = 0., freeze_count = 0,log_fn=log_def, _failed_before=False):
-    atoms.set_calculator(calc_fn(opt_dir))
-    add_freeze_surf_base_constraint(atoms, ztol=freeze_tol, freeze_base=freeze_base, freeze_count = freeze_count)
-    do_cell = get_do_cell(atoms.pbc)
-    dyn = optimizer(atoms, opt_dir, opter)
-    traj = Trajectory(opj(opt_dir, "opt.traj"), 'w', atoms, properties=['energy', 'forces', 'charges'])
-    logx = opj(opt_dir, "opt.logx")
-    write_logx = lambda: _write_logx(atoms, logx, do_cell=do_cell)
-    write_contcar = lambda: _write_contcar(atoms, opt_dir)
-    write_opt_log = lambda: _write_opt_iolog(atoms, dyn, max_steps, log_fn)
-    dyn.attach(traj.write, interval=1)
-    dyn.attach(write_contcar, interval=1)
-    dyn.attach(write_logx, interval=1)
-    dyn.attach(write_opt_log, interval=1)
+def run_ase_opt(atoms, ion_dir_path, opter, calc_fn, fmax, max_steps, apply_freeze_func, log_fn=log_def, _failed_before=False):
+    calculator_object = calc_fn(ion_dir_path)
+    atoms_obj.set_calculator(calculator_object)
+    atoms_obj = apply_freeze_func(atoms_obj)
+    log_fn("ASE ionic optimization starting")
+    dyn = optimizer(atoms, ion_dir_path, opter)
     log_fn("Optimization starting")
     log_fn(f"Fmax: {fmax}, max_steps: {max_steps}")
     dyn.run(fmax=fmax, steps=max_steps)
     log_fn(f"Finished in {dyn.nsteps}/{max_steps}")
-    finished_logx(atoms, logx, dyn.nsteps, max_steps)
-    sp_logx(atoms, "sp.logx", do_cell=do_cell)
-    finished(opt_dir)
-    # run_again = False
-    # try:
-    #     run_ase_opt_runner(atoms, opt_dir, opter, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=log_fn)
-    # except Exception as e:
-    #     check_for_restart(e, _failed_before, opt_dir, log_fn=log_fn)
-    #     run_again = True
-    #     pass
-    # if run_again:
-    #     run_ase_opt(atoms, opt_dir, opter, calc_fn, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=log_fn, _failed_before=True)
-
-def copy_result_files(opt_dir, work_dir):
-    result_files = ["CONTCAR", "CONTCAR.gjf", "Ecomponents", "out"]
-    for file in result_files:
-        full = opj(opt_dir, file)
-        if ope(full):
-            cp(full, work_dir)
+    finished(ion_dir_path)
 
 
-def append_out_to_logx(outfile, logx, log_fn=log_def):
-    log_fn(f"Gathering minimization structures from existing out file")
-    _atoms_list = get_atoms_list_from_out(outfile)
-    atoms_list = []
-    for atoms in _atoms_list:
-        if not atoms is None:
-            atoms_list.append(atoms)
-    log_fn(f"{len(atoms_list)} found from out file")
-    if len(atoms_list):
-        do_cell = get_do_cell(atoms_list[-1].pbc)
-        for atoms in atoms_list:
-            _write_logx(atoms, logx, do_cell=do_cell)
-
-def make_jdft_logx(opt_dir, log_fn=log_def):
-    outfile = opj(opt_dir, "out")
-    logx = opj(opt_dir, "out.logx")
-    if ope(outfile):
-        out_to_logx(opt_dir, outfile, log_fn=log_fn)
-        log_fn("Writing existing out file to logx file")
-
-
-
-def outfile_protect(work_dir):
-    calc_dirs = [opj(work_dir, t) for t in ["ion_opt", "lat_opt"]]
-    outfiles = [opj(c, "out") for c in calc_dirs]
-    for o in outfiles:
-        if ope(o):
-            if not debug:
-                print("DELETING FLUID-EX-CORR LINE FROM FUNCTIONAL - DELETE ME ONCE THIS BUG IS FIXED")
-                subprocess.run(f"sed -i '/fluid-ex-corr/d' {o}", shell=True, check=True)
-
-def fix_restart_bug(work_dir, restart):
-    outfile = opj(opj(work_dir, "ion_opt"), "out")
-    if restart:
-        if ope(outfile):
-            if not debug:
-                subprocess.run(f"sed -i '/fluid-ex-corr/d' {outfile}", shell=True, check=True)
-                subprocess.run(f"sed -i '/lda-PZ/d' {outfile}", shell=True, check=True)
-
-
-def get_ionic_opt_cmds_infile(infile: JDFTXInfile, ion_iters: int, use_jdft: bool):
-    if use_jdft:
-        if "ionic-minimize" in infile:
-            infile["ionic-minimize"]["nIterations"] = int(max(ion_iters, infile["ionic-minimize"]["nIterations"]))
-        else:
-            infile["ionic-minimize"] = {"nIterations": ion_iters}
+def get_pbc_from_infile(infile: JDFTXInfile):
+    coulomb_intrx: dict = infile.get("coulomb-interaction", None)
+    if coulomb_intrx is None:
+        return None
+    ttype = coulomb_intrx.get("truncationType")
+    if ttype == "Periodic":
+        return (True, True, True)
+    elif ttype == "Isolated":
+        return (False, False, False)
+    elif ttype == "Slab":
+        tdir = coulomb_intrx.get("dir", "001")
+        return ((not bool(int(tdir[0]))), (not bool(int(tdir[1]))), (not bool(int(tdir[2]))))
+    elif ttype == "Wire":
+        tdir = coulomb_intrx.get("dir", "001")
+        return ((not bool(int(tdir[0]))), (not bool(int(tdir[1]))), bool(int(tdir[2])))
     else:
-        if not "ionic-minimize" in infile:
-            infile["ionic-minimize"] = {"nIterations": 0}
-    return infile
+        raise ValueError(f"Unrecognized coulomb truncation type {ttype} in infile.")
+    
+    
+
+
+def check_pbc(pbc: list[bool] | tuple[bool, bool, bool] | None, infile: JDFTXInfile):
+    pbc_infile = get_pbc_from_infile(infile)
+    if pbc is None:
+        return get_pbc_from_infile(infile)
+    elif pbc_infile is None:
+        return pbc
+    else:
+        if not all([pbc[i] == pbc_infile[i] for i in range(3)]):
+            raise ValueError(f"Given pbc {pbc} does not match pbc from infile {pbc_infile}")
+        return pbc
 
 def main(debug=False):
     # work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
     oid = read_opt_inputs()
+    use_jdft = False
     work_dir = Path(oid["work_dir"])
     # outfile_protect(work_dir)
     structure = oid["structure"]
     restart = oid["restart"]
     #fix_restart_bug(work_dir, restart)
     lat_iters = oid["lat_iters"]
-    use_jdft = oid["use_jdft"]
     gpu = oid["gpu"]
     pbc = oid["pbc"]
     bias = oid["bias"]
@@ -619,49 +408,34 @@ def main(debug=False):
     exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
     cmds = get_cmds_dict(str(work_dir), ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
-    
-    # cmds = get_cmds_list(work_dir, ref_struct=structure)
     opt_log(f"Setting {structure} to atoms object")
-    atoms.pbc = pbc
-    # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
     cmds = add_cohp_cmds(cmds, ortho=ortho)
     if ddec6:
         cmds = add_elec_density_dump(cmds)
     base_infile = cmds_list_to_infile(cmds)
-    lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
-    lat_infile = cmds_list_to_infile(lat_cmds)
-    ion_infile = get_ionic_opt_cmds_infile(base_infile, ion_iters=max_steps, use_jdft=use_jdft)
-    
+    pbc = check_pbc(pbc, base_infile)
+    atoms.pbc = pbc
     get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, ignore_cache_for_aimd=True)
-    #get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
-    get_lat_calc = lambda root: get_arb_calc(root, lat_infile)
-    #get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log, direct_coords=direct_coords)
-    #get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
-    get_ion_calc = lambda root: get_arb_calc(root, ion_infile)
     get_calc = lambda root: get_arb_calc(root, base_infile)
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
-    lat_finished = ope(opj(lat_dir, "finished.txt"))
+    lat_finished = Path(lat_dir / "finished.txt").exists()
     do_lat = (lat_iters > 0) and (not lat_finished)
     restarting_lat = do_lat and restart
-    if do_lat:
-        if restarting_lat:
-            make_jdft_logx(lat_dir, log_fn=opt_log)
-        atoms, structure = run_lat_opt(
-            atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
-            log_fn=opt_log
-            )
+    # implement this when the time comes
+    # lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
+    # lat_infile = cmds_list_to_infile(lat_cmds)
+    # get_lat_calc = lambda root: get_arb_calc(root, lat_infile)
+    # if do_lat:
+    #     if restarting_lat:
+    #         make_jdft_logx(lat_dir, log_fn=opt_log)
+    #     atoms, structure = run_lat_opt(
+    #         atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
+    #         log_fn=opt_log
+    #         )
     restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
-    opt_log(f"Finding/copying any state files to {opt_dir}")
-    copy_best_state_files([work_dir, lat_dir, opt_dir], opt_dir, log_fn=opt_log)
-    if use_jdft:
-        if restarting_ion:
-            make_jdft_logx(opt_dir, log_fn=opt_log)
-        opt_log(f"Running ion optimization with JDFTx optimizer")
-        run_ion_opt(atoms, opt_dir, get_ion_calc, apply_freeze_func, log_fn=opt_log)
-    else:
-        opt_log(f"Running ion optimization with ASE optimizer")
-        run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=opt_log)
+    opt_log(f"Running ion optimization with ASE optimizer")
+    run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, apply_freeze_func, log_fn=opt_log)
     opt_log("Optimization finished.")
     if ddec6:
         opt_log(f"Running DDEC6 analysis in {opt_dir}")
