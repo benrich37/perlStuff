@@ -118,7 +118,7 @@ def write_ddec6_inputs(
     if dfname is None:
         has_spin = True
     elif dupfname is None:
-        raise ValueError("Could not find electron density files")
+        raise ValueError(f"Could not find electron density files with prefix {file_prefix} in {calc_dir}")
     if has_spin:
         write_ddec6_inputs_spin(calc_dir, outfile, dupfname, ddnfname, pbc, data_fname, a_d_env_path, max_space, norm_density=norm_density, offset=offset)
     else:
