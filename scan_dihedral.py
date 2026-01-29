@@ -64,6 +64,8 @@ def read_opt_inputs(fname = "opt_input"):
         "fmax": 0.01,
         "max_steps": 100,
         "gpu": True,
+        "dangle": 10.0,
+        "nsteps": 18,
         "restart": False,
         "pbc": None,
         "lat_iters": 0,
@@ -92,48 +94,18 @@ def read_opt_inputs(fname = "opt_input"):
             opt_inputs_dict["gpu"] = "true" in val.lower()
         if "restart" in key:
             opt_inputs_dict["restart"] = "true" in val.lower()
-        if "max" in key:
-            if "fmax" in key:
-                opt_inputs_dict["fmax"] = float(val)
-            elif "step" in key:
-                opt_inputs_dict["max_steps"] = int(val)
         if "pbc" in key:
             opt_inputs_dict["pbc"] = read_pbc_val(val)
-        if "lat" in key:
-            try:
-                opt_inputs_dict["n_iters"] = int(val)
-                opt_inputs_dict["lat_iters"] = opt_inputs_dict["n_iters"]
-            except:
-                pass
         if ("direct" in key) and ("coord" in key):
             opt_inputs_dict["direct_coords"] = "true" in val.lower()
-        if ("opt" in key) and ("progr" in key):
-            if "jdft" in val:
-                opt_inputs_dict["use_jdft"] = True
-            if "ase" in val:
-                opt_inputs_dict["use_jdft"] = False
-            else:
-                pass
-        if ("freeze" in key):
-            if ("base" in key):
-                opt_inputs_dict["freeze_base"] = "true" in val.lower()
-            elif ("tol" in key):
-                opt_inputs_dict["freeze_tol"] = float(val)
-            elif ("count" in key):
-                if "exclude" in key:
-                    opt_inputs_dict["exclude_freeze_count"] = int(val)
-                else:
-                    opt_inputs_dict["freeze_count"] = int(val)
-            elif ("map" in key):
-                freeze_dict = parse_dict_indexing(val)
-                if "all_but" in key:
-                    opt_inputs_dict["freeze_all_but_map"] = freeze_dict
-                else:
-                    opt_inputs_dict["freeze_map"] = freeze_dict
         if ("dihedral" in key):
             opt_inputs_dict["dihedral_list"] = parse_dihedral_idcs(val)
         if ("mask" in key):
             opt_inputs_dict["mask_list"] = parse_dihedral_idcs(val)
+        if ("nstep" in key):
+            opt_inputs_dict["nsteps"] = int(val)
+        if ("dangle" in key):
+            opt_inputs_dict["dangle"] = float(val)
         if ("ortho" in key):
             opt_inputs_dict["ortho"] = "true" in val.lower()
         if ("save" in key) and ("state" in key):
@@ -434,6 +406,8 @@ def main(debug=False):
     freeze_count = oid["freeze_count"]
     exclude_freeze_count = oid["exclude_freeze_count"]
     direct_coords = oid["direct_coords"]
+    nsteps = oid["nsteps"]
+    dangle = oid["dangle"]
     if exclude_freeze_count > freeze_count:
         raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
     
@@ -465,7 +439,7 @@ def main(debug=False):
     restarting_ion = (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
     opt_log(f"Running ion optimization with ASE optimizer")
-    run_dihedral_scan(atoms, opt_dir, get_calc, dihedral_list, mask_list=mask_list, log_fn=opt_log)
+    run_dihedral_scan(atoms, opt_dir, get_calc, nsteps, dangle, dihedral_list, mask_list=mask_list, log_fn=opt_log)
     opt_log("Optimization finished.")
 
 from sys import exc_info
