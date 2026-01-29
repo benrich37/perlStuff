@@ -823,11 +823,11 @@ def _write_contcar(atoms, root):
     insert_el(opj(root, 'CONTCAR'))
 
 
-def optimizer(atoms, root, opter, opt_alpha=150):
+def optimizer(atoms, root, opter, opt_alpha=150, **kwargs):
     traj = opj(root, "opt.traj")
     log = opj(root, "opt.log")
     restart = opj(root, "hessian.pckl")
-    dyn = opter(atoms, trajectory=traj, logfile=log, restart=restart, a=(opt_alpha / 70) * 0.1)
+    dyn = opter(atoms, trajectory=traj, logfile=log, restart=restart, a=(opt_alpha / 70) * 0.1, **kwargs)
     return dyn
 
 
