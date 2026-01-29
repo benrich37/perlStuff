@@ -418,7 +418,7 @@ def main(debug=False):
     structure = work_dir / structure
     opt_dir = str(opt_dir)
     structure = str(structure)
-    lat_dir = str(lat_dir)
+    lat_dir = str(opt_dir)
     opt_log = get_log_fn(str(work_dir), "dih_scan", False, restart=restart)
     opt_log(f"Given opt_input: {oid}")
     structure = check_structure(structure, str(work_dir), log_fn=opt_log)
