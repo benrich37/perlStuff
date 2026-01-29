@@ -86,11 +86,13 @@ def get_calc_pyjdftx(
         ignore_cache_for_aimd=True,
         ):
     from JDFTx_pyjdftx import JDFTx
+    import pyjdftx
+    from mpi4py import MPI
+    
     cmds = fix_dump_cmds_list(cmds)
     if label is None:
-        label = root
-    else:
-        label = str(Path(root) / label)
+        label = "jdftx"
+    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, str(Path(root) / f"{label}.out"), False)
     force_eval = False
     if ignore_cache_for_aimd:
         if not isinstance(cmds, JDFTXInfile):
@@ -104,14 +106,15 @@ def get_calc_pyjdftx(
     # log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
     # infile = JDFTXInfile.from_str("" + "\n".join(list), dont_require_structure=True)
     return JDFTx(
+        directory=str(root),
         infile=cmds,
         label=label,
-        pseudoDir=pseudoDir,
+        # pseudoDir=pseudoDir,
         pseudoSet=pseudoSet,
         # command=exe_cmd,
         #debug=debug,
-        log_func=log_fn,
-        force_evaluation=force_eval,
+        # log_func=log_fn,
+        # force_evaluation=force_eval,
     )
     
 # def _get_calc_new(
