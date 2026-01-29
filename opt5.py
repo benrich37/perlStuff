@@ -321,7 +321,7 @@ def get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdf
 
 
 def run_ase_opt(atoms_obj, ion_dir_path, opter, calc_fn, fmax, max_steps, apply_freeze_func, log_fn=log_def, _failed_before=False):
-    
+    import pyjdftx
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
     atoms_obj = apply_freeze_func(atoms_obj)
@@ -332,6 +332,9 @@ def run_ase_opt(atoms_obj, ion_dir_path, opter, calc_fn, fmax, max_steps, apply_
     dyn.run(fmax=fmax, steps=max_steps)
     log_fn(f"Finished in {dyn.nsteps}/{max_steps}")
     finished(ion_dir_path)
+    calculator_object.dump_end()
+    pyjdftx.finalize(True)
+
 
 
 def get_pbc_from_infile(infile: JDFTXInfile):
