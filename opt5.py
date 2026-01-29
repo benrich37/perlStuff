@@ -11,7 +11,7 @@ from datetime import datetime
 from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint, get_cmds_dict, get_apply_freeze_func
 from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
-from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_calc_new
+from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_calc_new, get_calc_pyjdftx
 from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out, add_elec_density_dump
 from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
 from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort, cmds_dict_to_list, cmds_list_to_infile
@@ -408,7 +408,7 @@ def main(debug=False):
     #opt_log(f"main: {freeze_idcs}")
     structure = check_structure(structure, str(work_dir), log_fn=opt_log)
     atoms, restart = get_atoms(structure, restart, str(work_dir), opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
-    exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
+    # exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
     cmds = get_cmds_dict(str(work_dir), ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
     opt_log(f"Setting {structure} to atoms object")
@@ -418,7 +418,8 @@ def main(debug=False):
     base_infile = cmds_list_to_infile(cmds)
     pbc = check_pbc(pbc, base_infile)
     atoms.pbc = pbc
-    get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, ignore_cache_for_aimd=True)
+    get_arb_calc = lambda root, cmds: get_calc_pyjdftx(cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, direct_coords=direct_coords)
+    # get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, ignore_cache_for_aimd=True)
     get_calc = lambda root: get_arb_calc(root, base_infile)
     check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
     lat_finished = Path(Path(lat_dir) / "finished.txt").exists()

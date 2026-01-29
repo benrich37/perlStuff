@@ -81,7 +81,7 @@ def _get_calc_new(
     )
 
 def get_calc_pyjdftx(
-        exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, 
+        cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, 
         debug=False, debug_fn=None, log_fn=log_def, direct_coords=False, label=None,
         ignore_cache_for_aimd=True,
         ):
@@ -108,7 +108,7 @@ def get_calc_pyjdftx(
         label=label,
         pseudoDir=pseudoDir,
         pseudoSet=pseudoSet,
-        command=exe_cmd,
+        # command=exe_cmd,
         #debug=debug,
         log_func=log_fn,
         force_evaluation=force_eval,
