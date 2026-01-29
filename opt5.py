@@ -321,9 +321,7 @@ def get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdf
 
 
 def run_ase_opt(atoms_obj, ion_dir_path, opter, calc_fn, fmax, max_steps, apply_freeze_func, log_fn=log_def, _failed_before=False):
-    import pyjdftx
-    from mpi4py import MPI
-    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, str(Path(ion_dir_path) / "out"), False)
+    
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
     atoms_obj = apply_freeze_func(atoms_obj)
@@ -447,11 +445,11 @@ def main(debug=False):
     if ddec6:
         opt_log(f"Running DDEC6 analysis in {opt_dir}")
         try:
-            run_ddec6(opt_dir)
+            run_ddec6(opt_dir, file_prefix="jdftx.")
         except Exception as e:
             if ope(opj(opt_dir, "jdftx_run")):
                 opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
-                run_ddec6(opj(opt_dir, "jdftx_run"))
+                run_ddec6(opj(opt_dir, "jdftx_run"), file_prefix="jdftx.")
     # copy_result_files(opt_dir, work_dir)
 
 from sys import exc_info
