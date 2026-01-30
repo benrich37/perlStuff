@@ -56,8 +56,8 @@ class DihedralScan(Optimizer):
             return optimizable.atoms.get_dihedral(*self.dihedral_idcs_list[0], mic=True)
         
     def update(self, optimizable):
-        energy = optimizable.get_potential_energy()
         forces = optimizable.get_forces()
+        energy = optimizable.get_potential_energy()
         self.energy_list.append(energy)
         self.forces_list.append(forces)
         self.dump((self.current_step, self.energy_list, self.forces_list))
