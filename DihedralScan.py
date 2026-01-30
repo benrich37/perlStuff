@@ -11,8 +11,9 @@ class DihedralScan(Optimizer):
         self.current_step = 0
         self.energy_list = []
         self.forces_list = []
+        self.dihedral_list = []
         self.dangle = dangle
-        self.total_steps = total_steps
+        self.total_steps = total_steps + 1
         super().__init__(atoms, **kwargs)
 
     def _check_argument_compatability(self, atoms, dihedral_idcs_list, mask_list):
@@ -38,7 +39,7 @@ class DihedralScan(Optimizer):
     #     self.update(self.optimizable)
             
     def read(self):
-        self.current_step, self.energy_list, self.forces_list = self.load()
+        self.current_step, self.energy_list, self.forces_list, self.dihedral_list = self.load()
 
     def _step(self, optimizable):
         if isinstance(self.dihedral_idcs_list[0], int):
@@ -60,8 +61,9 @@ class DihedralScan(Optimizer):
         energy = self.optimizable.atoms.get_potential_energy()
         self.energy_list.append(energy)
         self.forces_list.append(forces)
-        self.dump((self.current_step, self.energy_list, self.forces_list))
-        print(f"Step {self.current_step}/{self.total_steps} ({self._get_current_dihedral(self.optimizable):.2f}): Energy = {energy} eV")
+        self.dihedral_list.append(self._get_current_dihedral(self.optimizable))
+        self.dump((self.current_step, self.energy_list, self.forces_list, self.dihedral_list))
+        print(f"Step {self.current_step}/{self.total_steps} ({self.dihedral_list[-1]:.2f}): Energy = {energy} eV")
 
     def step(self):
         optimizable = self.optimizable
