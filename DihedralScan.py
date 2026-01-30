@@ -34,8 +34,8 @@ class DihedralScan(Optimizer):
             else:
                 self.mask_list = [None] * len(dihedral_idcs_list)
 
-    def initialize(self):
-        self.update(self.optimizable)
+    # def initialize(self):
+    #     self.update(self.optimizable)
             
     def read(self):
         self.current_step, self.energy_list, self.forces_list = self.load()
@@ -65,8 +65,9 @@ class DihedralScan(Optimizer):
 
     def step(self):
         optimizable = self.optimizable
-        self._step(optimizable)
-        self.current_step += 1
+        if not self.current_step == 0:
+            self._step(optimizable)
+            self.current_step += 1
         self.update(optimizable)
         
 
