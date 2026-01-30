@@ -116,7 +116,7 @@ def write_ddec6_inputs(
     if pbc is None:
         pbc = get_pbc(calc_dir)
     outfile = opj(calc_dir, outname)
-    has_spin = True
+    has_spin = False
     if dfname is None:
         has_spin = True
     elif dupfname is None:
