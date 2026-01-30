@@ -63,6 +63,7 @@ def read_opt_inputs(fname = "opt_input"):
         "structure": None,
         "fmax": 0.01,
         "max_steps": 100,
+        "init_step": 0.,
         "gpu": True,
         "dangle": 10.0,
         "nsteps": 18,
@@ -102,6 +103,8 @@ def read_opt_inputs(fname = "opt_input"):
             opt_inputs_dict["dihedral_list"] = parse_dihedral_idcs(val)
         if ("mask" in key):
             opt_inputs_dict["mask_list"] = parse_dihedral_idcs(val)
+        if ("init" in key):
+            opt_inputs_dict["init_step"] = float(val)
         if ("nstep" in key):
             opt_inputs_dict["nsteps"] = int(val)
         if ("dangle" in key):
@@ -324,12 +327,16 @@ def run_dihedral_scan(atoms_obj, ion_dir_path, calc_fn,
                       nsteps: int, dangle: float, 
                       dihedral_list: list[int] | list[list[int]], 
                       mask_list: list[int] | list[list[int]] | None = None, 
-                      log_fn=log_def):
+                      init_step: float = 0.,
+                      log_fn=log_def
+                      ):
     import pyjdftx
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
     log_fn("ASE ionic optimization starting")
-    dyn = optimizer(atoms_obj, ion_dir_path, DihedralScan, dangle=dangle, total_steps=nsteps, dihedral_idcs_list=dihedral_list, mask_list=mask_list, opt_alpha=None)
+    dyn = optimizer(atoms_obj, ion_dir_path, DihedralScan, 
+                    dangle=dangle, total_steps=nsteps, dihedral_idcs_list=dihedral_list, mask_list=mask_list, init_step=init_step,
+                    opt_alpha=None)
     log_fn("Scan starting")
     log_fn(f"Dangle: {dangle}, nsteps: {nsteps}, dihedral_list: {dihedral_list}, mask_list: {mask_list}")
     dyn.run()
@@ -408,6 +415,7 @@ def main(debug=False):
     direct_coords = oid["direct_coords"]
     nsteps = oid["nsteps"]
     dangle = oid["dangle"]
+    init_step = oid["init_step"]
     if exclude_freeze_count > freeze_count:
         raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
     
@@ -439,7 +447,7 @@ def main(debug=False):
     restarting_ion = (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
     opt_log(f"Running ion optimization with ASE optimizer")
-    run_dihedral_scan(atoms, opt_dir, get_calc, nsteps, dangle, dihedral_list, mask_list=mask_list, log_fn=opt_log)
+    run_dihedral_scan(atoms, opt_dir, get_calc, nsteps, dangle, dihedral_list, mask_list=mask_list, init_step=init_step, log_fn=opt_log)
     opt_log("Optimization finished.")
 
 from sys import exc_info
