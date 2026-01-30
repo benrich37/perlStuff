@@ -106,18 +106,22 @@ def get_calc_pyjdftx(
 
     # log_fn(f"Setting calculator with \n \t exe_cmd: {exe_cmd} \n \t calc dir: {root} \n \t cmds: {cmds} \n")
     # infile = JDFTXInfile.from_str("" + "\n".join(list), dont_require_structure=True)
-    return JDFTx(
-        directory=str(root),
-        infile=cmds,
-        label=label,
-        # pseudoDir=pseudoDir,
-        pseudoSet=pseudoSet,
-        restart=str(Path(root) / f"{label}") if restart else None,
-        # command=exe_cmd,
-        #debug=debug,
-        # log_func=log_fn,
-        # force_evaluation=force_eval,
+    try:
+        return JDFTx(
+            directory=str(root),
+            infile=cmds,
+            label=label,
+            pseudoSet=pseudoSet,
+            restart=str(Path(root) / f"{label}") if restart else None,
     )
+    except FileNotFoundError as e:
+        log_fn(f"Could not find restart files at {str(Path(root) / f'{label}')}, starting fresh calculation")
+        return JDFTx(
+            directory=str(root),
+            infile=cmds,
+            label=label,
+            pseudoSet=pseudoSet,
+        ) 
     
 # def _get_calc_new(
 #         exe_cmd: str, infile: JDFTXInfile, calc_dir: str, pseudoSet="GBRV", debug=False, debug_fn=None, log_fn=log_def, direct_coords=False
