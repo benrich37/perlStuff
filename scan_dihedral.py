@@ -329,7 +329,7 @@ def run_dihedral_scan(atoms_obj, ion_dir_path, calc_fn,
     calculator_object = calc_fn(ion_dir_path)
     atoms_obj.set_calculator(calculator_object)
     log_fn("ASE ionic optimization starting")
-    dyn = optimizer(atoms_obj, ion_dir_path, DihedralScan, dangle=dangle, total_steps=nsteps, dihedral_idcs_list=dihedral_list, mask_list=mask_list)
+    dyn = optimizer(atoms_obj, ion_dir_path, DihedralScan, dangle=dangle, total_steps=nsteps, dihedral_idcs_list=dihedral_list, mask_list=mask_list, opt_alpha=None)
     log_fn("Scan starting")
     log_fn(f"Dangle: {dangle}, nsteps: {nsteps}, dihedral_list: {dihedral_list}, mask_list: {mask_list}")
     dyn.run()
