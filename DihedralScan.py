@@ -4,9 +4,14 @@ from ase import Atoms
 class DihedralScan(Optimizer):
 
 
-    def __init__(self, atoms: Atoms, dangle: float, total_steps: int, dihedral_idcs_list: list[int] | list[list[int]], mask_list: list[int] | list[list[int]] | None = None, **kwargs):
+    def __init__(self, atoms: Atoms, dangle: float, total_steps: int, 
+                 dihedral_idcs_list: list[int] | list[list[int]], 
+                 mask_list: list[int] | list[list[int]] | None = None, 
+                 init_step: float = 0.,
+                 **kwargs):
         self.dihedral_idcs_list = dihedral_idcs_list
         self.mask_list = mask_list
+        self.init_step = init_step
         self._check_argument_compatability(atoms, dihedral_idcs_list, mask_list)
         self.current_step = 0
         self.energy_list = []
@@ -35,19 +40,19 @@ class DihedralScan(Optimizer):
             else:
                 self.mask_list = [None] * len(dihedral_idcs_list)
 
-    # def initialize(self):
-    #     self.update(self.optimizable)
+    def initialize(self):
+        self._step(self.optimizable, self.init_step)
             
     def read(self):
         self.current_step, self.energy_list, self.forces_list, self.dihedral_list = self.load()
 
-    def _step(self, optimizable):
+    def _step(self, optimizable, dangle: float):
         if isinstance(self.dihedral_idcs_list[0], int):
             dihedral_idcs = self.dihedral_idcs_list
-            optimizable.atoms.rotate_dihedral(*dihedral_idcs, self.dangle, mask=self.mask_list)
+            optimizable.atoms.rotate_dihedral(*dihedral_idcs, dangle, mask=self.mask_list)
         elif isinstance(self.dihedral_idcs_list[0][0], int):
             for i, dihedral_idcs in enumerate(self.dihedral_idcs_list):
-                optimizable.atoms.rotate_dihedral(*dihedral_idcs, self.dangle, mask=self.mask_list[i])
+                optimizable.atoms.rotate_dihedral(*dihedral_idcs, dangle, mask=self.mask_list[i])
 
     def _get_current_dihedral(self, optimizable):
         if isinstance(self.dihedral_idcs_list[0], int):
@@ -68,7 +73,7 @@ class DihedralScan(Optimizer):
     def step(self):
         optimizable = self.optimizable
         if not self.current_step == 0:
-            self._step(optimizable)
+            self._step(optimizable, self.dangle)
         self.current_step += 1
         self.update()
         
