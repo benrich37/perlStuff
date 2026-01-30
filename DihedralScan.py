@@ -55,20 +55,20 @@ class DihedralScan(Optimizer):
         elif isinstance(self.dihedral_idcs_list[0][0], int):
             return optimizable.atoms.get_dihedral(*self.dihedral_idcs_list[0], mic=True)
         
-    def update(self, optimizable):
-        forces = optimizable.get_forces()
-        energy = optimizable.get_potential_energy()
+    def update(self):
+        forces = self.optimizable.atoms.get_forces()
+        energy = self.optimizable.atoms.get_potential_energy()
         self.energy_list.append(energy)
         self.forces_list.append(forces)
         self.dump((self.current_step, self.energy_list, self.forces_list))
-        print(f"Step {self.current_step}/{self.total_steps} ({self._get_current_dihedral(optimizable):.2f}): Energy = {energy} eV")
+        print(f"Step {self.current_step}/{self.total_steps} ({self._get_current_dihedral(self.optimizable):.2f}): Energy = {energy} eV")
 
     def step(self):
         optimizable = self.optimizable
         if not self.current_step == 0:
             self._step(optimizable)
-            self.current_step += 1
-        self.update(optimizable)
+        self.current_step += 1
+        self.update()
         
 
     def converged(self, forces=None):
