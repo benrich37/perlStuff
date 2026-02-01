@@ -344,12 +344,14 @@ def run_rotation_scan(atoms_obj, ion_dir_path, calc_fn,
         "center": center,
         "init_step": init_step,
     }
+    log_fn("Scan initializing")
+    log_fn(", ".join([f"{k}: {v}" for k, v in rot_scan_kwargs.items()]))
     dyn = optimizer(atoms_obj, ion_dir_path, RotationScan, 
                     opt_alpha=None,
                     **rot_scan_kwargs,
                     )
     log_fn("Scan starting")
-    log_fn(", ".join([f"{k}: {v}" for k, v in rot_scan_kwargs.items()]))
+    # log_fn(", ".join([f"{k}: {v}" for k, v in rot_scan_kwargs.items()]))
     # log_fn(f"Dangle: {dangle}, nsteps: {nsteps}, mol_idcs: {dihedral_list}, mask_list: {mask_list}")
     dyn.run()
     log_fn(f"Finished in {dyn.nsteps}/{nsteps}")
