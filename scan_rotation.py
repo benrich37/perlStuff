@@ -105,6 +105,7 @@ def read_opt_inputs(fname = "opt_input"):
         if "center" in key:
             opt_inputs_dict["center"] = parse_dihedral_idcs(val)[0]
         if "axis" in key:
+            proc_val = parse_dihedral_idcs(val)
             opt_inputs_dict["axis"] = parse_dihedral_idcs(val)[0]
         if ("mask" in key):
             opt_inputs_dict["mask_list"] = parse_dihedral_idcs(val)
@@ -151,7 +152,7 @@ def parse_dihedral_idcs_entry(entry: str):
         return None
     return [int(v.strip()) for v in entry.split(',')]
 
-def parse_dihedral_idcs(line: str):
+def parse_dihedral_idcs(line: str) -> list[list[int]]:
     # Expected format: (i1, i2, i3, i4), (i1, i2, i3, i4), ...
     pieces = []
     start_idcs = [i for i, v in enumerate(line) if v == "("]
@@ -164,8 +165,8 @@ def parse_dihedral_idcs(line: str):
     dihedral_list = []
     for piece in pieces:
         dihedral_list.append(parse_dihedral_idcs_entry(piece))
-    if len(dihedral_list) == 1:
-        return dihedral_list[0]
+    # if len(dihedral_list) == 1:
+    #     return dihedral_list[0]
     return dihedral_list
 
 
