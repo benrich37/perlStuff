@@ -433,7 +433,7 @@ def main(debug=False):
     mol_idcs = oid["mol_idcs"]
 
     os.chdir(work_dir)
-    opt_dir = work_dir / "scan_dihedral"
+    opt_dir = work_dir / "scan"
     structure = work_dir / structure
     opt_dir = str(opt_dir)
     structure = str(structure)
