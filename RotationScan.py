@@ -9,7 +9,7 @@ def _rotate_substructure(atoms: OptimizableAtoms, axis_vector, center_vector, mo
         if not i in mol_idcs:
             del tmp_atoms[i]
     tmp_atoms.rotate(dangle, axis_vector, center=center_vector)
-    posns = atoms.get_positions()
+    posns = atoms.atoms.get_positions()
     for i, idx in enumerate(mol_idcs):
         posns[idx] = tmp_atoms[i].position
     atoms.set_positions(posns)
