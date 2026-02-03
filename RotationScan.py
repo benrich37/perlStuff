@@ -3,17 +3,29 @@ from ase import Atoms
 import numpy as np
 
 def _rotate_substructure(atoms: OptimizableAtoms, axis_vector, center_vector, mol_idcs, dangle) -> None:
+    sorted_mol_idcs = sorted(mol_idcs)
     work_atoms = atoms if not isinstance(atoms, OptimizableAtoms) else atoms.atoms
+    chem_syms = work_atoms.get_chemical_symbols()
+    original_order = [sym for i, sym in enumerate(chem_syms) if i in mol_idcs]
     axis_vector /= np.linalg.norm(axis_vector)
     # tmp_atoms: Atoms = work_atoms.copy()
     # for i in list(range(len(work_atoms)))[::-1]:
     #     if not i in mol_idcs:
     #         del tmp_atoms[i]
-    tmp_atoms: Atoms = work_atoms[mol_idcs].copy()
+    # tmp_atoms: Atoms = Atoms(cell=work_atoms.get_cell(), pbc=work_atoms.get_pbc())
+    # for i in mol_idcs:
+    #     tmp_atoms.append(work_atoms[i])
+    tmp_atoms: Atoms = work_atoms[sorted_mol_idcs].copy()
+    new_order = [sym for i, sym in enumerate(tmp_atoms.get_chemical_symbols())]
+    assert original_order == new_order, "Internal error: atom ordering mismatch during tmp_atoms creation."
     tmp_atoms.rotate(dangle, axis_vector, center=center_vector)
+    new_order = [sym for i, sym in enumerate(tmp_atoms.get_chemical_symbols())]
+    assert original_order == new_order, "Internal error: atom ordering mismatch during tmp_atoms rotation."
     posns = work_atoms.get_positions()
-    for i, idx in enumerate(mol_idcs):
+    for i, idx in enumerate(sorted_mol_idcs):
         posns[idx] = tmp_atoms[i].position
+        assert work_atoms.get_chemical_symbols()[idx] == tmp_atoms.get_chemical_symbols()[i], \
+            "Internal error: atom ordering mismatch during position assignment."
     work_atoms.set_positions(posns)
 
 def rotate_substructure(atoms, mol_idcs, axis_idcs, center_idx, dangle) -> None:
