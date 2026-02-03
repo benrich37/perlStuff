@@ -5,10 +5,11 @@ import numpy as np
 def _rotate_substructure(atoms: OptimizableAtoms, axis_vector, center_vector, mol_idcs, dangle) -> None:
     work_atoms = atoms if not isinstance(atoms, OptimizableAtoms) else atoms.atoms
     axis_vector /= np.linalg.norm(axis_vector)
-    tmp_atoms = work_atoms.copy()
-    for i in list(range(len(work_atoms)))[::-1]:
-        if not i in mol_idcs:
-            del tmp_atoms[i]
+    # tmp_atoms: Atoms = work_atoms.copy()
+    # for i in list(range(len(work_atoms)))[::-1]:
+    #     if not i in mol_idcs:
+    #         del tmp_atoms[i]
+    tmp_atoms: Atoms = work_atoms[mol_idcs].copy()
     tmp_atoms.rotate(dangle, axis_vector, center=center_vector)
     posns = work_atoms.get_positions()
     for i, idx in enumerate(mol_idcs):
