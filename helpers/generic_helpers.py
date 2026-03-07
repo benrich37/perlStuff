@@ -1032,8 +1032,13 @@ def append_keys_vals_to_cmds_list(cmds, keys, vals, allow_duplicates = False):
     return cmds
 def get_lattice_cmds_list(cmds, lat_iters, pbc):
     lat_cmds = duplicate(cmds)
-    keys = ["lattice-minimize", "latt-move-scale"]
-    vals = [f"nIterations {lat_iters}", ' '.join([str(int(v)) for v in pbc])]
+    keys = ["lattice-minimize", 
+            # "latt-move-scale"
+            ]
+    vals = [f"nIterations {lat_iters}"]
+    if not True in [c.strip().startswith("latt-move-scale") for c in [cmd[0] for cmd in lat_cmds]]:
+        keys.append("latt-move-scale")
+        vals.append(' '.join([str(int(v)) for v in pbc]))
     lat_cmds = append_keys_vals_to_cmds_list(lat_cmds, keys, vals, allow_duplicates = False)
     return lat_cmds
 
