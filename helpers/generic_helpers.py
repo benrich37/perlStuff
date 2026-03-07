@@ -1001,7 +1001,8 @@ def has_coords_out_files(dir):
 def get_lattice_cmds_dict(cmds, lat_iters, pbc):
     lat_cmds = duplicate(cmds)
     lat_cmds["lattice-minimize"] = f"nIterations {lat_iters}"
-    lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
+    if not "latt-move-scale" in lat_cmds.keys():
+        lat_cmds["latt-move-scale"] = ' '.join([str(int(v)) for v in pbc])
     return lat_cmds
 
 def get_ionic_opt_cmds_dict(cmds, lat_iters):
