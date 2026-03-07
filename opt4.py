@@ -76,6 +76,7 @@ def read_opt_inputs(fname = "opt_input"):
         "direct_coords": False,
         "freeze_map": None,
         "freeze_all_but_map": None,
+        "use_cart": False,
     }
     for input in inputs:
         key, val = input[0], input[1]
@@ -111,6 +112,8 @@ def read_opt_inputs(fname = "opt_input"):
                 opt_inputs_dict["use_jdft"] = False
             else:
                 pass
+        if "cart" in key:
+            opt_inputs_dict["use_cart"] = "true" in val.lower()
         if ("freeze" in key):
             if ("base" in key):
                 opt_inputs_dict["freeze_base"] = "true" in val.lower()
@@ -631,7 +634,7 @@ def main(debug=False):
     lat_infile = cmds_list_to_infile(lat_cmds)
     ion_infile = get_ionic_opt_cmds_infile(base_infile, ion_iters=max_steps, use_jdft=use_jdft)
     
-    get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, ignore_cache_for_aimd=True)
+    get_arb_calc = lambda root, cmds, use_cart: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, ignore_cache_for_aimd=True, use_cart=oid["use_cart"])
     #get_calc = lambda root: _get_calc(exe_cmd, cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
     get_lat_calc = lambda root: get_arb_calc(root, lat_infile)
     #get_lat_calc = lambda root: _get_calc(exe_cmd, lat_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log, direct_coords=direct_coords)
