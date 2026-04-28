@@ -311,15 +311,17 @@ def opt_serial(calc_root: Path, atoms_obj: Atoms, atomss: list[Atoms], labelss: 
     log_fn("Import pyjdftx")
     import pyjdftx
     ion_dir_path = calc_root / "serial_opt"
-    ion_dir_path.mkdir(exist_ok=True)
+    # ion_dir_path.mkdir(exist_ok=True)
+    jdftx_run_path = ion_dir_path / "jdftx_run"
+    jdftx_run_path.mkdir(exist_ok=True, parents=True)
     log_fn("Creating calculator object")
-    calculator_object = calc_fn(ion_dir_path)
+    calculator_object = calc_fn(jdftx_run_path)
     log_fn(f"Setting calculator to atoms object")
     atoms_obj.set_calculator(calculator_object)
     atoms_obj = apply_freeze_func(atoms_obj)
     for i, label in enumerate(labelss):
         atoms_obj = update_atoms(atoms_obj, atomss[i], log_fn=log_fn)
-        dyn = optimizer(atoms_obj, ion_dir_path, opter)
+        dyn = optimizer(atoms_obj, jdftx_run_path, opter)
         working_label(ion_dir_path, label, log_fn=log_fn)
         dyn.run(fmax=fmax, steps=max_steps)
         log_results(ion_dir_path, atoms_obj, label, log_fn=log_fn)

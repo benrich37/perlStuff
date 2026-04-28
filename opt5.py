@@ -377,10 +377,8 @@ def main(debug=False):
     oid = read_opt_inputs()
     use_jdft = False
     work_dir = Path(oid["work_dir"])
-    # outfile_protect(work_dir)
     structure = oid["structure"]
     restart = oid["restart"]
-    #fix_restart_bug(work_dir, restart)
     lat_iters = oid["lat_iters"]
     gpu = oid["gpu"]
     pbc = oid["pbc"]
