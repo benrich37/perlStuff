@@ -364,7 +364,7 @@ def main(debug=False):
     opt_log(f"Given opt_input: {oid}")
     apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, None, exclude_freeze_count, freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map, log_fn=opt_log)
     # finished labels should already be excluded, and working labels should be updated to current structure
-    atomss, labels = get_atomss(work_dir, prefix="POSCAR_", suffix=".gjf", format="gaussian-in")
+    atomss, labels = get_atomss(work_dir, prefix="POSCAR_", suffix=".gjf", read_format="gaussian-in")
     if not len(atomss):
         opt_log(f"No POSCAR_*.gjf files found in {work_dir} for trajectory recording - looking for POSCAR_* (vasp) files instead")
         atomss, labels = get_atomss(work_dir, prefix="POSCAR_", suffix="", format="vasp")
