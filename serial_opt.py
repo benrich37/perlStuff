@@ -235,7 +235,7 @@ def check_pbc(pbc: list[bool] | tuple[bool, bool, bool] | None, infile: JDFTXInf
             raise ValueError(f"Given pbc {pbc} does not match pbc from infile {pbc_infile}")
         return pbc
     
-def get_atomss(calc_root, prefix="POSCAR_", suffix=".gjf", read_format="gaussian-in", log_fn=log_def) -> tuple[list[Atoms], list[str]]:
+def get_atomss(calc_root: Path, prefix="POSCAR_", suffix=".gjf", read_format="gaussian-in", log_fn=log_def) -> tuple[list[Atoms], list[str]]:
     files = [f for f in os.listdir(calc_root) if f.startswith(prefix) and f.endswith(suffix)]
     try:
         files = sorted(files, key=lambda x: int(x[len(prefix):-len(suffix)]))
@@ -244,7 +244,7 @@ def get_atomss(calc_root, prefix="POSCAR_", suffix=".gjf", read_format="gaussian
     atomss = []
     labels = []
     for f in files:
-        atoms = read(opj(calc_root, f), format=format)
+        atoms = read(calc_root / f, format=read_format)
         atomss.append(atoms)
         labels.append(f[len(prefix):-len(suffix)])
     log_fn(f"Found {len(atomss)} files with prefix {prefix} and suffix {suffix} in {calc_root} with labels {labels}")
