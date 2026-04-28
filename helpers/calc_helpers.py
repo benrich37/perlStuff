@@ -50,7 +50,7 @@ def _get_calc(exe_cmd, cmds, root, pseudoSet="GBRV", debug=False, debug_fn=None,
 def _get_calc_new(
         exe_cmd, cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, 
         debug=False, debug_fn=None, log_fn=log_def, direct_coords=False, label=None,
-        ignore_cache_for_aimd=True,
+        ignore_cache_for_aimd=True, use_cart=False,
         ):
     cmds = fix_dump_cmds_list(cmds)
     if label is None:
@@ -78,6 +78,7 @@ def _get_calc_new(
         #debug=debug,
         log_func=log_fn,
         force_evaluation=force_eval,
+        use_cart=use_cart,
     )
 
 def get_calc_pyjdftx(

@@ -98,6 +98,7 @@ class JDFTx(Calculator):
             log_func = None,
             force_evaluation=False,
             use_zero_velocities=False,
+            use_cart=False,
             debug=True, **kwargs
             ):
         """ 
@@ -161,6 +162,7 @@ class JDFTx(Calculator):
         self.command = command
         self.ignore_state_on_failure = ignore_state_on_failure
         self.use_zero_velocities = use_zero_velocities
+        self.use_cart = use_cart
 
         if (restart is None) and detect_restart:
             self.parameters = None
@@ -255,7 +257,7 @@ class JDFTx(Calculator):
                 fixed_atom_idcs += list(constraint.get_indices())
             #fixed_atom_inds = atoms.constraints[0].get_indices()
             structure.site_properties["selective_dynamics"] = [0 if i in fixed_atom_idcs else 1 for i in range(len(atoms))]
-        infile = JDFTXInfile.from_structure(structure)
+        infile = JDFTXInfile.from_structure(structure, write_cart_coords=self.use_cart)
         infile += self.infile
         if "thermostat-velocity" in atoms.info:
             if isinstance(atoms.info["thermostat-velocity"], dict):
