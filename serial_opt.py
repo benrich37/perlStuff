@@ -253,7 +253,7 @@ def get_atomss(calc_root: Path, prefix="POSCAR_", suffix=".gjf", read_format="ga
 
 def trim_finished_atoms(calc_root, atomss, labels, prefix="CONTCAR_", suffix=".gjf", read_format="gaussian-in", log_fn=log_def) -> tuple[list[Atoms], list[str]]:
     files = [f for f in os.listdir(calc_root) if f.startswith(prefix) and f.endswith(suffix)]
-    finished_labels = [f[len(prefix):-len(suffix)] for f in files]
+    finished_labels = [label for label in labels if label_is_finished(calc_root / "serial_opt", label)]
     atomss_trimmed = []
     labels_trimmed = []
     for atoms, label in zip(atomss, labels):
@@ -367,7 +367,7 @@ def main(debug=False):
     atomss, labels = get_atomss(work_dir, prefix="POSCAR_", suffix=".gjf", read_format="gaussian-in")
     if not len(atomss):
         opt_log(f"No POSCAR_*.gjf files found in {work_dir} for trajectory recording - looking for POSCAR_* (vasp) files instead")
-        atomss, labels = get_atomss(work_dir, prefix="POSCAR_", suffix="", format="vasp")
+        atomss, labels = get_atomss(work_dir, prefix="POSCAR_", suffix="", read_format="vasp")
     atoms_obj = atomss[0].copy()
     structure = write_dummy_structure(work_dir, atoms_obj)
     cmds = get_cmds_dict(str(work_dir), ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias)
