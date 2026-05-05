@@ -170,6 +170,8 @@ def finished(dirname):
     with open(opj(dirname, "finished.txt"), 'w') as f:
         f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": Done")
 
+def is_finished(dirname):
+    return ope(opj(dirname, "finished.txt"))
 
 def get_atoms_from_lat_dir(dir):
     outfile = opj(dir, "out")
@@ -652,19 +654,21 @@ def main(debug=False):
             atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
             log_fn=opt_log
             )
+    ion_finished = is_finished(opt_dir)
     restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
     opt_log(f"Finding/copying any state files to {opt_dir}")
     copy_best_state_files([work_dir, lat_dir, opt_dir], opt_dir, log_fn=opt_log)
-    if use_jdft:
-        if restarting_ion:
-            make_jdft_logx(opt_dir, log_fn=opt_log)
-        opt_log(f"Running ion optimization with JDFTx optimizer")
-        run_ion_opt(atoms, opt_dir, get_ion_calc, apply_freeze_func, log_fn=opt_log)
-    else:
-        opt_log(f"Running ion optimization with ASE optimizer")
-        run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=opt_log)
-    opt_log("Optimization finished.")
+    if not ion_finished:
+        if use_jdft:
+            if restarting_ion:
+                make_jdft_logx(opt_dir, log_fn=opt_log)
+            opt_log(f"Running ion optimization with JDFTx optimizer")
+            run_ion_opt(atoms, opt_dir, get_ion_calc, apply_freeze_func, log_fn=opt_log)
+        else:
+            opt_log(f"Running ion optimization with ASE optimizer")
+            run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, freeze_base = freeze_base, freeze_tol = freeze_tol, freeze_count = freeze_count, log_fn=opt_log)
+        opt_log("Optimization finished.")
     if ddec6:
         opt_log(f"Running DDEC6 analysis in {opt_dir}")
         try:
@@ -673,7 +677,7 @@ def main(debug=False):
             if ope(opj(opt_dir, "jdftx_run")):
                 opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
                 run_ddec6(opj(opt_dir, "jdftx_run"))
-    # copy_result_files(opt_dir, work_dir)
+        # copy_result_files(opt_dir, work_dir)
 
 from sys import exc_info
 

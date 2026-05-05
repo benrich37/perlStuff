@@ -698,7 +698,10 @@ a_d_key = "DDEC6_AD_PATH"
 exe_key = "DDEC6_EXE_PATH"
 
 
-def main(calc_dir: str = None, a_d_env_path: str = None, exe_env_path: str = None, file_prefix: str = ""):
+def main(calc_dir: str = None, a_d_env_path: str = None, exe_env_path: str = None, file_prefix: str = "", force: bool = False):
+    if (ran_successfully(calc_dir)) and (not force):
+        print(f"DDEC6 already ran successfully in {calc_dir}. Use force=True to re-run.")
+        return None
     pbc = [True, True, True] # Hard-coding the periodic boundary condition to all True for now
     # Hypothetically, the pbc should inform the program which axes to add redundant layering to.
     # However, I've only achieved successful runs without guess-normalizing by setting all to True.
