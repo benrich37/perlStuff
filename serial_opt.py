@@ -383,8 +383,9 @@ from sys import exc_info
 
 if __name__ == '__main__':
     try:
-        if is_head():
-            main()
+        main()
+        # if is_head():
+        #     main()
     except Exception as e:
         print(f"Error: {e}", file=stderr)
         print(exc_info())
