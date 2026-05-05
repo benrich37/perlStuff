@@ -14,6 +14,7 @@ from sys import exit, stderr
 from os import getcwd
 import subprocess
 from pymatgen.io.jdftx.inputs import JDFTXInfile
+from ase import Atoms
 
 cwd = getcwd()
 debug = "perlStuff" in cwd
