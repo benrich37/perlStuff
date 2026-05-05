@@ -7,7 +7,7 @@ from ase.optimize import FIRE
 from ase import Atoms
 from datetime import datetime
 from helpers.generic_helpers import get_inputs_list, fix_work_dir, optimizer, get_cmds_dict, get_apply_freeze_func
-from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_val
+from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_val, is_head
 from helpers.calc_helpers import get_calc_pyjdftx
 from helpers.generic_helpers import add_cohp_cmds, add_elec_density_dump
 from helpers.generic_helpers import log_def, cmds_dict_to_list, cmds_list_to_infile
@@ -357,7 +357,7 @@ def main(debug=False):
     os.chdir(work_dir)
     opt_dir = work_dir / "serial_opt"
     opt_dir = str(opt_dir)
-    opt_log = get_log_fn(str(work_dir), "serial_opt", False, restart=restart)
+    opt_log = get_log_fn(str(work_dir), "serial_opt", False, restart=restart, parallel=True)
     opt_log(f"Given opt_input: {oid}")
     apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, None, exclude_freeze_count, freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map, log_fn=opt_log)
     # finished labels should already be excluded, and working labels should be updated to current structure
@@ -383,7 +383,8 @@ from sys import exc_info
 
 if __name__ == '__main__':
     try:
-        main()
+        if is_head():
+            main()
     except Exception as e:
         print(f"Error: {e}", file=stderr)
         print(exc_info())

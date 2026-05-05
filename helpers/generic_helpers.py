@@ -18,6 +18,7 @@ from pymatgen.io.jdftx.joutstructures import JOutStructures, JOutStructure
 from pymatgen.io.ase import AseAtomsAdaptor
 from pymatgen.core import Structure
 from pymatgen.io.jdftx.inputs import JDFTXInfile
+from pymatgen.io.jdftx.inputs import JDFTXInfile, clean_lines
 
 
 def log_def(s):
@@ -167,7 +168,7 @@ def insert_el(filename):
     with open(filename, 'w') as f:
         f.write('\n'.join(contents))
 
-from pymatgen.io.jdftx.inputs import JDFTXInfile, clean_lines
+
 
 def read_inputs_dict_helper(work_dir, inputs_name="inputs"):
     inpfname = opj(work_dir, inputs_name)
