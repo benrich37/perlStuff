@@ -81,6 +81,25 @@ def _get_calc_new(
         use_cart=use_cart,
     )
 
+def backup_pyjdftx_out_file(outfile: Path, log_fn=log_def):
+    outfile_name = outfile.name
+    cur_fs = outfile.parent.iterdir()
+    cur_backups = [f for f in cur_fs if f.is_file() and f.name.startswith(outfile_name)]
+    cur_backups_end_parts = [f.name.split(outfile_name)[-1] for f in cur_backups]
+    cur_backups_idcs = []
+    for part in cur_backups_end_parts:
+        idx = -1
+        try:
+            idx = int(part)
+        except ValueError:
+            pass
+        cur_backups_idcs.append(idx)
+    max_idx = max(cur_backups_idcs) if len(cur_backups_idcs) > 0 else -1
+    backup_name = f"{outfile_name}{max_idx + 1}"
+    backup_path = outfile.parent / backup_name
+    outfile.rename(backup_path)
+    log_fn(f"Backed up existing output file {outfile} to {backup_path}")
+
 def get_calc_pyjdftx(
         cmds: list[str], root, pseudoSet="GBRV", pseudoDir=None, 
         debug=False, debug_fn=None, log_fn=log_def, direct_coords=False, label=None,
@@ -97,7 +116,9 @@ def get_calc_pyjdftx(
     outfile = Path(root) / f"{label}.out"
     append = False
     if outfile.exists():
-        append = True
+        log_fn(f"Output file {outfile} already exists. Backing up old output file.")
+        backup_pyjdftx_out_file(outfile)
+        # append = True
     pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, str(outfile), append)
     force_eval = False
     if ignore_cache_for_aimd:
