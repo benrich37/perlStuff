@@ -15,6 +15,7 @@ from os import getcwd
 import subprocess
 from pymatgen.io.jdftx.inputs import JDFTXInfile
 from ase import Atoms
+from pathlib import Path
 
 cwd = getcwd()
 debug = "perlStuff" in cwd
@@ -165,7 +166,8 @@ def finished(dirname):
         f.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + ": Done")
 
 def is_finished(dirname):
-    return ope(opj(dirname, "finished.txt"))
+    # return ope(opj(dirname, "finished.txt"))
+    return (Path(dirname) / "finished.txt").is_file()
 
 def get_atoms_from_lat_dir(dir):
     outfile = opj(dir, "out")
