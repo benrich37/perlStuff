@@ -856,7 +856,11 @@ def optimizer(atoms, root, opter, opt_alpha=150, **kwargs):
     traj = opj(root, "opt.traj")
     log = opj(root, "opt.log")
     restart = opj(root, "hessian.pckl")
-    dyn = opter(atoms, trajectory=traj, logfile=log, restart=restart, **kwargs)
+    # kwargs.update({"trajectory": traj, "logfile": log, "restart": restart})
+    kwargs.update({"restart": restart})
+    if is_head():
+        kwargs.update({"trajectory": traj, "logfile": log})
+    dyn = opter(atoms, **kwargs)
     return dyn
 
 
