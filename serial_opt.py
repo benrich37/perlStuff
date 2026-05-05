@@ -312,7 +312,8 @@ def opt_serial(calc_root: Path, atoms_obj: Atoms, atomss: list[Atoms], labelss: 
     log_fn("Creating calculator object")
     calculator_object = calc_fn(jdftx_run_path)
     log_fn(f"Setting calculator to atoms object")
-    atoms_obj.set_calculator(calculator_object)
+    atoms_obj.calc = calculator_object
+    # atoms_obj.set_calculator(calculator_object)
     atoms_obj = apply_freeze_func(atoms_obj)
     for i, label in enumerate(labelss):
         atoms_obj = update_atoms(atoms_obj, atomss[i], log_fn=log_fn)
