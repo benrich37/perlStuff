@@ -3,19 +3,14 @@
 import os
 from os.path import exists as ope, join as opj
 from ase.io import read, write as _write
-from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
-from ase import Atoms, Atom
-from ase.constraints import FixAtoms
+from ase import Atoms
 from datetime import datetime
-from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
-    get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint, get_cmds_dict, get_apply_freeze_func
-from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val
-from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_calc_new, get_calc_pyjdftx
-from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out, add_elec_density_dump
-from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort, cmds_dict_to_list, cmds_list_to_infile
-from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
+from helpers.generic_helpers import get_inputs_list, fix_work_dir, optimizer, get_cmds_dict, get_apply_freeze_func
+from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_val
+from helpers.calc_helpers import get_calc_pyjdftx
+from helpers.generic_helpers import add_cohp_cmds, add_elec_density_dump
+from helpers.generic_helpers import log_def, cmds_dict_to_list, cmds_list_to_infile
 from scripts.run_ddec6_v3 import main as run_ddec6
 from sys import exit, stderr
 from shutil import copy as cp

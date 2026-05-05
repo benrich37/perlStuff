@@ -516,7 +516,25 @@ def get_log_file_name(work, calc_type):
     fname = opj(work, calc_type + ".iolog")
     return fname
 
-def get_log_fn(work, calc_type, print_bool, restart=False):
+def is_head():
+    rank = None
+    try:
+        from mpi4py import MPI
+        rank = MPI.COMM_WORLD.rank
+    except Exception as e:
+        pass
+    if rank is None:
+        return True
+    elif rank == 0:
+        return True
+    return False
+
+def get_log_fn(work, calc_type, print_bool, restart=False, parallel=False):
+    if parallel:
+        if is_head():
+            return get_log_fn(work, calc_type, print_bool, restart=restart, parallel=False)
+        else:
+            return lambda s: None
     fname = get_log_file_name(work, calc_type)
     if not restart:
         if ope(fname):

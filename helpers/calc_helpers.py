@@ -94,7 +94,11 @@ def get_calc_pyjdftx(
     cmds = fix_dump_cmds_list(cmds)
     if label is None:
         label = "jdftx"
-    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, str(Path(root) / f"{label}.out"), False)
+    outfile = Path(root) / f"{label}.out"
+    append = False
+    if outfile.exists():
+        append = True
+    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, str(outfile), append)
     force_eval = False
     if ignore_cache_for_aimd:
         if not isinstance(cmds, JDFTXInfile):
