@@ -424,6 +424,9 @@ def main(debug=False):
     get_vib_calc = lambda root: get_arb_calc(root, vib_infile)
     sp_finished = is_finished(sp_dir)
     vib_finished = is_finished(vib_dir)
+    if not vib_finished:
+        opt_log(f"Running vibrational calculation in {vib_dir}")
+        run_ion_opt(atoms, vib_dir, get_vib_calc, apply_freeze_func, log_fn=opt_log)
     if not sp_finished:
         opt_log(f"Running single point calculation in {sp_dir}")
         run_ion_opt(atoms, sp_dir, get_sp_calc, apply_freeze_func, log_fn=opt_log)
@@ -435,9 +438,7 @@ def main(debug=False):
             if ope(opj(sp_dir, "jdftx_run")):
                 opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
                 run_ddec6(opj(sp_dir, "jdftx_run"))
-    if not vib_finished:
-        opt_log(f"Running vibrational calculation in {vib_dir}")
-        run_ion_opt(atoms, vib_dir, get_vib_calc, apply_freeze_func, log_fn=opt_log)
+    
 
 from sys import exc_info
 
