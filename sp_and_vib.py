@@ -436,7 +436,7 @@ def main(debug=False):
             run_ddec6(sp_dir)
         except Exception as e:
             if ope(opj(sp_dir, "jdftx_run")):
-                opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
+                opt_log(f"Error running DDEC6: {e}, tryin again in {opj(sp_dir, 'jdftx_run')}")
                 run_ddec6(opj(sp_dir, "jdftx_run"))
     
 
