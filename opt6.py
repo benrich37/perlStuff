@@ -389,7 +389,9 @@ def check_pbc(pbc: list[bool] | tuple[bool, bool, bool] | None, infile: JDFTXInf
             raise ValueError(f"Given pbc {pbc} does not match pbc from infile {pbc_infile}")
         return pbc
 
-def main(debug=False):
+from sys import exc_info
+
+try:
     # work_dir, structure, fmax, max_steps, gpu, restart, pbc, lat_iters, use_jdft, freeze_base, freeze_tol, ortho, save_state, pseudoSet, bias, ddec6 = read_opt_inputs()
     oid = read_opt_inputs()
     use_jdft = False
@@ -413,9 +415,6 @@ def main(debug=False):
     freeze_all_but_map = oid["freeze_all_but_map"]
     if exclude_freeze_count > freeze_count:
         raise ValueError(f"freeze_count ({freeze_count}) must be greater than exclude_freeze_count ({exclude_freeze_count})")
-    
-
-
     fmax = oid["fmax"]
     os.chdir(work_dir)
     opt_dir = work_dir / "ion_opt"
@@ -443,18 +442,59 @@ def main(debug=False):
     base_infile = cmds_list_to_infile(cmds)
     pbc = check_pbc(pbc, base_infile)
     atoms.pbc = pbc
-    # get_arb_calc = lambda root, cmds: get_calc_pyjdftx(cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, direct_coords=direct_coords)
-    # get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, ignore_cache_for_aimd=True)
-    # get_calc = lambda root: get_arb_calc(root, base_infile)
-    # check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
-    # lat_finished = Path(Path(lat_dir) / "finished.txt").exists()
-    # do_lat = (lat_iters > 0) and (not lat_finished)
-    # restarting_lat = do_lat and restart
     restarting_lat = False
     restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
     opt_log(f"Running ion optimization with ASE optimizer")
-    run_ase_opt(atoms, opt_dir, FIRE, base_infile, fmax, max_steps, apply_freeze_func, pseudoSet=pseudoSet, log_fn=opt_log)
+    ###
+    # run_ase_opt(atoms, opt_dir, FIRE, base_infile, fmax, max_steps, apply_freeze_func, pseudoSet=pseudoSet, log_fn=opt_log)
+    ###
+    opt_log("Importing pyjdftx")
+    import pyjdftx
+    opt_log("Importing mpi4py")
+    from mpi4py import MPI
+    opt_log("Applying freeze constraints to atoms object")
+    atoms_obj = apply_freeze_func(atoms)
+    opt_log("Initializing pyjdftx")
+    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "output/jdftx.log", False)
+    opt_log("Creating calculator object")
+    # calculator_object = calc_fn(ion_dir_path)
+    # sinfile = strip_infile_of_reserved_commands(infile)
+    kwargs = translate_infile_to_pydftx_kwargs(base_infile, {})
+    kwargs["pseudopotentials"] = pseudoSet
+    kwargs["commands"] = str(strip_infile_of_reserved_commands(base_infile))
+    calculator_object = pyjdftx.ase.JDFTx(
+        directory="output",
+        label="jdftx",
+        **kwargs
+    )
+    opt_log(f"Setting calculator to atoms object")
+    atoms_obj.set_calculator(calculator_object)
+    opt_log("ASE ionic optimization starting")
+    ##
+    # dyn = optimizer(atoms_obj, opt_dir, FIRE)
+    ##
+    FIRE_kwargs = {
+        "a": (150 / 70) * 0.1
+    }
+    kwargs.pop("opt_alpha", None)
+    traj = opj(opt_dir, "opt.traj")
+    log = opj(opt_dir, "opt.log")
+    restart = opj(opt_dir, "hessian.pckl")
+    # kwargs.update({"trajectory": traj, "logfile": log, "restart": restart})
+    kwargs.update({"restart": restart})
+    if is_head():
+        kwargs.update({"trajectory": traj, "logfile": log})
+    dyn = FIRE(atoms, **FIRE_kwargs)
+    ##
+    opt_log("Optimization starting")
+    opt_log(f"Fmax: {fmax}, max_steps: {max_steps}")
+    dyn.run(fmax=fmax, steps=max_steps)
+    opt_log(f"Finished in {dyn.nsteps}/{max_steps}")
+    finished(opt_dir)
+    calculator_object.dump_end()
+    pyjdftx.finalize(True)
+    ###
     opt_log("Optimization finished.")
     if ddec6:
         opt_log(f"Running DDEC6 analysis in {opt_dir}")
@@ -465,14 +505,8 @@ def main(debug=False):
                 opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
                 run_ddec6(opj(opt_dir, "jdftx_run"), file_prefix="jdftx.")
     # copy_result_files(opt_dir, work_dir)
-
-from sys import exc_info
-
-if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print(f"Error: {e}", file=stderr)
-        print(exc_info())
-        exit(1)
+except Exception as e:
+    print(f"Error: {e}", file=stderr)
+    print(exc_info())
+    exit(1)
 
