@@ -498,14 +498,14 @@ try:
     log = opj(opt_dir, "opt.log")
     restart = opj(opt_dir, "hessian.pckl")
     # kwargs.update({"trajectory": traj, "logfile": log, "restart": restart})
-    kwargs.update({"restart": restart})
+    FIRE_kwargs.update({"restart": restart})
     
     if is_head():
     # if True:
         opt_log("Running in head node - attaching trajectory and log file to optimizer kwargs")
         opt_log("trajectory path: " + traj)
         opt_log("log file path: " + log)
-        kwargs.update({"trajectory": traj, "logfile": log})
+        FIRE_kwargs.update({"trajectory": traj, "logfile": log})
     
     dyn = FIRE(atoms, **FIRE_kwargs)
     ##
