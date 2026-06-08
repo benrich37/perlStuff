@@ -24,6 +24,8 @@ import numpy as np
 import subprocess
 from pymatgen.io.jdftx.inputs import JDFTXInfile
 from pathlib import Path
+import pyjdftx
+from JDFTx_pyjdftx import translate_infile_to_pydftx_kwargs, strip_infile_of_reserved_commands
 
 cwd = getcwd()
 debug = "perlStuff" in cwd
@@ -319,12 +321,11 @@ def get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdf
 #     sp_logx(atoms, "sp.logx", do_cell=do_cell)
 #     finished(root)
 
-from JDFTx_pyjdftx import translate_infile_to_pydftx_kwargs, strip_infile_of_reserved_commands
 
 def run_ase_opt(atoms_obj, ion_dir_path, opter, infile: JDFTXInfile, fmax, max_steps, apply_freeze_func, log_fn=log_def, _failed_before=False, pseudoSet="GBRV"):
     atoms_obj = apply_freeze_func(atoms_obj)
     log_fn("Import pyjdftx")
-    import pyjdftx
+    
     log_fn("Creating calculator object")
     # calculator_object = calc_fn(ion_dir_path)
     # sinfile = strip_infile_of_reserved_commands(infile)
@@ -424,33 +425,26 @@ def main(debug=False):
     structure = check_structure(structure, str(work_dir), log_fn=opt_log)
     atoms, restart = get_atoms(structure, restart, str(work_dir), opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
     # exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
+    opt_log("getting cmds dict")
     cmds = get_cmds_dict(str(work_dir), ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias)
+    opt_log(f"cmds dict: {cmds}")
     cmds = cmds_dict_to_list(cmds)
     opt_log(f"Setting {structure} to atoms object")
     cmds = add_cohp_cmds(cmds, ortho=ortho)
     if ddec6:
         cmds = add_elec_density_dump(cmds)
+    opt_log(f"Final cmds list: {cmds}")
     base_infile = cmds_list_to_infile(cmds)
     pbc = check_pbc(pbc, base_infile)
     atoms.pbc = pbc
-    get_arb_calc = lambda root, cmds: get_calc_pyjdftx(cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, direct_coords=direct_coords)
+    # get_arb_calc = lambda root, cmds: get_calc_pyjdftx(cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, direct_coords=direct_coords)
     # get_arb_calc = lambda root, cmds: _get_calc_new(exe_cmd, cmds, root, pseudoSet=pseudoSet, debug=debug, log_fn=opt_log, ignore_cache_for_aimd=True)
-    get_calc = lambda root: get_arb_calc(root, base_infile)
-    check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
-    lat_finished = Path(Path(lat_dir) / "finished.txt").exists()
-    do_lat = (lat_iters > 0) and (not lat_finished)
-    restarting_lat = do_lat and restart
-    # implement this when the time comes
-    # lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
-    # lat_infile = cmds_list_to_infile(lat_cmds)
-    # get_lat_calc = lambda root: get_arb_calc(root, lat_infile)
-    # if do_lat:
-    #     if restarting_lat:
-    #         make_jdft_logx(lat_dir, log_fn=opt_log)
-    #     atoms, structure = run_lat_opt(
-    #         atoms, structure, lat_dir, work_dir, get_lat_calc, freeze_base=freeze_base, freeze_tol=freeze_tol, freeze_count=freeze_count,
-    #         log_fn=opt_log
-    #         )
+    # get_calc = lambda root: get_arb_calc(root, base_infile)
+    # check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
+    # lat_finished = Path(Path(lat_dir) / "finished.txt").exists()
+    # do_lat = (lat_iters > 0) and (not lat_finished)
+    # restarting_lat = do_lat and restart
+    restarting_lat = False
     restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
     opt_log(f"Running ion optimization with ASE optimizer")
