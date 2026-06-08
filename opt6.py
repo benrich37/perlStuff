@@ -459,7 +459,7 @@ try:
     atoms_obj = apply_freeze_func(atoms)
     calc_dir = Path(opt_dir) / "jdftx_run"
     opt_log(f"Creating directory for pyjdftx calculation: {calc_dir}")
-    calc_dir.mkdir(exist_ok=True)
+    calc_dir.mkdir(exist_ok=True, parents=True)
     outfile = calc_dir / "out"
     opt_log(f"Writing initial out file for pyjdftx at {outfile}")
     with open(outfile, 'a') as f:
