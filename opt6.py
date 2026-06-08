@@ -467,9 +467,10 @@ try:
     opt_log(f"Creating directory for pyjdftx calculation: {calc_dir}")
     calc_dir.mkdir(exist_ok=True, parents=True)
     outfile = calc_dir / "out"
-    opt_log(f"Writing initial out file for pyjdftx at {outfile}")
-    with open(outfile, 'a') as f:
-        f.write("creating file\n")
+    if not outfile.exists():
+        opt_log(f"Writing initial out file for pyjdftx at {outfile}")
+        with open(outfile, 'a') as f:
+            f.write("creating file\n")
     opt_log("Initializing pyjdftx")
     # pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "ion_opt/jdftx_run/out", False)
     pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "ion_opt/jdftx_run/out", True)
@@ -500,8 +501,8 @@ try:
     # kwargs.update({"trajectory": traj, "logfile": log, "restart": restart})
     FIRE_kwargs.update({"restart": restart})
     
-    if is_head():
-    # if True:
+    # if is_head():
+    if True:
         opt_log("Running in head node - attaching trajectory and log file to optimizer kwargs")
         opt_log("trajectory path: " + traj)
         opt_log("log file path: " + log)
