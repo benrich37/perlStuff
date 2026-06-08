@@ -73,7 +73,7 @@ def find_file_name(calc_dir: str, suffix: str, prefix: str):
     if not ope(file_path):
         print(f"Could not find file {file_path}, trying without prefix {prefix}")
         filename = suffix
-        file_path = opj(calc_dir, f"{file_path}")
+        file_path = opj(calc_dir, f"{filename}")
     if not ope(file_path):
         print(f"Could not find file {file_path} either, returning None")
         return None
