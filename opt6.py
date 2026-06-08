@@ -333,7 +333,7 @@ def run_ase_opt(atoms_obj, ion_dir_path, opter, infile: JDFTXInfile, fmax, max_s
     kwargs["pseudopotentials"] = pseudoSet
     kwargs["commands"] = str(strip_infile_of_reserved_commands(infile))
     calculator_object = pyjdftx.ase.JDFTx(
-        directory=ion_dir_path,
+        # directory=ion_dir_path,
         label="jdftx",
         **kwargs
     )
