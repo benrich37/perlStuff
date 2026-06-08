@@ -319,15 +319,25 @@ def get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdf
 #     sp_logx(atoms, "sp.logx", do_cell=do_cell)
 #     finished(root)
 
+from JDFTx_pyjdftx import translate_infile_to_pydftx_kwargs, strip_infile_of_reserved_commands
 
-def run_ase_opt(atoms_obj, ion_dir_path, opter, calc_fn, fmax, max_steps, apply_freeze_func, log_fn=log_def, _failed_before=False):
+def run_ase_opt(atoms_obj, ion_dir_path, opter, infile: JDFTXInfile, fmax, max_steps, apply_freeze_func, log_fn=log_def, _failed_before=False, pseudoSet="GBRV"):
+    atoms_obj = apply_freeze_func(atoms_obj)
     log_fn("Import pyjdftx")
     import pyjdftx
     log_fn("Creating calculator object")
-    calculator_object = calc_fn(ion_dir_path)
+    # calculator_object = calc_fn(ion_dir_path)
+    # sinfile = strip_infile_of_reserved_commands(infile)
+    kwargs = translate_infile_to_pydftx_kwargs(infile, {})
+    kwargs["pseudopotentials"] = pseudoSet
+    kwargs["commands"] = str(strip_infile_of_reserved_commands(infile))
+    calculator_object = pyjdftx.ase.JDFTx(
+        directory=ion_dir_path,
+        label="jdftx",
+        **kwargs
+    )
     log_fn(f"Setting calculator to atoms object")
     atoms_obj.set_calculator(calculator_object)
-    atoms_obj = apply_freeze_func(atoms_obj)
     log_fn("ASE ionic optimization starting")
     dyn = optimizer(atoms_obj, ion_dir_path, opter)
     log_fn("Optimization starting")
@@ -444,7 +454,7 @@ def main(debug=False):
     restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
     opt_log(f"Running ion optimization with ASE optimizer")
-    run_ase_opt(atoms, opt_dir, FIRE, get_calc, fmax, max_steps, apply_freeze_func, log_fn=opt_log)
+    run_ase_opt(atoms, opt_dir, FIRE, base_infile, fmax, max_steps, apply_freeze_func, pseudoSet=pseudoSet, log_fn=opt_log)
     opt_log("Optimization finished.")
     if ddec6:
         opt_log(f"Running DDEC6 analysis in {opt_dir}")
