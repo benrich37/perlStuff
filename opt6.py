@@ -457,10 +457,14 @@ try:
     from mpi4py import MPI
     opt_log("Applying freeze constraints to atoms object")
     atoms_obj = apply_freeze_func(atoms)
-    opt_log("Initializing pyjdftx")
-    (Path(opt_dir) / "jdftx_run").mkdir(exist_ok=True)
-    with open(Path(opt_dir) / "jdftx_run" / "out", 'w') as f:
+    calc_dir = Path(opt_dir) / "jdftx_run"
+    opt_log(f"Creating directory for pyjdftx calculation: {calc_dir}")
+    calc_dir.mkdir(exist_ok=True)
+    outfile = calc_dir / "out"
+    opt_log(f"Writing initial out file for pyjdftx at {outfile}")
+    with open(outfile, 'a') as f:
         f.write("creating file\n")
+    opt_log("Initializing pyjdftx")
     pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "ion_opt/jdftx_run/out", False)
     opt_log("Creating calculator object")
     # calculator_object = calc_fn(ion_dir_path)
