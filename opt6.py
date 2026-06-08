@@ -456,7 +456,10 @@ try:
     opt_log("Applying freeze constraints to atoms object")
     atoms_obj = apply_freeze_func(atoms)
     opt_log("Initializing pyjdftx")
-    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "output/jdftx.log", False)
+    (Path(opt_dir) / "jdftx_run").mkdir(exist_ok=True)
+    with open(Path(opt_dir) / "jdftx_run" / "out", 'w') as f:
+        f.write("creating file\n")
+    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "ion_opt/jdftx_run/out", False)
     opt_log("Creating calculator object")
     # calculator_object = calc_fn(ion_dir_path)
     # sinfile = strip_infile_of_reserved_commands(infile)
@@ -464,7 +467,7 @@ try:
     kwargs["pseudopotentials"] = pseudoSet
     kwargs["commands"] = str(strip_infile_of_reserved_commands(base_infile))
     calculator_object = pyjdftx.ase.JDFTx(
-        directory="output",
+        directory="ion_opt/jdftx_run",
         label="jdftx",
         **kwargs
     )
@@ -483,8 +486,8 @@ try:
     restart = opj(opt_dir, "hessian.pckl")
     # kwargs.update({"trajectory": traj, "logfile": log, "restart": restart})
     kwargs.update({"restart": restart})
-    if is_head():
-        kwargs.update({"trajectory": traj, "logfile": log})
+    # if is_head():
+    #     kwargs.update({"trajectory": traj, "logfile": log})
     dyn = FIRE(atoms, **FIRE_kwargs)
     ##
     opt_log("Optimization starting")
