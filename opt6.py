@@ -212,12 +212,16 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
     # If an atoms is found in the ion_opt dir, then an ionic minimization was run
     # (So even if the lattice opt was run, the ion opt will be the most recent)
     atoms = get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_fn)
+    if atoms is None:
+        atoms = get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_fn, prefix="")
     if not atoms is None:
         structure = opj(opt_dir, "POSCAR")
         write(structure, atoms, format="vasp")
         return structure, restart
     if atoms is None:
         atoms = get_restart_atoms_from_opt_dir(lat_dir, log_fn=log_fn)
+    if atoms is None:
+        atoms = get_restart_atoms_from_opt_dir(lat_dir, log_fn=log_fn, prefix="")
     if not atoms is None:
         structure = opj(lat_dir, "POSCAR")
         write(structure, atoms, format="vasp")
@@ -241,6 +245,8 @@ def get_restart_atoms(structure, restart, work_dir, opt_dir, lat_dir, use_jdft, 
     # If an atoms is found in the ion_opt dir, then an ionic minimization was run
     # (So even if the lattice opt was run, the ion opt will be the most recent)
     atoms = get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_fn)
+    if atoms is None:
+        atoms = get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_fn, prefix="")
     if atoms is None:
         atoms = get_restart_atoms_from_opt_dir(lat_dir, log_fn=log_fn)
     if atoms is None:
