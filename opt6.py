@@ -235,9 +235,9 @@ def get_restart_structure(structure, restart, work_dir, opt_dir, lat_dir, use_jd
 
 
 def get_restart_atoms(structure, restart, work_dir, opt_dir, lat_dir, use_jdft, log_fn=log_def):
-    for path in [opt_dir, lat_dir]:
-        if not ope(path):
-            make_dir(path)
+    # for path in [opt_dir, lat_dir]:
+    #     if not ope(path):
+    #         make_dir(path)
     # If an atoms is found in the ion_opt dir, then an ionic minimization was run
     # (So even if the lattice opt was run, the ion opt will be the most recent)
     atoms = get_restart_atoms_from_opt_dir(opt_dir, log_fn=log_fn)
@@ -427,7 +427,9 @@ try:
     opt_log(f"Given opt_input: {oid}")
     apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, None, exclude_freeze_count, freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map, log_fn=opt_log)
     #opt_log(f"main: {freeze_idcs}")
+    opt_log("Getting structure and restart status")
     structure = check_structure(structure, str(work_dir), log_fn=opt_log)
+    opt_log(f"Structure: {structure}")
     atoms, restart = get_atoms(structure, restart, str(work_dir), opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
     # exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
     opt_log("getting cmds dict")
