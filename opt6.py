@@ -331,7 +331,7 @@ def run_ase_opt(atoms_obj, ion_dir_path, opter, infile: JDFTXInfile, fmax, max_s
     log_fn("Applying freeze constraints to atoms object")
     atoms_obj = apply_freeze_func(atoms_obj)
     log_fn("Initializing pyjdftx")
-    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, f"{ion_dir_path.name}/jdftx.log", False)
+    pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "output/jdftx.log", False)
     log_fn("Creating calculator object")
     # calculator_object = calc_fn(ion_dir_path)
     # sinfile = strip_infile_of_reserved_commands(infile)
@@ -339,7 +339,7 @@ def run_ase_opt(atoms_obj, ion_dir_path, opter, infile: JDFTXInfile, fmax, max_s
     kwargs["pseudopotentials"] = pseudoSet
     kwargs["commands"] = str(strip_infile_of_reserved_commands(infile))
     calculator_object = pyjdftx.ase.JDFTx(
-        # directory=ion_dir_path,
+        directory="output",
         label="jdftx",
         **kwargs
     )
