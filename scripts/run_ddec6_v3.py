@@ -109,6 +109,8 @@ def write_ddec6_inputs(
     """
     outname = find_file_name(calc_dir, "out", file_prefix)
     if outname is None:
+        outname = find_file_name(calc_dir, "out", "")
+    if outname is None:
         raise ValueError("Could not find out file")
     dfname = find_file_name(calc_dir, "n", file_prefix)
     dupfname = find_file_name(calc_dir, "n_up", file_prefix)
