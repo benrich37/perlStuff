@@ -496,6 +496,7 @@ try:
     
     if is_head():
     # if True:
+        opt_log("Running in head node - attaching trajectory and log file to optimizer kwargs")
         kwargs.update({"trajectory": traj, "logfile": log})
     
     dyn = FIRE(atoms, **FIRE_kwargs)
