@@ -15,7 +15,7 @@ def translate_infile_to_pydftx_kwargs(infile: JDFTXInfile, kwargs) -> dict:
                                 int(infile["kpoint-folding"]["n1"]), 
                                 int(infile["kpoint-folding"]["n2"])])
     if "elec-initial-charge" in infile:
-        kwargs["initial_charges"] = -float(infile["elec-initial-charge"])
+        kwargs["charge"] = -float(infile["elec-initial-charge"])
     kwargs["nbands"] = int(infile.get("elec-n-bands", {"n": 0})["n"])
     if "lattice-minimize" in infile:
         kwargs["variable_cell"] = infile["lattice-minimize"].get("nIterations", 0) > 0
