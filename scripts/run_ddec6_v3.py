@@ -680,7 +680,7 @@ def run_ddec6_looper(calc_dir: str, a_d_env_path: str, pbc: list[bool], exe_env_
     run_ddec6_runner(calc_dir, a_d_env_path, pbc, exe_env_path, file_prefix=file_prefix)
     success = ran_successfully(calc_dir)
     if success:
-        return None
+        return True
     else:
         offset = 0
         print(f"Run without norm unsuccessful. Attempting with norm offset starting at {offset}")
@@ -693,6 +693,7 @@ def run_ddec6_looper(calc_dir: str, a_d_env_path: str, pbc: list[bool], exe_env_
                 print(f"Run unsuccessful with offset={offset}. Re-evaluating offset")
                 offset = adjust_offset(offset, calc_dir)
                 print(f"Rerunning with offset={offset}")
+    return False
 
 pbc_default = [True, True, True]
 
@@ -735,7 +736,11 @@ def main(calc_dir: str = None, a_d_env_path: str = None, exe_env_path: str = Non
 
     # If your fftbox is too coarse, adding max_space=0.1 can force ddec6 to work with a linear interpolation onto
     # a finer density grid.
-    run_ddec6_looper(calc_dir, a_d_env_path, pbc, exe_env_path, file_prefix=file_prefix)
+    success = run_ddec6_looper(calc_dir, a_d_env_path, pbc, exe_env_path, file_prefix=file_prefix)
+    if success:
+        print(f"DDEC6 ran successfully in {calc_dir}")
+    else:
+        print(f"DDEC6 did not run successfully in {calc_dir} after multiple attempts. Please check the output and try adjusting the normalization offset or max_space parameters.")
 
 if __name__ == "__main__":
     main()

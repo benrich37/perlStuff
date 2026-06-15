@@ -521,12 +521,13 @@ try:
     opt_log("Optimization finished.")
     if ddec6:
         opt_log(f"Running DDEC6 analysis in {opt_dir}")
-        try:
-            run_ddec6(opt_dir, file_prefix="jdftx.")
-        except Exception as e:
-            if ope(opj(opt_dir, "jdftx_run")):
-                opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
-                run_ddec6(opj(opt_dir, "jdftx_run"), file_prefix="jdftx.")
+        run_ddec6(calc_dir, file_prefix="jdftx.")
+        # try:
+        #     run_ddec6(opt_dir, file_prefix="jdftx.")
+        # except Exception as e:
+        #     if ope(opj(opt_dir, "jdftx_run")):
+        #         opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
+        #         run_ddec6(opj(opt_dir, "jdftx_run"), file_prefix="jdftx.")
     # copy_result_files(opt_dir, work_dir)
 except Exception as e:
     print(f"Error: {e}", file=stderr)
