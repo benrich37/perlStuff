@@ -519,7 +519,7 @@ try:
     pyjdftx.finalize(True)
     ###
     opt_log("Optimization finished.")
-    if ddec6:
+    if ddec6 and (is_head()):
         opt_log(f"Running DDEC6 analysis in {opt_dir}")
         run_ddec6(calc_dir, file_prefix="jdftx.")
         # try:
