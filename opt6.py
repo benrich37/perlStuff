@@ -3,30 +3,18 @@
 import os
 from os.path import exists as ope, join as opj
 from ase.io import read, write as _write
-from ase.io.trajectory import Trajectory
 from ase.optimize import FIRE
-from ase import Atoms, Atom
-from ase.constraints import FixAtoms
 from datetime import datetime
-from helpers.generic_helpers import get_cmds_list, get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, \
-    get_atoms_list_from_out, get_do_cell, add_freeze_surf_base_constraint, get_cmds_dict, get_apply_freeze_func
-from helpers.generic_helpers import _write_contcar, get_log_fn, dump_template_input, read_pbc_val, is_head
-from helpers.calc_helpers import _get_calc, get_exe_cmd, _get_calc_new, get_calc_pyjdftx
-from helpers.generic_helpers import check_submit, get_atoms_from_coords_out, add_cohp_cmds, get_atoms_from_out, add_elec_density_dump
-from helpers.generic_helpers import copy_best_state_files, has_coords_out_files, get_lattice_cmds_list, get_ionic_opt_cmds_list
-from helpers.generic_helpers import _write_opt_iolog, check_for_restart, log_def, check_structure, log_and_abort, cmds_dict_to_list, cmds_list_to_infile
-from helpers.logx_helpers import out_to_logx, _write_logx, finished_logx, sp_logx, opt_dot_log_faker
+from helpers.generic_helpers import get_inputs_list, fix_work_dir, optimizer, remove_dir_recursive, get_cmds_dict, get_apply_freeze_func
+from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_val, is_head
+from helpers.generic_helpers import add_cohp_cmds, get_atoms_from_out, add_elec_density_dump
+from helpers.generic_helpers import log_def, check_structure, log_and_abort, cmds_dict_to_list, cmds_list_to_infile
 from scripts.run_ddec6_v3 import main as run_ddec6
 from sys import exit, stderr
-from shutil import copy as cp
 from os import getcwd
-import numpy as np
-import subprocess
 from pymatgen.io.jdftx.inputs import JDFTXInfile
-from pathlib import Path
-# import pyjdftx
-# from mpi4py import MPI
 from JDFTx_pyjdftx import translate_infile_to_pydftx_kwargs, strip_infile_of_reserved_commands
+from pathlib import Path
 
 cwd = getcwd()
 debug = "perlStuff" in cwd
@@ -339,8 +327,6 @@ def run_ase_opt(atoms_obj, ion_dir_path, opter, infile: JDFTXInfile, fmax, max_s
     log_fn("Initializing pyjdftx")
     pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "output/jdftx.log", False)
     log_fn("Creating calculator object")
-    # calculator_object = calc_fn(ion_dir_path)
-    # sinfile = strip_infile_of_reserved_commands(infile)
     kwargs = translate_infile_to_pydftx_kwargs(infile, {})
     kwargs["pseudopotentials"] = pseudoSet
     kwargs["commands"] = str(strip_infile_of_reserved_commands(infile))
@@ -454,9 +440,6 @@ try:
     restarting_ion = (not restarting_lat) and (not ope(opj(opt_dir, "finished.txt")))
     restarting_ion = restarting_ion and restart
     opt_log(f"Running ion optimization with ASE optimizer")
-    ###
-    # run_ase_opt(atoms, opt_dir, FIRE, base_infile, fmax, max_steps, apply_freeze_func, pseudoSet=pseudoSet, log_fn=opt_log)
-    ###
     opt_log("Importing pyjdftx")
     import pyjdftx
     opt_log("Importing mpi4py")
@@ -475,8 +458,6 @@ try:
     # pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "ion_opt/jdftx_run/out", False)
     pyjdftx.initialize(MPI.COMM_WORLD, MPI.COMM_WORLD, "ion_opt/jdftx_run/out", True)
     opt_log("Creating calculator object")
-    # calculator_object = calc_fn(ion_dir_path)
-    # sinfile = strip_infile_of_reserved_commands(infile)
     kwargs = translate_infile_to_pydftx_kwargs(base_infile, {})
     kwargs["pseudopotentials"] = pseudoSet
     kwargs["commands"] = str(strip_infile_of_reserved_commands(base_infile))
@@ -488,9 +469,6 @@ try:
     opt_log(f"Setting calculator to atoms object")
     atoms_obj.set_calculator(calculator_object)
     opt_log("ASE ionic optimization starting")
-    ##
-    # dyn = optimizer(atoms_obj, opt_dir, FIRE)
-    ##
     FIRE_kwargs = {
         "a": (150 / 70) * 0.1
     }
@@ -498,9 +476,7 @@ try:
     traj = opj(opt_dir, "opt.traj")
     log = opj(opt_dir, "opt.log")
     restart = opj(opt_dir, "hessian.pckl")
-    # kwargs.update({"trajectory": traj, "logfile": log, "restart": restart})
     FIRE_kwargs.update({"restart": restart})
-    
     # if is_head():
     if True:
         opt_log("Running in head node - attaching trajectory and log file to optimizer kwargs")
@@ -522,13 +498,6 @@ try:
     if ddec6 and (is_head()):
         opt_log(f"Running DDEC6 analysis in {opt_dir}")
         run_ddec6(calc_dir, file_prefix="jdftx.")
-        # try:
-        #     run_ddec6(opt_dir, file_prefix="jdftx.")
-        # except Exception as e:
-        #     if ope(opj(opt_dir, "jdftx_run")):
-        #         opt_log(f"Error running DDEC6: {e}, tryin again in {opj(opt_dir, 'jdftx_run')}")
-        #         run_ddec6(opj(opt_dir, "jdftx_run"), file_prefix="jdftx.")
-    # copy_result_files(opt_dir, work_dir)
 except Exception as e:
     print(f"Error: {e}", file=stderr)
     print(exc_info())

@@ -732,9 +732,11 @@ def get_freeze_surf_base_constraint_by_idcs(atoms, freeze_idcs, log_fn=log_def):
     c = FixAtoms(mask=mask)
     return c
 
-def get_freeze_surf_base_constraint_by_count(atoms, freeze_count=1, exclude_freeze_count=0, log_fn=log_def):
-    direct_posns = atoms.get_scaled_positions()
-    idcs = np.argsort(direct_posns[:,2])
+def get_freeze_surf_base_constraint_by_count(atoms: Atoms, freeze_count=1, exclude_freeze_count=0, log_fn=log_def):
+    # direct_posns = atoms.get_scaled_positions()
+    # idcs = np.argsort(direct_posns[:,2])
+    posns = atoms.get_positions()
+    idcs = np.argsort(posns[:, 2])
     mask = []
     for a in atoms:
         mask.append(False)
