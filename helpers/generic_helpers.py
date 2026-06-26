@@ -740,7 +740,7 @@ def get_freeze_surf_base_constraint_by_count(atoms: Atoms, freeze_count=1, exclu
     mask = []
     for a in atoms:
         mask.append(False)
-    for i in range(exclude_freeze_count, freeze_count):
+    for i in range(exclude_freeze_count, freeze_count+exclude_freeze_count):
         mask[idcs[i]] = True
     log_fn(f"Imposing atom freezing for bottom {freeze_count} atoms")
     log_str = ""

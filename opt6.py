@@ -51,7 +51,7 @@ def read_opt_inputs(fname = "opt_input"):
     opt_inputs_dict = {
         "work_dir": None,
         "structure": None,
-        "fmax": 0.03,
+        "fmax": 0.05,
         "max_steps": 100,
         "gpu": True,
         "restart": False,
