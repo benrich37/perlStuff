@@ -78,6 +78,23 @@ def find_file_name(calc_dir: str, suffix: str, prefix: str):
         print(f"Could not find file {file_path} either, returning None")
         return None
     return filename
+
+def find_file_name_multi_options(calc_dir: str, suffix: str, prefixes: str):
+    for prefix in prefixes:
+        filename = f"{prefix}{suffix}"
+        file_path = opj(calc_dir, f"{filename}")
+        if ope(file_path):
+            return filename
+        # if not ope(file_path):
+        #     print(f"Could not find file {file_path}, trying without prefix {prefix}")
+        #     filename = suffix
+        #     file_path = opj(calc_dir, f"{filename}")
+        # if not ope(file_path):
+        #     print(f"Could not find file {file_path} either, returning None")
+        #     return None
+        # return filename
+    # raise ValueError(f"Could not find file with suffix {suffix} and any of the prefixes {prefixes} in {calc_dir}")
+    return None
         
 
 
@@ -107,14 +124,17 @@ def write_ddec6_inputs(
             file_prefix (str): Prefix for jdftx output files `out` and `n`/`n_up`/`n_dn` (ie put "jdftx." if your out file is
                 "jdftx.out"). Leave as empty string if no prefix.
     """
-    outname = find_file_name(calc_dir, "out", file_prefix)
-    if outname is None:
-        outname = find_file_name(calc_dir, "out", "")
-    if outname is None:
-        raise ValueError("Could not find out file")
+    outname = find_file_name_multi_options(calc_dir, "out", ["jdftx.", file_prefix, "", "in."])
+    # outname = find_file_name(calc_dir, "out", file_prefix)
+    # if outname is None:
+    #     outname = find_file_name(calc_dir, "out", "")
+    # if outname is None:
+    #     raise ValueError("Could not find out file")
     dfname = find_file_name(calc_dir, "n", file_prefix)
-    dupfname = find_file_name(calc_dir, "n_up", file_prefix)
-    ddnfname = find_file_name(calc_dir, "n_dn", file_prefix)
+    # dupfname = find_file_name(calc_dir, "n_up", file_prefix)
+    # ddnfname = find_file_name(calc_dir, "n_dn", file_prefix)
+    dupfname = find_file_name_multi_options(calc_dir, "n_up", ["in.", "jdftx.", file_prefix, "", ])
+    ddnfname = find_file_name_multi_options(calc_dir, "n_dn", ["in.", "jdftx.", file_prefix, "", ])
     if pbc is None:
         pbc = get_pbc(calc_dir)
     outfile = opj(calc_dir, outname)
@@ -701,7 +721,9 @@ a_d_key = "DDEC6_AD_PATH"
 exe_key = "DDEC6_EXE_PATH"
 
 
-def main(calc_dir: str = None, a_d_env_path: str = None, exe_env_path: str = None, file_prefix: str = "", force: bool = False):
+def main(calc_dir: str = None, a_d_env_path: str = None, exe_env_path: str = None, file_prefix: str = "in.", force: bool = False):
+    if calc_dir is None:
+        calc_dir = getcwd()
     if (ran_successfully(calc_dir)) and (not force):
         print(f"DDEC6 already ran successfully in {calc_dir}. Use force=True to re-run.")
         return None
@@ -710,8 +732,6 @@ def main(calc_dir: str = None, a_d_env_path: str = None, exe_env_path: str = Non
     # However, I've only achieved successful runs without guess-normalizing by setting all to True.
     # This needs to be tested and refined more, because it still feels like I did something wrong with that,
     # but the difference in results is pretty minimal so I'm leaving it as so for now.
-    if calc_dir is None:
-        calc_dir = getcwd()
     if exe_env_path is None:
         if exe_key in environ:
             exe_env_path = environ[exe_key]
