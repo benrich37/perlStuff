@@ -625,7 +625,7 @@ def main(debug=False):
     use_srun = not debug
     if Path(work_dir).parts[0] == "anvil":
         use_srun = False
-    exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
+    exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=use_srun)
     cmds = get_cmds_dict(work_dir, ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias)
     cmds = cmds_dict_to_list(cmds)
     
