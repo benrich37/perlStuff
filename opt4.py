@@ -648,7 +648,7 @@ def main(debug=False):
     #get_ion_calc = lambda root: _get_calc(exe_cmd, ion_cmds, root, pseudoSet=pseudoSet, log_fn=opt_log)
     get_ion_calc = lambda root: get_arb_calc(root, ion_infile)
     get_calc = lambda root: get_arb_calc(root, base_infile)
-    check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
+    # check_submit(gpu, os.getcwd(), "opt", log_fn=opt_log)
     lat_finished = ope(opj(lat_dir, "finished.txt"))
     do_lat = (lat_iters > 0) and (not lat_finished)
     restarting_lat = do_lat and restart
