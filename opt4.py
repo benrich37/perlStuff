@@ -623,7 +623,14 @@ def main(debug=False):
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     atoms, restart = get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
     use_srun = not debug
+    print(f"work_dir: {work_dir}")
+    print(f"Path(work_dir).parts: {Path(work_dir).parts}")
+    print(f"Path(work_dir).parts[0]: {Path(work_dir).parts[0]}")
     if Path(work_dir).parts[0] == "anvil":
+        print("Running on anvil - not using srun")
+        use_srun = False
+    elif "anvil" in Path(work_dir).parts:
+        print("Running on anvil - not using srun")
         use_srun = False
     exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=use_srun)
     cmds = get_cmds_dict(work_dir, ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias)
