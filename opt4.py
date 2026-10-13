@@ -641,8 +641,9 @@ def main(debug=False):
     atoms.pbc = pbc
     # cmds = add_dos_cmds(cmds, atoms, save_dos, save_pdos)
     cmds = add_cohp_cmds(cmds, ortho=ortho)
-    if ddec6:
-        cmds = add_elec_density_dump(cmds)
+    cmds = add_elec_density_dump(cmds)
+    # if ddec6:
+    #     cmds = add_elec_density_dump(cmds)
     base_infile = cmds_list_to_infile(cmds)
     lat_cmds = get_lattice_cmds_list(cmds, lat_iters, pbc)
     lat_infile = cmds_list_to_infile(lat_cmds)
