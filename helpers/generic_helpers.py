@@ -198,7 +198,7 @@ def read_inputs_dict_helper(work_dir, inputs_name="inputs"):
                     cmd = line[:line.index(" ")]
                     rest = line.rstrip("\n")[line.index(" ") + 1:]
                     if cmd not in ignore:
-                        if not "dump " in cmd:
+                        if cmd != "dump":
                             input_cmds[cmd] = rest
                         else:
                             freq = rest.split(" ")[0]
@@ -696,7 +696,6 @@ def get_freeze_by_map(atoms, freeze_map: dict[str, list[int]], log_fn=log_def):
     return _get_freeze_by_map(atoms, freeze_map, False, log_fn=log_fn)
 
 def _get_freeze_by_map(atoms, freeze_map: dict[str, list[int]], ref_bool: bool, log_fn=log_def):
-    #log_fn(f"get_freeze_surf_base_constraint_by_idcs {freeze_idcs}")
     mask = [ref_bool for _ in range(len(atoms))]
     for el in freeze_map:
         el_idcs = [idx for idx, _el in enumerate(atoms.get_chemical_symbols()) if el == _el]
