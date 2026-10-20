@@ -143,12 +143,31 @@ SHE_work_val_Ha = 4.66/Hartree
 
 
 
+def _gather_tags(lines: list[str]) -> list[str]:
+    """Join JDFTx input lines ending in "\\" (line continuation) with the line after them.
+
+    Local copy of the former private pymatgen method JDFTXInfile._gather_tags, which pymatgen-core no longer has.
+    """
+    total_tag = ""
+    gathered_strings = []
+    for line in lines:
+        if line[-1] == "\\":  # "\" indicates line continuation
+            total_tag += line[:-1].strip() + " "  # remove \ and any extra whitespace
+        elif total_tag:  # then finished with line continuations
+            total_tag += line
+            gathered_strings.append(total_tag)
+            total_tag = ""
+        else:  # then append line like normal
+            gathered_strings.append(line)
+    return gathered_strings
+
+
 def read_inputs_dict_helper(work_dir, inputs_name="inputs"):
     inpfname = opj(work_dir, inputs_name)
     with open(Path(inpfname)) as file:
         string = file.read()
     lines: list[str] = list(clean_lines(string.splitlines()))
-    lines = JDFTXInfile._gather_tags(lines)
+    lines = _gather_tags(lines)
     if ope(inputs_name):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "initial-state",
                   "lattice-type", "opt", "max_steps", "fmax", 

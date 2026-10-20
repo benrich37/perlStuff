@@ -1,5 +1,6 @@
 from shutil import copy as cp
 import numpy as np
+import re
 from datetime import datetime as dt
 from ase import Atoms, Atom
 from ase.constraints import FixBondLength, FixAtoms
@@ -174,12 +175,14 @@ def read_inputs_dict_helper(work_dir, inputs_name="inputs"):
     inpfname = opj(work_dir, inputs_name)
     with open(Path(inpfname)) as file:
         string = file.read()
-    lines: list[str] = list(clean_lines(string.splitlines()))
-    lines = JDFTXInfile._gather_tags(lines)
+    # Join lines ending in "\" (line continuation) with the line after them
+    lines = re.sub(r"[ \t]*\\\n", " ", "\n".join(clean_lines(string.splitlines()))).splitlines()
     if ope(inputs_name):
         ignore = ["Orbital", "coords-type", "ion-species ", "density-of-states ", "initial-state",
                   "lattice-type", "opt", "max_steps", "fmax", 
                   "optimizer", "pseudos", "logfile", "restart", "econv", "safe-mode"]
+        # Tags that JDFTx only allows once, but whose entries can be split across lines here
+        merge_repeats = ["add-U"]
         input_cmds = {"dump End": ""}
         
         # with open(inpfname) as f:
@@ -198,7 +201,10 @@ def read_inputs_dict_helper(work_dir, inputs_name="inputs"):
                     cmd = line[:line.index(" ")]
                     rest = line.rstrip("\n")[line.index(" ") + 1:]
                     if cmd not in ignore:
-                        if cmd != "dump":
+                        if cmd in merge_repeats and cmd in input_cmds:
+                            # e.g. "add-U Fe d 0.1" + "add-U Ni d 0.2" -> "add-U Fe d 0.1 Ni d 0.2"
+                            input_cmds[cmd] += " " + rest
+                        elif cmd != "dump":
                             input_cmds[cmd] = rest
                         else:
                             freq = rest.split(" ")[0]
