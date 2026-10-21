@@ -2030,6 +2030,7 @@ def get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdf
             make_dir(d)
         if ope(structure):
             log_fn(f"Found {structure} for structure")
+            atoms = read(structure, format="vasp")
         else:
             log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
     else:

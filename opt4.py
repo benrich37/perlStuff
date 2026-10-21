@@ -349,6 +349,7 @@ def get_atoms(structure, restart, work_dir, opt_dir, lat_dir, lat_iters, use_jdf
             make_dir(d)
         if ope(structure):
             log_fn(f"Found {structure} for structure")
+            atoms = read(structure, format="vasp")
         else:
             log_and_abort(f"Requested structure {structure} not found", log_fn=log_fn)
     else:
@@ -368,10 +369,13 @@ def run_lat_opt_runner(
     log_fn("lattice optimization starting")
     atoms.get_forces()
     log_fn("lattice optimization finished - organizing output data")
-    outfile = opj(lat_dir, "out")
+    outfile1 = opj(lat_dir, "out")
+    outfile2 = opj(lat_dir, opj("jdftx_run", "out"))
     pbc = atoms.pbc
-    if ope(outfile):
-        atoms_obj: Atoms = get_atoms_from_out(outfile)
+    if ope(outfile2):
+        atoms_obj: Atoms = get_atoms_from_out(outfile2)
+    elif ope(outfile1):
+        atoms_obj: Atoms = get_atoms_from_out(outfile1)
     else:
         log_and_abort(f"No output data given - check error file", log_fn=log_fn)
     atoms_obj.pbc = pbc
@@ -380,7 +384,7 @@ def run_lat_opt_runner(
     structure_path = opj(lat_dir, "CONTCAR.gjf")
     write(structure_path, atoms_obj, format="gaussian-in")
     finished(lat_dir)
-    return atoms, structure
+    return atoms_obj, structure
 
 
 def run_lat_opt(atoms, structure, lat_dir, root, calc_fn, freeze_base = False, freeze_tol = 0., freeze_count = 0, log_fn=log_def, _failed_before=False):
