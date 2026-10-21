@@ -5,7 +5,7 @@ from datetime import datetime
 from helpers.generic_helpers import get_inputs_list, fix_work_dir, remove_dir_recursive, \
     get_atoms_list_from_out, get_do_cell, get_cmds_dict, get_apply_freeze_func
 from helpers.generic_helpers import get_log_fn, dump_template_input, read_pbc_val
-from helpers.calc_helpers import get_exe_cmd, _get_calc_new
+from helpers.calc_helpers import get_exe_cmd, _get_calc_new, apply_local_protections
 from helpers.generic_helpers import add_cohp_cmds, get_atoms_from_out, add_elec_density_dump
 from helpers.generic_helpers import log_def, check_structure, log_and_abort, cmds_dict_to_list, cmds_list_to_infile
 from helpers.logx_helpers import out_to_logx, _write_logx
@@ -305,7 +305,8 @@ def run_ion_opt(
     atoms_obj = apply_freeze_func(atoms_obj)
     log_fn("ionic optimization starting")
     pbc = atoms_obj.pbc
-    atoms_obj.get_properties(['energy'])
+    # Request no properties - vibrations outputs have no total energy, so just run the calculation
+    atoms_obj.get_properties([])
     log_fn("ionic optimization finished - organizing output data")
     outfile2 = opj(ion_dir_path, opj("jdftx_run", "out"))
     if ope(outfile2):
@@ -400,10 +401,13 @@ def main(debug=False):
     vib_dir = opj(work_dir, "vib/")
     opt_log = get_log_fn(work_dir, "sp_and_vib", False, restart=restart)
     opt_log(f"Given opt_input: {oid}")
+    oid = apply_local_protections(oid, log_fn=opt_log)
+    gpu = oid["gpu"]
+    ddec6 = oid["ddec6"]
     apply_freeze_func = get_apply_freeze_func(freeze_base, freeze_tol, freeze_count, None, exclude_freeze_count, freeze_map=freeze_map, freeze_all_but_map=freeze_all_but_map, log_fn=opt_log)
     structure = check_structure(structure, work_dir, log_fn=opt_log)
     atoms, restart = get_atoms(structure, True, work_dir, opt_dir, lat_dir, lat_iters, use_jdft, log_fn=opt_log)
-    exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=not debug)
+    exe_cmd = get_exe_cmd(gpu, opt_log, use_srun=(not debug) and (not oid["local"]))
     cmds_vib = get_cmds_dict(work_dir, ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias, inputs_name="inputs_vib")
     cmds_vib = cmds_dict_to_list(cmds_vib)
     cmds_sp = get_cmds_dict(work_dir, ref_struct=structure, log_fn=opt_log, pbc=pbc, bias=bias, inputs_name="inputs_sp")

@@ -305,7 +305,8 @@ def run_ion_opt(
     atoms_obj = apply_freeze_func(atoms_obj)
     log_fn("ionic optimization starting")
     pbc = atoms_obj.pbc
-    atoms_obj.get_properties(['energy'])
+    # Request no properties - vibrations outputs have no total energy, so just run the calculation
+    atoms_obj.get_properties([])
     log_fn("ionic optimization finished - organizing output data")
     outfile2 = opj(ion_dir_path, opj("jdftx_run", "out"))
     if ope(outfile2):

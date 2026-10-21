@@ -16,9 +16,9 @@ python -m unittest test_checks/unit_schedule_readers.py
 python -m unittest test_checks.unit_helpers.TestGeomHelpers.test_read_pbc   # single test
 ```
 
-[test_checks/local_opt4.py](test_checks/local_opt4.py) runs `opt4.py` end to end against a local CPU JDFTx build, using a tiny H2 system (~16 s total). It shims `srun` and skips if no working `jdftx` is found. The executable comes from `PERLSTUFF_TEST_JDFTX`, then `$JDFTx`, then `../jdftx/build/jdftx`. Pseudopotentials default to `/Volumes/Ext4TB/scratch_backup/perl_home/pseudopotentials`, which matches the remote layout.
+[test_checks/local_jdftx_runs.py](test_checks/local_jdftx_runs.py) runs `opt4.py` and `vib2.py` end to end against a local CPU JDFTx build, using a tiny H2 system (~35 s total), and tests the local-run protections. It skips if no working `jdftx` is found. The executable comes from `PERLSTUFF_TEST_JDFTX`, then `$JDFTx`, then `../jdftx/build/jdftx`. Pseudopotentials default to `/Volumes/Ext4TB/scratch_backup/perl_home/pseudopotentials`, which matches the remote layout.
 ```
-PERLSTUFF_TEST_JDFTX=/path/to/jdftx python -m unittest -v test_checks/local_opt4.py
+PERLSTUFF_TEST_JDFTX=/path/to/jdftx python -m unittest -v test_checks/local_jdftx_runs.py
 ```
 
 Development uses the conda env `research`. `pymatgen.io.jdftx` (`JDFTXInfile`, `JDFTXOutfile`) comes from an editable checkout of pymatgen-core at `../pymatgen-core`, not from a released pymatgen. Changes or uncommitted work there directly change the `in` files these scripts write.
@@ -30,7 +30,9 @@ The scripts are designed to be run "dry" on a login node first. Each dry run exi
 2. If `psubmit.sh` is missing, a slurm template is dumped (`check_submit`). Newer scripts such as `opt4.py` have this call commented out.
 3. After that, submit with `sbatch psubmit.sh`. Progress goes to `<calc_type>.iolog` (via `get_log_fn`). Optimizations are also written as `.logx` files (Gaussian-log format readable by GaussView). These store Lowdin charges labeled as Mulliken.
 
-`debug = "perlStuff" in cwd`: running a script with the cwd inside this repo flips it into debug mode (no `srun`).
+Scripts define `debug = "perlStuff" in cwd` at module level, but `opt4.py` and `vib2.py` call `main()` without it, so it doesn't affect them.
+
+**Local runs:** `opt4.py` and `vib2.py` call `apply_local_protections` ([helpers/calc_helpers.py](helpers/calc_helpers.py)). A run counts as local when slurm is absent (no `srun` on PATH and no `SLURM_JOB_ID`); set `PERLSTUFF_LOCAL=1`/`0` to override. Locally, `gpu: True` is ignored (local machines have no GPU JDFTx), `srun` is not prepended, `$JDFTx` must be set, and DDEC6 is skipped unless `$DDEC6_EXE_PATH` exists. Other scripts don't have this protection yet.
 
 ## JDFTx command flow
 
@@ -41,7 +43,7 @@ The scripts are designed to be run "dry" on a login node first. Each dry run exi
   - [JDFTx.py](JDFTx.py): legacy, takes a command list (`_get_calc`).
   - [JDFTx_new.py](JDFTx_new.py): takes a `JDFTXInfile` and shells out to the executable (`_get_calc_new`). `opt4.py` uses this one.
   - [JDFTx_pyjdftx.py](JDFTx_pyjdftx.py): runs JDFTx in-process via `pyjdftx` + `mpi4py`. It translates the infile to pyjdftx kwargs and strips pyjdftx-reserved commands. `opt6*.py` use this one.
-- Executable: `get_exe_cmd` reads `$JDFTx` or `$JDFTx_GPU` and prepends `srun ` unless in debug mode or the work dir path contains `anvil`.
+- Executable: `get_exe_cmd` reads `$JDFTx` or `$JDFTx_GPU` and prepends `srun ` unless the caller passes `use_srun=False` (debug mode, local runs, or `opt4.py` with a work dir path containing `anvil`).
 
 Environment variables used: `JDFTx`, `JDFTx_GPU`, `JDFTx_pseudo` (pseudopotential root, with `pseudoset` as subdir), `DDEC6_EXE_PATH`, `DDEC6_AD_PATH`, `SLURM_NNODES`.
 

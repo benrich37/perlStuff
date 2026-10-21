@@ -1,7 +1,9 @@
 from os import getcwd as getcwd, environ as env_vars_dict
+from os.path import exists as ope
+from shutil import which
 from JDFTx import JDFTx, Wannier
 from JDFTx_new import JDFTx as JDFTx_new, JDFTXInfile
-from helpers.generic_helpers import log_def, fix_dump_cmds_list
+from helpers.generic_helpers import log_def, fix_dump_cmds_list, log_and_abort
 from pathlib import Path
 
 
@@ -178,6 +180,42 @@ def get_wannier_exe_cmd(gpu, log_fn):
     exe_cmd = 'srun ' + env_vars_dict[_get]
     log_fn(f"exe_cmd: {exe_cmd}")
     return exe_cmd
+
+local_env_key = "PERLSTUFF_LOCAL"
+
+
+def is_local_run():
+    """Return True if running on a local machine rather than a slurm cluster.
+
+    Detected by the absence of slurm (no srun on PATH and no SLURM_JOB_ID).
+    Set $PERLSTUFF_LOCAL to 1 or 0 to override the detection.
+    """
+    override = env_vars_dict.get(local_env_key, "").strip().lower()
+    if override:
+        return override in ["1", "true", "yes"]
+    return (which("srun") is None) and ("SLURM_JOB_ID" not in env_vars_dict)
+
+
+def apply_local_protections(oid: dict, log_fn=log_def) -> dict:
+    """Override opt_input settings that only make sense on remote machines when running locally.
+
+    Sets oid["local"]. On a local run, uses the CPU executable instead of the GPU one, and only
+    keeps DDEC6 if a chargemol executable is available. Callers should also skip srun if oid["local"].
+    """
+    oid["local"] = is_local_run()
+    if not oid["local"]:
+        return oid
+    log_fn(f"Local run detected (no slurm found, or ${local_env_key} set) - overriding remote-only settings")
+    if oid.get("gpu"):
+        log_fn("Local run: ignoring 'gpu: True' - using the CPU executable ($JDFTx)")
+        oid["gpu"] = False
+    if oid.get("ddec6") and not ope(env_vars_dict.get("DDEC6_EXE_PATH", "")):
+        log_fn("Local run: $DDEC6_EXE_PATH is not an existing chargemol executable - skipping DDEC6 analysis")
+        oid["ddec6"] = False
+    if not "JDFTx" in env_vars_dict:
+        log_and_abort("Local run: $JDFTx must be set to a CPU JDFTx executable", log_fn=log_fn)
+    return oid
+
 
 def get_exe_cmd(gpu, log_fn, use_srun=True):
     if gpu:

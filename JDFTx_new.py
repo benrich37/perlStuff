@@ -314,7 +314,11 @@ class JDFTx(Calculator):
                 if outfile.slices[-1].is_md:
                     atoms.set_velocities(outfile.structure.site_properties["velocities"])
             self.log_func(f"Native opt {niter} iterations, updated energy {outfile.e}")
-        self.results["energy"] = outfile.e
+        # Some calculations (ie vibrations) do not report a total energy in the output file
+        if outfile.e is not None:
+            self.results["energy"] = outfile.e
+        else:
+            self.log_func("No total energy found in output file - not storing energy in results")
         # Some calculations (ie vibrations) do not have forces in the output file
         default_results_map = {
             "forces": outfile.forces if hasattr(outfile, "forces") else None,
@@ -327,9 +331,12 @@ class JDFTx(Calculator):
             "strain": _tensor_to_voigt(outfile.strain) if (hasattr(outfile, "strain") and not outfile.strain is None) else None,
         }
         for rprop in default_results_map:
+            if default_results_map[rprop] is None:
+                # ASE rejects None results, so a requested-but-missing property raises PropertyNotPresent instead
+                continue
             if rprop in properties:
                 self.results[rprop] = default_results_map[rprop]
-            elif not default_results_map[rprop] is None:
+            else:
                 self.log_func(f"Not storing {rprop} in results as it was not requested, but it is available.")
         for aimd_field in ["thermostat_velocity", "pe", "ke", "tmd_fs", "p_bar", "t_k"]:
             if hasattr(outfile, aimd_field) and not getattr(outfile, aimd_field) is None:
